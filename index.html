@@ -44,15 +44,16 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: clamp(300px, 50vw, 800px);
-        height: clamp(300px, 50vw, 800px);
-        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><style>.od-text{fill:%23D4AF37;font-family:Arial Black,sans-serif;font-weight:900;font-size:120px;}.skull{fill:%23D4AF37;}</style></defs><text class="od-text" x="50%25" y="45%25" text-anchor="middle" dominant-baseline="middle">OD</text><g class="skull" transform="translate(100,120) scale(0.4)"><path d="M0,-40 Q-25,-40,-25,-20 L-25,0 Q-25,20,0,20 Q25,20,25,0 L25,-20 Q25,-40,0,-40 Z M-15,-25 Q-20,-25,-20,-20 Q-20,-15,-15,-15 Q-10,-15,-10,-20 Q-10,-25,-15,-25 Z M15,-25 Q10,-25,10,-20 Q10,-15,15,-15 Q20,-15,20,-20 Q20,-25,15,-25 Z M-8,0 L-8,10 L8,10 L8,0 Z M-20,25 L-15,35 L-10,25 M0,25 L0,35 M20,25 L15,35 L10,25"/><path d="M-35,-15 L-50,-5 M35,-15 L50,-5"/></g></svg>');
+        width: clamp(400px, 60vw, 1000px);
+        height: clamp(400px, 60vw, 1000px);
+        background-image: url('icon-192.png');
         background-size: contain;
         background-position: center;
         background-repeat: no-repeat;
-        opacity: 0.04;
+        opacity: 0.05;
         z-index: 0;
         pointer-events: none;
+        filter: brightness(1.2);
     }
 
     .app-container {
@@ -137,6 +138,7 @@
         grid-template-columns: 1fr;
         gap: 1rem;
         padding: 1rem;
+        padding-bottom: 50px; /* Space for ticker */
         min-height: calc(100vh - 200px);
     }
 
@@ -498,6 +500,66 @@
         line-height: 1.2;
     }
 
+    /* News Ticker */
+    .news-ticker-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(90deg, var(--black) 0%, var(--off-black) 50%, var(--black) 100%);
+        border-top: 2px solid var(--gold);
+        height: 40px;
+        overflow: hidden;
+        z-index: 200;
+        box-shadow: 0 -4px 20px rgba(212, 175, 55, 0.2);
+    }
+
+    .news-ticker {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        white-space: nowrap;
+        animation: scroll-ticker 120s linear infinite;
+    }
+
+    @keyframes scroll-ticker {
+        0% {
+            transform: translateX(100%);
+        }
+        100% {
+            transform: translateX(-100%);
+        }
+    }
+
+    .news-ticker-label {
+        background: var(--gold);
+        color: var(--black);
+        padding: 0.5rem 1rem;
+        font-weight: 700;
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        flex-shrink: 0;
+        margin-right: 1rem;
+    }
+
+    .news-item {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 3rem;
+        font-size: 0.85rem;
+        color: var(--white);
+    }
+
+    .news-separator {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background: var(--gold);
+        border-radius: 50%;
+        margin: 0 1.5rem;
+    }
+
     /* Mobile adjustments */
     @media (max-width: 767px) {
         .main-layout {
@@ -518,7 +580,7 @@
         .right-column {
             order: 3;
             position: fixed;
-            bottom: 0;
+            bottom: 42px; /* Above the news ticker */
             left: 0;
             right: 0;
             flex-direction: row;
@@ -720,6 +782,33 @@
                             <div className="icon-button-icon">💵</div>
                             <div className="icon-button-label">Pay Dues</div>
                         </button>
+                    </div>
+                </div>
+
+                {/* News Ticker */}
+                <div className="news-ticker-container">
+                    <div className="news-ticker">
+                        <span className="news-ticker-label">NFL NEWS</span>
+                        <span className="news-item">Chiefs sign star QB to record-breaking extension</span>
+                        <span className="news-separator"></span>
+                        <span className="news-item">49ers trade for elite pass rusher ahead of deadline</span>
+                        <span className="news-separator"></span>
+                        <span className="news-item">Cowboys WR reaches 1,000 yards in historic season</span>
+                        <span className="news-separator"></span>
+                        <span className="news-item">Eagles secure playoff spot with dominant win</span>
+                        <span className="news-separator"></span>
+                        <span className="news-item">Bengals RB suffers season-ending injury</span>
+                        <span className="news-separator"></span>
+                        <span className="news-item">Patriots name new offensive coordinator</span>
+                        <span className="news-separator"></span>
+                        <span className="news-item">Bills clinch division with three games remaining</span>
+                        <span className="news-separator"></span>
+                        <span className="news-item">Packers QB throws 5 TDs in comeback victory</span>
+                        <span className="news-separator"></span>
+                        <span className="news-item">Ravens defense sets franchise record for sacks</span>
+                        <span className="news-separator"></span>
+                        <span className="news-item">Dolphins announce stadium renovations for 2027</span>
+                        <span className="news-separator"></span>
                     </div>
                 </div>
             </div>
