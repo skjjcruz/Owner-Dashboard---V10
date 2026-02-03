@@ -33,8 +33,10 @@
         background: var(--black);
         color: var(--white);
         overflow-x: hidden;
+        overflow-y: auto;
         min-height: 100vh;
         position: relative;
+        -webkit-overflow-scrolling: touch;
     }
 
     /* Subdued logo background */
@@ -520,6 +522,7 @@
         height: 100%;
         white-space: nowrap;
         animation: scroll-ticker 30s linear infinite;
+        will-change: transform;
     }
 
     @keyframes scroll-ticker {
