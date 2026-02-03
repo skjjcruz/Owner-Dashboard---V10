@@ -174,9 +174,15 @@
         border: 2px solid rgba(212, 175, 55, 0.2);
         border-radius: 12px;
         padding: 1rem;
-        max-height: 400px;
-        overflow-y: auto;
         animation: fadeInLeft 0.6s ease both;
+    }
+
+    /* Only add scroll on desktop/tablet */
+    @media (min-width: 768px) {
+        .league-window {
+            max-height: 400px;
+            overflow-y: auto;
+        }
     }
 
     @keyframes fadeInLeft {
