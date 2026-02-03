@@ -100,13 +100,15 @@
     }
 
     .owner-logo-small {
-        width: clamp(80px, 15vw, 120px);
-        height: clamp(80px, 15vw, 120px);
+        width: clamp(70px, 12vw, 100px);
+        height: clamp(70px, 12vw, 100px);
         flex-shrink: 0;
-        filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.6));
-        border-radius: 20px;
-        margin-left: 2rem;
-        mix-blend-mode: screen;
+        filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.5));
+    }
+
+    .owner-logo-svg {
+        width: 100%;
+        height: 100%;
     }
 
     @keyframes shimmer {
@@ -690,8 +692,77 @@
                 <header className="header">
                     <div className="header-title">OWNER DASHBOARD</div>
                     <h1 className="owner-name">
+                        <div className="owner-logo-small">
+                            <svg className="owner-logo-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                                {/* Football laces at top */}
+                                <g fill="#D4AF37">
+                                    <rect x="85" y="10" width="30" height="3" rx="1.5"/>
+                                    <rect x="75" y="20" width="10" height="2" rx="1"/>
+                                    <rect x="90" y="20" width="10" height="2" rx="1"/>
+                                    <rect x="105" y="20" width="10" height="2" rx="1"/>
+                                </g>
+                                {/* OD letters */}
+                                <text x="100" y="100" fontFamily="Arial Black, sans-serif" fontSize="80" fontWeight="900" fill="#D4AF37" textAnchor="middle" dominantBaseline="middle">OD</text>
+                                {/* Skull and crossbones */}
+                                <g fill="#D4AF37" transform="translate(100, 150)">
+                                    {/* Skull */}
+                                    <ellipse cx="0" cy="-10" rx="18" ry="20"/>
+                                    {/* Eye sockets */}
+                                    <ellipse cx="-8" cy="-13" rx="4" ry="5" fill="#0A0A0A"/>
+                                    <ellipse cx="8" cy="-13" rx="4" ry="5" fill="#0A0A0A"/>
+                                    {/* Nose */}
+                                    <path d="M-3,-5 L0,0 L3,-5 Z" fill="#0A0A0A"/>
+                                    {/* Jaw teeth */}
+                                    <rect x="-10" y="2" width="4" height="4" fill="#0A0A0A"/>
+                                    <rect x="-4" y="2" width="4" height="4" fill="#0A0A0A"/>
+                                    <rect x="2" y="2" width="4" height="4" fill="#0A0A0A"/>
+                                    {/* Crossbones */}
+                                    <rect x="-25" y="10" width="50" height="6" rx="3" transform="rotate(-20 0 13)"/>
+                                    <rect x="-25" y="10" width="50" height="6" rx="3" transform="rotate(20 0 13)"/>
+                                    {/* Bone ends */}
+                                    <circle cx="-22" cy="6" r="5"/>
+                                    <circle cx="22" cy="6" r="5"/>
+                                    <circle cx="-22" cy="20" r="5"/>
+                                    <circle cx="22" cy="20" r="5"/>
+                                </g>
+                            </svg>
+                        </div>
                         {ownerData.name}
-                        <img src="icon-192.png" alt="OD Logo" className="owner-logo-small" />
+                        <div className="owner-logo-small">
+                            <svg className="owner-logo-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                                {/* Football laces at top */}
+                                <g fill="#D4AF37">
+                                    <rect x="85" y="10" width="30" height="3" rx="1.5"/>
+                                    <rect x="75" y="20" width="10" height="2" rx="1"/>
+                                    <rect x="90" y="20" width="10" height="2" rx="1"/>
+                                    <rect x="105" y="20" width="10" height="2" rx="1"/>
+                                </g>
+                                {/* OD letters */}
+                                <text x="100" y="100" fontFamily="Arial Black, sans-serif" fontSize="80" fontWeight="900" fill="#D4AF37" textAnchor="middle" dominantBaseline="middle">OD</text>
+                                {/* Skull and crossbones */}
+                                <g fill="#D4AF37" transform="translate(100, 150)">
+                                    {/* Skull */}
+                                    <ellipse cx="0" cy="-10" rx="18" ry="20"/>
+                                    {/* Eye sockets */}
+                                    <ellipse cx="-8" cy="-13" rx="4" ry="5" fill="#0A0A0A"/>
+                                    <ellipse cx="8" cy="-13" rx="4" ry="5" fill="#0A0A0A"/>
+                                    {/* Nose */}
+                                    <path d="M-3,-5 L0,0 L3,-5 Z" fill="#0A0A0A"/>
+                                    {/* Jaw teeth */}
+                                    <rect x="-10" y="2" width="4" height="4" fill="#0A0A0A"/>
+                                    <rect x="-4" y="2" width="4" height="4" fill="#0A0A0A"/>
+                                    <rect x="2" y="2" width="4" height="4" fill="#0A0A0A"/>
+                                    {/* Crossbones */}
+                                    <rect x="-25" y="10" width="50" height="6" rx="3" transform="rotate(-20 0 13)"/>
+                                    <rect x="-25" y="10" width="50" height="6" rx="3" transform="rotate(20 0 13)"/>
+                                    {/* Bone ends */}
+                                    <circle cx="-22" cy="6" r="5"/>
+                                    <circle cx="22" cy="6" r="5"/>
+                                    <circle cx="-22" cy="20" r="5"/>
+                                    <circle cx="22" cy="20" r="5"/>
+                                </g>
+                            </svg>
+                        </div>
                     </h1>
                     <div className="quote">
                         "If you're not first, you're last"
