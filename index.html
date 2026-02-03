@@ -39,17 +39,20 @@
 
     /* Subdued logo background */
     body::before {
-        content: 'OD';
+        content: '';
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        font-family: 'Bebas Neue', cursive;
-        font-size: clamp(200px, 40vw, 600px);
-        color: rgba(212, 175, 55, 0.03);
+        width: clamp(300px, 50vw, 800px);
+        height: clamp(300px, 50vw, 800px);
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><style>.od-text{fill:%23D4AF37;font-family:Arial Black,sans-serif;font-weight:900;font-size:120px;}.skull{fill:%23D4AF37;}</style></defs><text class="od-text" x="50%25" y="45%25" text-anchor="middle" dominant-baseline="middle">OD</text><g class="skull" transform="translate(100,120) scale(0.4)"><path d="M0,-40 Q-25,-40,-25,-20 L-25,0 Q-25,20,0,20 Q25,20,25,0 L25,-20 Q25,-40,0,-40 Z M-15,-25 Q-20,-25,-20,-20 Q-20,-15,-15,-15 Q-10,-15,-10,-20 Q-10,-25,-15,-25 Z M15,-25 Q10,-25,10,-20 Q10,-15,15,-15 Q20,-15,20,-20 Q20,-25,15,-25 Z M-8,0 L-8,10 L8,10 L8,0 Z M-20,25 L-15,35 L-10,25 M0,25 L0,35 M20,25 L15,35 L10,25"/><path d="M-35,-15 L-50,-5 M35,-15 L50,-5"/></g></svg>');
+        background-size: contain;
+        background-position: center;
+        background-repeat: no-repeat;
+        opacity: 0.04;
         z-index: 0;
         pointer-events: none;
-        letter-spacing: 0.05em;
     }
 
     .app-container {
