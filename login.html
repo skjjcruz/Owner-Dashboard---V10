@@ -17,7 +17,6 @@
             --silver: #C0C0C0;
         }
 
-```
     * {
         margin: 0;
         padding: 0;
@@ -170,7 +169,6 @@
         }
     }
 </style>
-```
 
 </head>
 <body>
@@ -179,7 +177,6 @@
             <img src="icon-192.png" alt="Owner Dashboard Logo">
         </div>
 
-```
     <h1 class="login-title">Owner Dashboard</h1>
     <p class="login-subtitle">Fantasy Football Command Center</p>
 
@@ -284,8 +281,27 @@
                 showError('Authentication error. Please try again.');
             }
         } else {
-            // First-time setup - create account
+            // First-time setup - validate Sleeper username then create account
             try {
+                const loginBtn = document.querySelector('.login-btn');
+                loginBtn.textContent = 'Verifying Sleeper username...';
+                loginBtn.disabled = true;
+
+                const resp = await fetch(`https://api.sleeper.app/v1/user/${encodeURIComponent(username)}`);
+                if (!resp.ok || resp.status === 404) {
+                    showError('Sleeper username not found. Please check and try again.');
+                    loginBtn.textContent = 'Access Dashboard';
+                    loginBtn.disabled = false;
+                    return;
+                }
+                const sleeperUser = await resp.json();
+                if (!sleeperUser || !sleeperUser.user_id) {
+                    showError('Sleeper username not found. Please check and try again.');
+                    loginBtn.textContent = 'Access Dashboard';
+                    loginBtn.disabled = false;
+                    return;
+                }
+
                 const passwordHash = await hashPassword(password);
                 const auth = {
                     username: username,
@@ -296,12 +312,14 @@
                 localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
                 window.location.href = 'index.html';
             } catch (e) {
-                showError('Failed to create account. Please try again.');
+                showError('Failed to verify Sleeper username. Check your connection and try again.');
+                const loginBtn = document.querySelector('.login-btn');
+                loginBtn.textContent = 'Access Dashboard';
+                loginBtn.disabled = false;
             }
         }
     });
 </script>
-```
 
 </body>
 </html>

@@ -21,7 +21,6 @@
             --loss-red: #E74C3C;
         }
 
-```
     * {
         margin: 0;
         padding: 0;
@@ -276,7 +275,7 @@
     .trophy-case {
         background: var(--black);
         border: 2px solid rgba(212, 175, 55, 0.2);
-        borderRadius: 12px;
+        border-radius: 12px;
         padding: 1.5rem;
         animation: fadeInUp 0.6s ease 0.2s both;
     }
@@ -679,13 +678,11 @@
         }
     }
 </style>
-```
 
 </head>
 <body>
     <div id="root"></div>
 
-```
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -742,8 +739,11 @@
         return await fetchJSON(`${SLEEPER_BASE_URL}/league/${leagueId}/users`);
     }
 
+    let _playersCache = null;
     async function fetchAllPlayers() {
-        return await fetchJSON(`${SLEEPER_BASE_URL}/players/nfl`);
+        if (_playersCache) return _playersCache;
+        _playersCache = await fetchJSON(`${SLEEPER_BASE_URL}/players/nfl`);
+        return _playersCache;
     }
 
     // Mock data for trophy case and events
@@ -1416,15 +1416,6 @@
 
         const AVAILABLE_YEARS = ['2023', '2024', '2025', '2026'];
 
-        // Show league detail if selected
-        if (selectedLeague) {
-            return <LeagueDetail 
-                league={selectedLeague} 
-                onBack={() => setSelectedLeague(null)} 
-                sleeperUserId={sleeperUser?.user_id}
-            />;
-        }
-
         useEffect(() => {
             loadSleeperData();
         }, [selectedYear]);
@@ -1480,6 +1471,15 @@
                 setError('Failed to load Sleeper data. Please refresh.');
                 setLoading(false);
             }
+        }
+
+        // Show league detail if selected
+        if (selectedLeague) {
+            return <LeagueDetail
+                league={selectedLeague}
+                onBack={() => setSelectedLeague(null)}
+                sleeperUserId={sleeperUser?.user_id}
+            />;
         }
 
         return (
@@ -1734,7 +1734,6 @@
 
     ReactDOM.render(<OwnerDashboard />, document.getElementById('root'));
 </script>
-```
 
 </body>
 </html>
