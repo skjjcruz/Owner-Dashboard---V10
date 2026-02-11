@@ -896,7 +896,8 @@
                         wins: roster.settings?.wins || 0,
                         losses: roster.settings?.losses || 0,
                         ties: roster.settings?.ties || 0,
-                        pointsFor: roster.settings?.fpts || 0
+                        pointsFor: roster.settings?.fpts || 0,
+                        division: roster.settings?.division || 0
                     };
                 }).sort((a, b) => {
                     if (b.wins !== a.wins) return b.wins - a.wins;
@@ -992,11 +993,81 @@
             );
         }
 
+        // Position color helper
+        function getPositionColor(pos) {
+            const colors = { QB: '#FF6B6B', RB: '#4ECDC4', WR: '#45B7D1', TE: '#F7DC6F', K: '#BB8FCE', DEF: '#85929E' };
+            return colors[pos] || 'var(--silver)';
+        }
+
+        // Build player row
+        function PlayerRow({ playerId, section }) {
+            const pos = getPlayerPosition(playerId);
+            const borderColor = section === 'starter' ? 'var(--gold)' : section === 'ir' ? '#E74C3C' : section === 'taxi' ? '#3498DB' : 'transparent';
+            const bgColor = section === 'starter' ? 'rgba(212, 175, 55, 0.05)' : section === 'ir' ? 'rgba(231, 76, 60, 0.05)' : section === 'taxi' ? 'rgba(52, 152, 219, 0.05)' : 'rgba(255, 255, 255, 0.02)';
+            return (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0.4rem 0.6rem',
+                    marginBottom: '0.2rem',
+                    background: bgColor,
+                    borderLeft: borderColor !== 'transparent' ? `3px solid ${borderColor}` : 'none',
+                    borderRadius: '4px',
+                    gap: '0.6rem'
+                }}>
+                    <span style={{
+                        width: '32px',
+                        flexShrink: 0,
+                        fontSize: '0.65rem',
+                        fontWeight: '700',
+                        color: getPositionColor(pos),
+                        opacity: 0.7,
+                        textAlign: 'center',
+                        letterSpacing: '0.02em'
+                    }}>
+                        {pos}
+                    </span>
+                    <span style={{
+                        flex: 1,
+                        color: 'var(--white)',
+                        fontSize: '0.85rem',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                    }}>
+                        {getPlayerName(playerId)}
+                    </span>
+                    <span style={{
+                        flexShrink: 0,
+                        color: 'var(--silver)',
+                        fontSize: '0.7rem',
+                        opacity: 0.6
+                    }}>
+                        {getPlayerTeam(playerId)}
+                    </span>
+                </div>
+            );
+        }
+
+        // Build divisions from standings
+        const divisions = {};
+        const hasDivisions = standings.some(t => t.division > 0);
+        if (hasDivisions) {
+            standings.forEach(team => {
+                const div = team.division || 0;
+                if (!divisions[div]) divisions[div] = [];
+                divisions[div].push(team);
+            });
+        } else {
+            divisions[0] = [...standings];
+        }
+        const divisionKeys = Object.keys(divisions).sort((a, b) => Number(a) - Number(b));
+
         return (
-            <div className="app-container" style={{ paddingBottom: '100px' }}>
+            <div className="app-container" style={{ paddingBottom: '60px' }}>
                 {/* Header with Back Button */}
-                <header className="header" style={{ position: 'relative', marginBottom: '2rem' }}>
-                    <button 
+                <header className="header" style={{ position: 'relative', marginBottom: '1.5rem' }}>
+                    <button
                         onClick={onBack}
                         style={{
                             position: 'absolute',
@@ -1018,9 +1089,9 @@
                     </button>
 
                     <div className="header-title">{league.name}</div>
-                    <div style={{ 
-                        textAlign: 'center', 
-                        color: 'var(--gold)', 
+                    <div style={{
+                        textAlign: 'center',
+                        color: 'var(--gold)',
                         fontSize: '1.2rem',
                         fontFamily: 'Oswald, sans-serif',
                         marginTop: '0.5rem'
@@ -1033,100 +1104,126 @@
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr',
-                    gap: '1.5rem',
-                    padding: '0 1.5rem',
+                    gap: '1.25rem',
+                    padding: '0 1rem',
                     maxWidth: '1600px',
                     margin: '0 auto'
                 }}>
-                    {/* Mobile: Stack vertically */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
-                        {/* Team Owners */}
+                    {/* Desktop: 3 columns */}
+                    <style dangerouslySetInnerHTML={{ __html: `
+                        @media (min-width: 768px) {
+                            .league-detail-grid { grid-template-columns: 220px 1fr 260px !important; }
+                        }
+                        @media (min-width: 1200px) {
+                            .league-detail-grid { grid-template-columns: 260px 1fr 300px !important; }
+                        }
+                    `}} />
+
+                    <div className="league-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.25rem' }}>
+
+                        {/* LEFT COLUMN - Team Owners */}
                         <div style={{
                             background: 'var(--black)',
                             border: '2px solid rgba(212, 175, 55, 0.3)',
                             borderRadius: '12px',
-                            padding: '1.5rem'
+                            padding: '1rem'
                         }}>
                             <h3 style={{
                                 color: 'var(--gold)',
                                 fontFamily: 'Bebas Neue, cursive',
-                                fontSize: '1.3rem',
+                                fontSize: '1.2rem',
                                 letterSpacing: '0.1em',
-                                marginBottom: '1rem',
-                                textAlign: 'center'
+                                marginBottom: '0.75rem',
+                                textAlign: 'center',
+                                paddingBottom: '0.5rem',
+                                borderBottom: '1px solid rgba(212, 175, 55, 0.3)'
                             }}>
-                                TEAM OWNERS
+                                OWNERS
                             </h3>
 
                             {standings.map((team, idx) => (
                                 <div key={team.rosterId} style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '0.75rem',
-                                    padding: '0.75rem',
-                                    marginBottom: '0.5rem',
-                                    background: team.userId === sleeperUserId ? 'rgba(212, 175, 55, 0.1)' : 'transparent',
-                                    border: team.userId === sleeperUserId ? '1px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.1)',
-                                    borderRadius: '8px'
+                                    gap: '0.5rem',
+                                    padding: '0.5rem',
+                                    marginBottom: '0.35rem',
+                                    background: team.userId === sleeperUserId ? 'rgba(212, 175, 55, 0.12)' : 'transparent',
+                                    border: team.userId === sleeperUserId ? '1px solid rgba(212, 175, 55, 0.5)' : '1px solid rgba(255, 255, 255, 0.06)',
+                                    borderRadius: '8px',
+                                    transition: 'background 0.2s ease'
                                 }}>
                                     <div style={{
-                                        width: '24px',
+                                        width: '20px',
                                         color: 'var(--gold)',
                                         fontWeight: '700',
-                                        fontSize: '0.9rem'
+                                        fontSize: '0.75rem',
+                                        textAlign: 'center',
+                                        flexShrink: 0
                                     }}>
                                         {idx + 1}
                                     </div>
-                                    
+
                                     {team.avatar ? (
-                                        <img 
+                                        <img
                                             src={`https://sleepercdn.com/avatars/thumbs/${team.avatar}`}
                                             alt=""
                                             style={{
-                                                width: '32px',
-                                                height: '32px',
+                                                width: '30px',
+                                                height: '30px',
                                                 borderRadius: '50%',
-                                                border: '2px solid var(--gold)'
+                                                border: team.userId === sleeperUserId ? '2px solid var(--gold)' : '2px solid var(--charcoal)',
+                                                flexShrink: 0
                                             }}
                                         />
                                     ) : (
                                         <div style={{
-                                            width: '32px',
-                                            height: '32px',
+                                            width: '30px',
+                                            height: '30px',
                                             borderRadius: '50%',
                                             background: 'var(--charcoal)',
-                                            border: '2px solid var(--gold)'
-                                        }} />
+                                            border: team.userId === sleeperUserId ? '2px solid var(--gold)' : '2px solid rgba(255,255,255,0.1)',
+                                            flexShrink: 0,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '0.7rem',
+                                            color: 'var(--silver)'
+                                        }}>
+                                            {team.displayName.charAt(0)}
+                                        </div>
                                     )}
 
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{
-                                            color: 'var(--white)',
-                                            fontSize: '0.85rem',
-                                            fontWeight: '600',
+                                            color: team.userId === sleeperUserId ? 'var(--gold)' : 'var(--white)',
+                                            fontSize: '0.8rem',
+                                            fontWeight: team.userId === sleeperUserId ? '700' : '500',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap'
+                                            whiteSpace: 'nowrap',
+                                            lineHeight: '1.2'
                                         }}>
                                             {team.displayName}
                                         </div>
                                         <div style={{
                                             color: 'var(--silver)',
-                                            fontSize: '0.75rem'
+                                            fontSize: '0.65rem',
+                                            opacity: 0.8
                                         }}>
-                                            {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}
+                                            {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''} · {team.pointsFor.toFixed(1)} PF
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        {/* My Roster */}
+                        {/* CENTER COLUMN - My Roster */}
                         <div style={{
                             background: 'var(--black)',
                             border: '2px solid rgba(212, 175, 55, 0.3)',
                             borderRadius: '12px',
-                            padding: '1.5rem'
+                            padding: '1.25rem'
                         }}>
                             <h3 style={{
                                 color: 'var(--gold)',
@@ -1134,7 +1231,9 @@
                                 fontSize: '1.3rem',
                                 letterSpacing: '0.1em',
                                 marginBottom: '1rem',
-                                textAlign: 'center'
+                                textAlign: 'center',
+                                paddingBottom: '0.5rem',
+                                borderBottom: '1px solid rgba(212, 175, 55, 0.3)'
                             }}>
                                 MY ROSTER
                             </h3>
@@ -1143,140 +1242,64 @@
                                 <>
                                     {/* Starters */}
                                     {myRoster.starters && myRoster.starters.length > 0 && (
-                                        <div style={{ marginBottom: '1.5rem' }}>
+                                        <div style={{ marginBottom: '1.25rem' }}>
                                             <div style={{
                                                 color: 'var(--gold)',
-                                                fontSize: '0.9rem',
+                                                fontSize: '0.8rem',
                                                 fontWeight: '700',
-                                                marginBottom: '0.75rem',
-                                                paddingBottom: '0.5rem',
-                                                borderBottom: '2px solid var(--gold)'
+                                                marginBottom: '0.5rem',
+                                                paddingBottom: '0.4rem',
+                                                borderBottom: '2px solid var(--gold)',
+                                                letterSpacing: '0.08em'
                                             }}>
                                                 STARTERS
                                             </div>
                                             {myRoster.starters.map((playerId, idx) => (
-                                                <div key={idx} style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    padding: '0.5rem 0.75rem',
-                                                    marginBottom: '0.25rem',
-                                                    background: 'rgba(212, 175, 55, 0.05)',
-                                                    borderLeft: '3px solid var(--gold)',
-                                                    borderRadius: '4px'
-                                                }}>
-                                                    <span style={{ color: 'var(--white)', fontSize: '0.9rem' }}>
-                                                        {getPlayerName(playerId)}
-                                                    </span>
-                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                        <span style={{ 
-                                                            color: 'var(--silver)', 
-                                                            fontSize: '0.75rem',
-                                                            fontWeight: '600'
-                                                        }}>
-                                                            {getPlayerTeam(playerId)}
-                                                        </span>
-                                                        <span style={{ 
-                                                            color: 'var(--gold)', 
-                                                            fontSize: '0.8rem',
-                                                            fontWeight: '700'
-                                                        }}>
-                                                            {getPlayerPosition(playerId)}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                                <PlayerRow key={idx} playerId={playerId} section="starter" />
                                             ))}
                                         </div>
                                     )}
 
                                     {/* Bench */}
                                     {myRoster.players && (
-                                        <div style={{ marginBottom: '1.5rem' }}>
+                                        <div style={{ marginBottom: '1.25rem' }}>
                                             <div style={{
                                                 color: 'var(--silver)',
-                                                fontSize: '0.9rem',
+                                                fontSize: '0.8rem',
                                                 fontWeight: '700',
-                                                marginBottom: '0.75rem',
-                                                paddingBottom: '0.5rem',
-                                                borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+                                                marginBottom: '0.5rem',
+                                                paddingBottom: '0.4rem',
+                                                borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
+                                                letterSpacing: '0.08em'
                                             }}>
                                                 BENCH
                                             </div>
                                             {myRoster.players
-                                                .filter(p => !myRoster.starters.includes(p) && 
-                                                           !(myRoster.reserve || []).includes(p) && 
+                                                .filter(p => !myRoster.starters.includes(p) &&
+                                                           !(myRoster.reserve || []).includes(p) &&
                                                            !(myRoster.taxi || []).includes(p))
                                                 .map((playerId, idx) => (
-                                                <div key={idx} style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    padding: '0.5rem 0.75rem',
-                                                    marginBottom: '0.25rem',
-                                                    background: 'rgba(255, 255, 255, 0.02)',
-                                                    borderRadius: '4px'
-                                                }}>
-                                                    <span style={{ color: 'var(--white)', fontSize: '0.85rem' }}>
-                                                        {getPlayerName(playerId)}
-                                                    </span>
-                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                        <span style={{ 
-                                                            color: 'var(--silver)', 
-                                                            fontSize: '0.7rem'
-                                                        }}>
-                                                            {getPlayerTeam(playerId)}
-                                                        </span>
-                                                        <span style={{ 
-                                                            color: 'var(--silver)', 
-                                                            fontSize: '0.75rem'
-                                                        }}>
-                                                            {getPlayerPosition(playerId)}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                                <PlayerRow key={idx} playerId={playerId} section="bench" />
                                             ))}
                                         </div>
                                     )}
 
                                     {/* IR */}
                                     {myRoster.reserve && myRoster.reserve.length > 0 && (
-                                        <div style={{ marginBottom: '1.5rem' }}>
+                                        <div style={{ marginBottom: '1.25rem' }}>
                                             <div style={{
                                                 color: '#E74C3C',
-                                                fontSize: '0.9rem',
+                                                fontSize: '0.8rem',
                                                 fontWeight: '700',
-                                                marginBottom: '0.75rem',
-                                                paddingBottom: '0.5rem',
-                                                borderBottom: '1px solid rgba(231, 76, 60, 0.3)'
+                                                marginBottom: '0.5rem',
+                                                paddingBottom: '0.4rem',
+                                                borderBottom: '1px solid rgba(231, 76, 60, 0.3)',
+                                                letterSpacing: '0.08em'
                                             }}>
                                                 INJURED RESERVE
                                             </div>
                                             {myRoster.reserve.map((playerId, idx) => (
-                                                <div key={idx} style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    padding: '0.5rem 0.75rem',
-                                                    marginBottom: '0.25rem',
-                                                    background: 'rgba(231, 76, 60, 0.1)',
-                                                    borderLeft: '3px solid #E74C3C',
-                                                    borderRadius: '4px'
-                                                }}>
-                                                    <span style={{ color: 'var(--white)', fontSize: '0.85rem' }}>
-                                                        {getPlayerName(playerId)}
-                                                    </span>
-                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                        <span style={{ 
-                                                            color: 'var(--silver)', 
-                                                            fontSize: '0.7rem'
-                                                        }}>
-                                                            {getPlayerTeam(playerId)}
-                                                        </span>
-                                                        <span style={{ 
-                                                            color: '#E74C3C', 
-                                                            fontSize: '0.75rem'
-                                                        }}>
-                                                            {getPlayerPosition(playerId)}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                                <PlayerRow key={idx} playerId={playerId} section="ir" />
                                             ))}
                                         </div>
                                     )}
@@ -1286,42 +1309,17 @@
                                         <div>
                                             <div style={{
                                                 color: '#3498DB',
-                                                fontSize: '0.9rem',
+                                                fontSize: '0.8rem',
                                                 fontWeight: '700',
-                                                marginBottom: '0.75rem',
-                                                paddingBottom: '0.5rem',
-                                                borderBottom: '1px solid rgba(52, 152, 219, 0.3)'
+                                                marginBottom: '0.5rem',
+                                                paddingBottom: '0.4rem',
+                                                borderBottom: '1px solid rgba(52, 152, 219, 0.3)',
+                                                letterSpacing: '0.08em'
                                             }}>
                                                 TAXI SQUAD
                                             </div>
                                             {myRoster.taxi.map((playerId, idx) => (
-                                                <div key={idx} style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    padding: '0.5rem 0.75rem',
-                                                    marginBottom: '0.25rem',
-                                                    background: 'rgba(52, 152, 219, 0.1)',
-                                                    borderLeft: '3px solid #3498DB',
-                                                    borderRadius: '4px'
-                                                }}>
-                                                    <span style={{ color: 'var(--white)', fontSize: '0.85rem' }}>
-                                                        {getPlayerName(playerId)}
-                                                    </span>
-                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                        <span style={{ 
-                                                            color: 'var(--silver)', 
-                                                            fontSize: '0.7rem'
-                                                        }}>
-                                                            {getPlayerTeam(playerId)}
-                                                        </span>
-                                                        <span style={{ 
-                                                            color: '#3498DB', 
-                                                            fontSize: '0.75rem'
-                                                        }}>
-                                                            {getPlayerPosition(playerId)}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                                <PlayerRow key={idx} playerId={playerId} section="taxi" />
                                             ))}
                                         </div>
                                     )}
@@ -1333,70 +1331,124 @@
                             )}
                         </div>
 
-                        {/* Standings */}
+                        {/* RIGHT COLUMN - Divisions */}
                         <div style={{
                             background: 'var(--black)',
                             border: '2px solid rgba(212, 175, 55, 0.3)',
                             borderRadius: '12px',
-                            padding: '1.5rem'
+                            padding: '1rem'
                         }}>
                             <h3 style={{
                                 color: 'var(--gold)',
                                 fontFamily: 'Bebas Neue, cursive',
-                                fontSize: '1.3rem',
+                                fontSize: '1.2rem',
                                 letterSpacing: '0.1em',
-                                marginBottom: '1rem',
-                                textAlign: 'center'
+                                marginBottom: '0.75rem',
+                                textAlign: 'center',
+                                paddingBottom: '0.5rem',
+                                borderBottom: '1px solid rgba(212, 175, 55, 0.3)'
                             }}>
-                                STANDINGS
+                                {hasDivisions ? 'DIVISIONS' : 'LEAGUE STANDINGS'}
                             </h3>
 
-                            {standings.map((team, idx) => (
-                                <div key={team.rosterId} style={{
-                                    padding: '0.75rem',
-                                    marginBottom: '0.5rem',
-                                    background: idx < 4 ? 'rgba(212, 175, 55, 0.05)' : 'transparent',
-                                    border: team.userId === sleeperUserId 
-                                        ? '2px solid var(--gold)' 
-                                        : '1px solid rgba(255, 255, 255, 0.1)',
-                                    borderRadius: '8px'
-                                }}>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        marginBottom: '0.25rem'
-                                    }}>
-                                        <span style={{
-                                            color: 'var(--gold)',
-                                            fontWeight: '700',
-                                            fontSize: '0.9rem'
-                                        }}>
-                                            #{idx + 1}
-                                        </span>
-                                        <span style={{
-                                            color: 'var(--white)',
-                                            fontSize: '0.85rem',
-                                            fontWeight: '600'
-                                        }}>
-                                            {team.displayName}
-                                        </span>
+                            {divisionKeys.map((divKey, divIdx) => {
+                                const divTeams = divisions[divKey];
+                                const divSorted = [...divTeams].sort((a, b) => {
+                                    if (b.wins !== a.wins) return b.wins - a.wins;
+                                    if (a.losses !== b.losses) return a.losses - b.losses;
+                                    return b.pointsFor - a.pointsFor;
+                                });
+
+                                return (
+                                    <div key={divKey} style={{ marginBottom: divIdx < divisionKeys.length - 1 ? '1rem' : 0 }}>
+                                        {hasDivisions && (
+                                            <div style={{
+                                                color: 'var(--gold)',
+                                                fontSize: '0.75rem',
+                                                fontWeight: '700',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.1em',
+                                                marginBottom: '0.5rem',
+                                                paddingBottom: '0.35rem',
+                                                borderBottom: '1px solid rgba(212, 175, 55, 0.2)'
+                                            }}>
+                                                Division {divKey}
+                                            </div>
+                                        )}
+
+                                        {divSorted.map((team, idx) => (
+                                            <div key={team.rosterId} style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '0.45rem 0.5rem',
+                                                marginBottom: '0.25rem',
+                                                background: team.userId === sleeperUserId ? 'rgba(212, 175, 55, 0.1)' : 'transparent',
+                                                border: team.userId === sleeperUserId ? '1px solid rgba(212, 175, 55, 0.4)' : '1px solid rgba(255, 255, 255, 0.05)',
+                                                borderRadius: '6px'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
+                                                    {team.avatar ? (
+                                                        <img
+                                                            src={`https://sleepercdn.com/avatars/thumbs/${team.avatar}`}
+                                                            alt=""
+                                                            style={{
+                                                                width: '22px',
+                                                                height: '22px',
+                                                                borderRadius: '50%',
+                                                                flexShrink: 0
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div style={{
+                                                            width: '22px',
+                                                            height: '22px',
+                                                            borderRadius: '50%',
+                                                            background: 'var(--charcoal)',
+                                                            flexShrink: 0,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontSize: '0.6rem',
+                                                            color: 'var(--silver)'
+                                                        }}>
+                                                            {team.displayName.charAt(0)}
+                                                        </div>
+                                                    )}
+                                                    <span style={{
+                                                        color: team.userId === sleeperUserId ? 'var(--gold)' : 'var(--white)',
+                                                        fontSize: '0.78rem',
+                                                        fontWeight: team.userId === sleeperUserId ? '700' : '400',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {team.displayName}
+                                                    </span>
+                                                </div>
+                                                <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                                                    <div style={{
+                                                        color: 'var(--silver)',
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: '600'
+                                                    }}>
+                                                        {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}
+                                                    </div>
+                                                    <div style={{
+                                                        color: 'var(--gold)',
+                                                        fontSize: '0.6rem',
+                                                        opacity: 0.7
+                                                    }}>
+                                                        {team.pointsFor.toFixed(1)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        fontSize: '0.75rem'
-                                    }}>
-                                        <span style={{ color: 'var(--silver)' }}>
-                                            {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}
-                                        </span>
-                                        <span style={{ color: 'var(--gold)' }}>
-                                            {team.pointsFor.toFixed(1)} PF
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
+
                     </div>
                 </div>
             </div>
