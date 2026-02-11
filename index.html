@@ -861,6 +861,7 @@
     // League Detail Component
     function LeagueDetail({ league, onBack, sleeperUserId }) {
         const [loading, setLoading] = useState(true);
+        const [error, setError] = useState(null);
         const [playersData, setPlayersData] = useState({});
         const [myRoster, setMyRoster] = useState(null);
         const [standings, setStandings] = useState([]);
@@ -871,12 +872,17 @@
 
         async function loadLeagueDetails() {
             try {
-                // Load players database
-                const players = await fetchAllPlayers();
-                setPlayersData(players);
+                console.log('Loading league details for:', league.name);
+                console.log('League data:', league);
+
+                // Check if league has required data
+                if (!league.rosters || !league.users) {
+                    throw new Error('League missing roster or user data');
+                }
 
                 // Find my roster
                 const myRosterData = league.rosters.find(r => r.owner_id === sleeperUserId);
+                console.log('My roster:', myRosterData);
                 setMyRoster(myRosterData);
 
                 // Build standings
@@ -899,17 +905,27 @@
                 });
 
                 setStandings(standingsData);
+                console.log('Standings built:', standingsData);
+
+                // Load players database (this is big!)
+                console.log('Fetching player database...');
+                const players = await fetchAllPlayers();
+                console.log('Players loaded, count:', Object.keys(players).length);
+                setPlayersData(players);
+
                 setLoading(false);
+                console.log('League details loaded successfully!');
             } catch (err) {
                 console.error('Failed to load league details:', err);
+                setError(err.message || 'Failed to load league details');
                 setLoading(false);
             }
         }
 
         function getPlayerName(playerId) {
             const player = playersData[playerId];
-            if (!player) return 'Unknown Player';
-            return player.full_name || `${player.first_name || ''} ${player.last_name || ''}`.trim() || 'Unknown';
+            if (!player) return `Player ${playerId}`;
+            return player.full_name || `${player.first_name || ''} ${player.last_name || ''}`.trim() || `Player ${playerId}`;
         }
 
         function getPlayerPosition(playerId) {
@@ -922,16 +938,56 @@
             return player?.team || '';
         }
 
+        if (error) {
+            return (
+                <div style={{ 
+                    minHeight: '100vh', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    color: 'var(--white)',
+                    padding: '2rem',
+                    textAlign: 'center'
+                }}>
+                    <div style={{ color: '#E74C3C', fontSize: '1.5rem', marginBottom: '1rem' }}>
+                        Error Loading League
+                    </div>
+                    <div style={{ color: 'var(--silver)', marginBottom: '2rem' }}>
+                        {error}
+                    </div>
+                    <button onClick={onBack} style={{
+                        padding: '0.75rem 1.5rem',
+                        background: 'var(--gold)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: 'var(--black)',
+                        fontFamily: 'Oswald, sans-serif',
+                        fontSize: '1rem',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                    }}>
+                        ← Back to Dashboard
+                    </button>
+                </div>
+            );
+        }
+
         if (loading) {
             return (
                 <div style={{ 
                     minHeight: '100vh', 
                     display: 'flex', 
+                    flexDirection: 'column',
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    color: 'var(--gold)'
+                    color: 'var(--gold)',
+                    gap: '1rem'
                 }}>
-                    Loading league details...
+                    <div style={{ fontSize: '1.5rem' }}>Loading {league.name}...</div>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--silver)' }}>
+                        Fetching player database (this may take a moment)
+                    </div>
                 </div>
             );
         }
