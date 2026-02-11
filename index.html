@@ -850,6 +850,26 @@
         };
     }
 
+    async function fetchAllPlayers() {
+        const cacheKey = 'all_players';
+        const cached = getCachedData(cacheKey);
+        if (cached) return cached;
+
+        const players = await fetchJSON(`${SLEEPER_BASE_URL}/players/nfl`);
+        setCachedData(cacheKey, players);
+        return players;
+    }
+
+    async function fetchLeagueTransactions(leagueId, week = 1) {
+        const cacheKey = `transactions_${leagueId}_${week}`;
+        const cached = getCachedData(cacheKey);
+        if (cached) return cached;
+
+        const transactions = await fetchJSON(`${SLEEPER_BASE_URL}/league/${leagueId}/transactions/${week}`);
+        setCachedData(cacheKey, transactions);
+        return transactions;
+    }
+
     // Mock Data
     const ownerData = {
         name: "SKJJCRUZ FOOTBALL CLUB",
@@ -976,6 +996,1012 @@
         );
     }
 
+    // League Detail Page Component
+    function LeagueDetail({ league, onBack, sleeperUserId }) {
+        const [selectedOwnerId, setSelectedOwnerId] = React.useState(sleeperUserId);
+        const [rosterData, setRosterData] = React.useState(null);
+        const [playersData, setPlayersData] = React.useState(null);
+        const [loading, setLoading] = React.useState(true);
+
+        React.useEffect(() => {
+            loadLeagueDetails();
+        }, []);
+
+        async function loadLeagueDetails() {
+            try {
+                // Fetch all players data
+                const cacheKey = 'all_players';
+                let players = getCachedData(cacheKey);
+                
+                if (!players) {
+                    players = await fetchJSON('https://api.sleeper.app/v1/players/nfl');
+                    setCachedData(cacheKey, players);
+                }
+                
+                setPlayersData(players);
+                setLoading(false);
+            } catch (err) {
+                console.error('Failed to load league details:', err);
+                setLoading(false);
+            }
+        }
+
+        function getPlayerInfo(playerId) {
+            if (!playersData || !playerId) return null;
+            return playersData[playerId];
+        }
+
+        function getUserDisplayName(userId) {
+            const user = league.users?.find(u => u.user_id === userId);
+            return user?.display_name || user?.username || 'Unknown';
+        }
+
+        function getUserAvatar(userId) {
+            const user = league.users?.find(u => u.user_id === userId);
+            return user?.avatar ? `https://sleepercdn.com/avatars/${user.avatar}` : null;
+        }
+
+        function getRosterForOwner(ownerId) {
+            return league.rosters?.find(r => r.owner_id === ownerId);
+        }
+
+        const selectedRoster = getRosterForOwner(selectedOwnerId);
+        const sortedRosters = [...(league.rosters || [])].sort((a, b) => {
+            const aWins = a.settings?.wins || 0;
+            const bWins = b.settings?.wins || 0;
+            const aLosses = a.settings?.losses || 0;
+            const bLosses = b.settings?.losses || 0;
+            
+            if (bWins !== aWins) return bWins - aWins;
+            return aLosses - bLosses;
+        });
+
+        return (
+            <div className="app-container" style={{ paddingBottom: '120px' }}>
+                {/* Header with Back Button */}
+                <header className="header" style={{ position: 'relative' }}>
+                    <button 
+                        onClick={onBack}
+                        style={{
+                            position: 'absolute',
+                            left: '1rem',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'var(--gold)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '0.5rem 1rem',
+                            color: 'var(--black)',
+                            fontFamily: 'Oswald, sans-serif',
+                            fontWeight: '700',
+                            fontSize: '0.9rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            zIndex: 10
+                        }}
+                    >
+                        ← Back
+                    </button>
+                    
+                    <div className="header-title" style={{ fontSize: '1.2rem' }}>
+                        {league.name}
+                    </div>
+                    <div style={{ 
+                        textAlign: 'center', 
+                        color: 'var(--gold)', 
+                        fontSize: '0.9rem',
+                        marginTop: '0.5rem'
+                    }}>
+                        Season {league.season}
+                    </div>
+                </header>
+
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '250px 1fr 250px',
+                    gap: '1rem',
+                    padding: '2rem 1rem',
+                    maxWidth: '1600px',
+                    margin: '0 auto'
+                }}>
+                    {/* Left Column - Team Owners */}
+                    <div style={{
+                        background: 'var(--black)',
+                        border: '2px solid rgba(212, 175, 55, 0.2)',
+                        borderRadius: '12px',
+                        padding: '1rem',
+                        maxHeight: '600px',
+                        overflowY: 'auto'
+                    }}>
+                        <h3 style={{
+                            fontFamily: 'Bebas Neue, cursive',
+                            color: 'var(--gold)',
+                            fontSize: '1.2rem',
+                            marginBottom: '1rem',
+                            letterSpacing: '0.1em',
+                            textAlign: 'center'
+                        }}>
+                            TEAM OWNERS
+                        </h3>
+
+                        {league.rosters?.map(roster => {
+                            const ownerId = roster.owner_id;
+                            const name = getUserDisplayName(ownerId);
+                            const avatar = getUserAvatar(ownerId);
+                            const record = `${roster.settings?.wins || 0}-${roster.settings?.losses || 0}`;
+                            const isSelected = ownerId === selectedOwnerId;
+
+                            return (
+                                <div
+                                    key={ownerId}
+                                    onClick={() => setSelectedOwnerId(ownerId)}
+                                    style={{
+                                        padding: '0.75rem',
+                                        marginBottom: '0.5rem',
+                                        background: isSelected ? 'rgba(212, 175, 55, 0.2)' : 'transparent',
+                                        border: isSelected ? '2px solid var(--gold)' : '2px solid transparent',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem'
+                                    }}
+                                >
+                                    {avatar ? (
+                                        <img 
+                                            src={avatar} 
+                                            alt={name}
+                                            style={{
+                                                width: '32px',
+                                                height: '32px',
+                                                borderRadius: '50%',
+                                                border: '2px solid var(--gold)'
+                                            }}
+                                        />
+                                    ) : (
+                                        <div style={{
+                                            width: '32px',
+                                            height: '32px',
+                                            borderRadius: '50%',
+                                            background: 'var(--gold)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: 'var(--black)',
+                                            fontWeight: '700',
+                                            fontSize: '0.8rem'
+                                        }}>
+                                            {name.charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{
+                                            color: 'var(--white)',
+                                            fontWeight: '600',
+                                            fontSize: '0.9rem',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                        }}>
+                                            {name}
+                                        </div>
+                                        <div style={{
+                                            color: 'var(--gold)',
+                                            fontSize: '0.75rem',
+                                            marginTop: '2px'
+                                        }}>
+                                            {record}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Middle Column - Roster */}
+                    <div style={{
+                        background: 'var(--black)',
+                        border: '2px solid rgba(212, 175, 55, 0.2)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        maxHeight: '600px',
+                        overflowY: 'auto'
+                    }}>
+                        <h3 style={{
+                            fontFamily: 'Bebas Neue, cursive',
+                            color: 'var(--gold)',
+                            fontSize: '1.5rem',
+                            marginBottom: '1rem',
+                            letterSpacing: '0.1em',
+                            textAlign: 'center'
+                        }}>
+                            {getUserDisplayName(selectedOwnerId)}'S ROSTER
+                        </h3>
+
+                        {loading ? (
+                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gold)' }}>
+                                Loading roster...
+                            </div>
+                        ) : !selectedRoster ? (
+                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--silver)' }}>
+                                No roster found
+                            </div>
+                        ) : (
+                            <>
+                                {/* Starters */}
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <h4 style={{
+                                        color: 'var(--gold)',
+                                        fontSize: '1rem',
+                                        fontWeight: '700',
+                                        marginBottom: '0.75rem',
+                                        paddingBottom: '0.5rem',
+                                        borderBottom: '2px solid rgba(212, 175, 55, 0.3)'
+                                    }}>
+                                        STARTERS
+                                    </h4>
+                                    {selectedRoster.starters?.map((playerId, idx) => {
+                                        const player = getPlayerInfo(playerId);
+                                        return (
+                                            <div key={idx} style={{
+                                                padding: '0.5rem',
+                                                marginBottom: '0.25rem',
+                                                background: 'rgba(212, 175, 55, 0.1)',
+                                                borderRadius: '4px',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center'
+                                            }}>
+                                                <span style={{ color: 'var(--white)', fontSize: '0.9rem' }}>
+                                                    {player ? `${player.full_name || player.first_name + ' ' + player.last_name}` : 'Empty'}
+                                                </span>
+                                                <span style={{ 
+                                                    color: 'var(--gold)', 
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: '600'
+                                                }}>
+                                                    {player?.position || '—'}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Bench */}
+                                {selectedRoster.players && selectedRoster.players.length > (selectedRoster.starters?.length || 0) && (
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <h4 style={{
+                                            color: 'var(--silver)',
+                                            fontSize: '1rem',
+                                            fontWeight: '700',
+                                            marginBottom: '0.75rem',
+                                            paddingBottom: '0.5rem',
+                                            borderBottom: '2px solid rgba(192, 192, 192, 0.2)'
+                                        }}>
+                                            BENCH
+                                        </h4>
+                                        {selectedRoster.players
+                                            .filter(pid => !selectedRoster.starters?.includes(pid) && !selectedRoster.reserve?.includes(pid) && !selectedRoster.taxi?.includes(pid))
+                                            .map((playerId, idx) => {
+                                                const player = getPlayerInfo(playerId);
+                                                return (
+                                                    <div key={idx} style={{
+                                                        padding: '0.5rem',
+                                                        marginBottom: '0.25rem',
+                                                        background: 'rgba(255, 255, 255, 0.05)',
+                                                        borderRadius: '4px',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center'
+                                                    }}>
+                                                        <span style={{ color: 'var(--white)', fontSize: '0.85rem' }}>
+                                                            {player ? `${player.full_name || player.first_name + ' ' + player.last_name}` : 'Unknown'}
+                                                        </span>
+                                                        <span style={{ 
+                                                            color: 'var(--silver)', 
+                                                            fontSize: '0.75rem'
+                                                        }}>
+                                                            {player?.position || '—'}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+                                )}
+
+                                {/* IR */}
+                                {selectedRoster.reserve && selectedRoster.reserve.length > 0 && (
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <h4 style={{
+                                            color: '#E74C3C',
+                                            fontSize: '1rem',
+                                            fontWeight: '700',
+                                            marginBottom: '0.75rem',
+                                            paddingBottom: '0.5rem',
+                                            borderBottom: '2px solid rgba(231, 76, 60, 0.3)'
+                                        }}>
+                                            INJURED RESERVE
+                                        </h4>
+                                        {selectedRoster.reserve.map((playerId, idx) => {
+                                            const player = getPlayerInfo(playerId);
+                                            return (
+                                                <div key={idx} style={{
+                                                    padding: '0.5rem',
+                                                    marginBottom: '0.25rem',
+                                                    background: 'rgba(231, 76, 60, 0.1)',
+                                                    borderRadius: '4px',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                }}>
+                                                    <span style={{ color: 'var(--white)', fontSize: '0.85rem' }}>
+                                                        {player ? `${player.full_name || player.first_name + ' ' + player.last_name}` : 'Unknown'}
+                                                    </span>
+                                                    <span style={{ 
+                                                        color: '#E74C3C', 
+                                                        fontSize: '0.75rem'
+                                                    }}>
+                                                        {player?.position || '—'}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Taxi */}
+                                {selectedRoster.taxi && selectedRoster.taxi.length > 0 && (
+                                    <div>
+                                        <h4 style={{
+                                            color: '#3498DB',
+                                            fontSize: '1rem',
+                                            fontWeight: '700',
+                                            marginBottom: '0.75rem',
+                                            paddingBottom: '0.5rem',
+                                            borderBottom: '2px solid rgba(52, 152, 219, 0.3)'
+                                        }}>
+                                            TAXI SQUAD
+                                        </h4>
+                                        {selectedRoster.taxi.map((playerId, idx) => {
+                                            const player = getPlayerInfo(playerId);
+                                            return (
+                                                <div key={idx} style={{
+                                                    padding: '0.5rem',
+                                                    marginBottom: '0.25rem',
+                                                    background: 'rgba(52, 152, 219, 0.1)',
+                                                    borderRadius: '4px',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                }}>
+                                                    <span style={{ color: 'var(--white)', fontSize: '0.85rem' }}>
+                                                        {player ? `${player.full_name || player.first_name + ' ' + player.last_name}` : 'Unknown'}
+                                                    </span>
+                                                    <span style={{ 
+                                                        color: '#3498DB', 
+                                                        fontSize: '0.75rem'
+                                                    }}>
+                                                        {player?.position || '—'}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+
+                    {/* Right Column - Standings */}
+                    <div style={{
+                        background: 'var(--black)',
+                        border: '2px solid rgba(212, 175, 55, 0.2)',
+                        borderRadius: '12px',
+                        padding: '1rem',
+                        maxHeight: '600px',
+                        overflowY: 'auto'
+                    }}>
+                        <h3 style={{
+                            fontFamily: 'Bebas Neue, cursive',
+                            color: 'var(--gold)',
+                            fontSize: '1.2rem',
+                            marginBottom: '1rem',
+                            letterSpacing: '0.1em',
+                            textAlign: 'center'
+                        }}>
+                            STANDINGS
+                        </h3>
+
+                        {sortedRosters.map((roster, idx) => {
+                            const ownerId = roster.owner_id;
+                            const name = getUserDisplayName(ownerId);
+                            const wins = roster.settings?.wins || 0;
+                            const losses = roster.settings?.losses || 0;
+                            const ties = roster.settings?.ties || 0;
+                            const pf = roster.settings?.fpts || 0;
+
+                            return (
+                                <div key={ownerId} style={{
+                                    padding: '0.75rem',
+                                    marginBottom: '0.5rem',
+                                    background: idx < 6 ? 'rgba(46, 204, 113, 0.1)' : 'transparent',
+                                    border: idx < 6 ? '1px solid rgba(46, 204, 113, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                    borderRadius: '6px'
+                                }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        marginBottom: '0.25rem'
+                                    }}>
+                                        <span style={{
+                                            color: 'var(--gold)',
+                                            fontWeight: '700',
+                                            fontSize: '0.9rem',
+                                            minWidth: '20px'
+                                        }}>
+                                            {idx + 1}.
+                                        </span>
+                                        <span style={{
+                                            color: 'var(--white)',
+                                            fontSize: '0.85rem',
+                                            flex: 1,
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                        }}>
+                                            {name}
+                                        </span>
+                                    </div>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        fontSize: '0.75rem',
+                                        color: 'var(--silver)',
+                                        marginLeft: '28px'
+                                    }}>
+                                        <span>{wins}-{losses}{ties > 0 ? `-${ties}` : ''}</span>
+                                        <span>{pf.toFixed(1)} PF</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Bottom News/Transactions Box */}
+                <div style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    background: 'linear-gradient(90deg, var(--black) 0%, var(--off-black) 50%, var(--black) 100%)',
+                    borderTop: '3px solid var(--gold)',
+                    padding: '1rem',
+                    zIndex: 100,
+                    maxHeight: '100px',
+                    overflowY: 'auto'
+                }}>
+                    <div style={{
+                        textAlign: 'center',
+                        color: 'var(--silver)',
+                        fontSize: '0.85rem'
+                    }}>
+                        📰 League transactions and news feed coming in Phase 3...
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // League Detail Component
+    function LeagueDetail({ league, onBack, sleeperUserId }) {
+        const [loading, setLoading] = React.useState(true);
+        const [playersData, setPlayersData] = React.useState({});
+        const [myRoster, setMyRoster] = React.useState(null);
+        const [allRosters, setAllRosters] = React.useState([]);
+        const [standings, setStandings] = React.useState([]);
+        const [transactions, setTransactions] = React.useState([]);
+
+        React.useEffect(() => {
+            loadLeagueDetails();
+        }, []);
+
+        async function loadLeagueDetails() {
+            try {
+                // Load players database
+                const players = await fetchAllPlayers();
+                setPlayersData(players);
+
+                // Find my roster
+                const myRosterData = league.rosters.find(r => r.owner_id === sleeperUserId);
+                setMyRoster(myRosterData);
+
+                // Build standings
+                const standingsData = league.rosters.map(roster => {
+                    const user = league.users.find(u => u.user_id === roster.owner_id);
+                    return {
+                        rosterId: roster.roster_id,
+                        userId: roster.owner_id,
+                        displayName: user?.display_name || user?.username || 'Unknown',
+                        avatar: user?.avatar,
+                        wins: roster.settings?.wins || 0,
+                        losses: roster.settings?.losses || 0,
+                        ties: roster.settings?.ties || 0,
+                        pointsFor: roster.settings?.fpts || 0
+                    };
+                }).sort((a, b) => {
+                    if (b.wins !== a.wins) return b.wins - a.wins;
+                    if (a.losses !== b.losses) return a.losses - b.losses;
+                    return b.pointsFor - a.pointsFor;
+                });
+
+                setStandings(standingsData);
+                setAllRosters(league.rosters);
+
+                // Try to load recent transactions
+                try {
+                    const recentTx = await fetchLeagueTransactions(league.id, 1);
+                    setTransactions(recentTx || []);
+                } catch (e) {
+                    setTransactions([]);
+                }
+
+                setLoading(false);
+            } catch (err) {
+                console.error('Failed to load league details:', err);
+                setLoading(false);
+            }
+        }
+
+        function getPlayerName(playerId) {
+            const player = playersData[playerId];
+            if (!player) return 'Unknown Player';
+            return player.full_name || `${player.first_name} ${player.last_name}`.trim() || 'Unknown';
+        }
+
+        function getPlayerPosition(playerId) {
+            const player = playersData[playerId];
+            return player?.position || '??';
+        }
+
+        function getPlayerTeam(playerId) {
+            const player = playersData[playerId];
+            return player?.team || '';
+        }
+
+        if (loading) {
+            return (
+                <div style={{ 
+                    minHeight: '100vh', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    color: 'var(--gold)'
+                }}>
+                    Loading league details...
+                </div>
+            );
+        }
+
+        return (
+            <div className="app-container" style={{ paddingBottom: '100px' }}>
+                {/* Header with Back Button */}
+                <header className="header" style={{ marginBottom: '2rem' }}>
+                    <button 
+                        onClick={onBack}
+                        style={{
+                            position: 'absolute',
+                            top: '1rem',
+                            left: '1rem',
+                            padding: '0.5rem 1rem',
+                            background: 'var(--black)',
+                            border: '2px solid var(--gold)',
+                            borderRadius: '6px',
+                            color: 'var(--gold)',
+                            fontFamily: 'Oswald, sans-serif',
+                            fontSize: '0.9rem',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            zIndex: 100
+                        }}
+                    >
+                        ← BACK
+                    </button>
+
+                    <div className="header-title">{league.name}</div>
+                    <div style={{ 
+                        textAlign: 'center', 
+                        color: 'var(--gold)', 
+                        fontSize: '1.2rem',
+                        fontFamily: 'Oswald, sans-serif',
+                        marginTop: '0.5rem'
+                    }}>
+                        {league.season} SEASON
+                    </div>
+                </header>
+
+                {/* Three Column Layout */}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '250px 1fr 250px',
+                    gap: '1.5rem',
+                    padding: '0 1.5rem',
+                    maxWidth: '1600px',
+                    margin: '0 auto'
+                }}>
+                    {/* Left: Team Owners */}
+                    <div style={{
+                        background: 'var(--black)',
+                        border: '2px solid rgba(212, 175, 55, 0.3)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        maxHeight: '80vh',
+                        overflowY: 'auto'
+                    }}>
+                        <h3 style={{
+                            color: 'var(--gold)',
+                            fontFamily: 'Bebas Neue, cursive',
+                            fontSize: '1.3rem',
+                            letterSpacing: '0.1em',
+                            marginBottom: '1rem',
+                            textAlign: 'center'
+                        }}>
+                            TEAM OWNERS
+                        </h3>
+
+                        {standings.map((team, idx) => (
+                            <div key={team.rosterId} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                padding: '0.75rem',
+                                marginBottom: '0.5rem',
+                                background: team.userId === sleeperUserId ? 'rgba(212, 175, 55, 0.1)' : 'transparent',
+                                border: team.userId === sleeperUserId ? '1px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '8px',
+                                transition: 'all 0.3s ease'
+                            }}>
+                                <div style={{
+                                    width: '24px',
+                                    color: 'var(--gold)',
+                                    fontWeight: '700',
+                                    fontSize: '0.9rem'
+                                }}>
+                                    {idx + 1}
+                                </div>
+                                
+                                {team.avatar ? (
+                                    <img 
+                                        src={`https://sleepercdn.com/avatars/thumbs/${team.avatar}`}
+                                        alt=""
+                                        style={{
+                                            width: '32px',
+                                            height: '32px',
+                                            borderRadius: '50%',
+                                            border: '2px solid var(--gold)'
+                                        }}
+                                    />
+                                ) : (
+                                    <div style={{
+                                        width: '32px',
+                                        height: '32px',
+                                        borderRadius: '50%',
+                                        background: 'var(--charcoal)',
+                                        border: '2px solid var(--gold)'
+                                    }} />
+                                )}
+
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{
+                                        color: 'var(--white)',
+                                        fontSize: '0.85rem',
+                                        fontWeight: '600',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                    }}>
+                                        {team.displayName}
+                                    </div>
+                                    <div style={{
+                                        color: 'var(--silver)',
+                                        fontSize: '0.75rem'
+                                    }}>
+                                        {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Center: My Roster */}
+                    <div style={{
+                        background: 'var(--black)',
+                        border: '2px solid rgba(212, 175, 55, 0.3)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        maxHeight: '80vh',
+                        overflowY: 'auto'
+                    }}>
+                        <h3 style={{
+                            color: 'var(--gold)',
+                            fontFamily: 'Bebas Neue, cursive',
+                            fontSize: '1.3rem',
+                            letterSpacing: '0.1em',
+                            marginBottom: '1rem',
+                            textAlign: 'center'
+                        }}>
+                            MY ROSTER
+                        </h3>
+
+                        {myRoster ? (
+                            <>
+                                {/* Starters */}
+                                {myRoster.starters && myRoster.starters.length > 0 && (
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <div style={{
+                                            color: 'var(--gold)',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '700',
+                                            marginBottom: '0.75rem',
+                                            paddingBottom: '0.5rem',
+                                            borderBottom: '2px solid var(--gold)'
+                                        }}>
+                                            STARTERS
+                                        </div>
+                                        {myRoster.starters.map((playerId, idx) => (
+                                            <div key={idx} style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                padding: '0.5rem 0.75rem',
+                                                marginBottom: '0.25rem',
+                                                background: 'rgba(212, 175, 55, 0.05)',
+                                                borderLeft: '3px solid var(--gold)',
+                                                borderRadius: '4px'
+                                            }}>
+                                                <span style={{ color: 'var(--white)', fontSize: '0.9rem' }}>
+                                                    {getPlayerName(playerId)}
+                                                </span>
+                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                    <span style={{ 
+                                                        color: 'var(--silver)', 
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: '600'
+                                                    }}>
+                                                        {getPlayerTeam(playerId)}
+                                                    </span>
+                                                    <span style={{ 
+                                                        color: 'var(--gold)', 
+                                                        fontSize: '0.8rem',
+                                                        fontWeight: '700'
+                                                    }}>
+                                                        {getPlayerPosition(playerId)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Bench */}
+                                {myRoster.players && (
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <div style={{
+                                            color: 'var(--silver)',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '700',
+                                            marginBottom: '0.75rem',
+                                            paddingBottom: '0.5rem',
+                                            borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+                                        }}>
+                                            BENCH
+                                        </div>
+                                        {myRoster.players
+                                            .filter(p => !myRoster.starters.includes(p) && 
+                                                       !(myRoster.reserve || []).includes(p) && 
+                                                       !(myRoster.taxi || []).includes(p))
+                                            .map((playerId, idx) => (
+                                            <div key={idx} style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                padding: '0.5rem 0.75rem',
+                                                marginBottom: '0.25rem',
+                                                background: 'rgba(255, 255, 255, 0.02)',
+                                                borderRadius: '4px'
+                                            }}>
+                                                <span style={{ color: 'var(--white)', fontSize: '0.85rem' }}>
+                                                    {getPlayerName(playerId)}
+                                                </span>
+                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                    <span style={{ 
+                                                        color: 'var(--silver)', 
+                                                        fontSize: '0.7rem'
+                                                    }}>
+                                                        {getPlayerTeam(playerId)}
+                                                    </span>
+                                                    <span style={{ 
+                                                        color: 'var(--silver)', 
+                                                        fontSize: '0.75rem'
+                                                    }}>
+                                                        {getPlayerPosition(playerId)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* IR */}
+                                {myRoster.reserve && myRoster.reserve.length > 0 && (
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <div style={{
+                                            color: '#E74C3C',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '700',
+                                            marginBottom: '0.75rem',
+                                            paddingBottom: '0.5rem',
+                                            borderBottom: '1px solid rgba(231, 76, 60, 0.3)'
+                                        }}>
+                                            INJURED RESERVE
+                                        </div>
+                                        {myRoster.reserve.map((playerId, idx) => (
+                                            <div key={idx} style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                padding: '0.5rem 0.75rem',
+                                                marginBottom: '0.25rem',
+                                                background: 'rgba(231, 76, 60, 0.1)',
+                                                borderLeft: '3px solid #E74C3C',
+                                                borderRadius: '4px'
+                                            }}>
+                                                <span style={{ color: 'var(--white)', fontSize: '0.85rem' }}>
+                                                    {getPlayerName(playerId)}
+                                                </span>
+                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                    <span style={{ 
+                                                        color: 'var(--silver)', 
+                                                        fontSize: '0.7rem'
+                                                    }}>
+                                                        {getPlayerTeam(playerId)}
+                                                    </span>
+                                                    <span style={{ 
+                                                        color: '#E74C3C', 
+                                                        fontSize: '0.75rem'
+                                                    }}>
+                                                        {getPlayerPosition(playerId)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Taxi */}
+                                {myRoster.taxi && myRoster.taxi.length > 0 && (
+                                    <div>
+                                        <div style={{
+                                            color: '#3498DB',
+                                            fontSize: '0.9rem',
+                                            fontWeight: '700',
+                                            marginBottom: '0.75rem',
+                                            paddingBottom: '0.5rem',
+                                            borderBottom: '1px solid rgba(52, 152, 219, 0.3)'
+                                        }}>
+                                            TAXI SQUAD
+                                        </div>
+                                        {myRoster.taxi.map((playerId, idx) => (
+                                            <div key={idx} style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                padding: '0.5rem 0.75rem',
+                                                marginBottom: '0.25rem',
+                                                background: 'rgba(52, 152, 219, 0.1)',
+                                                borderLeft: '3px solid #3498DB',
+                                                borderRadius: '4px'
+                                            }}>
+                                                <span style={{ color: 'var(--white)', fontSize: '0.85rem' }}>
+                                                    {getPlayerName(playerId)}
+                                                </span>
+                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                    <span style={{ 
+                                                        color: 'var(--silver)', 
+                                                        fontSize: '0.7rem'
+                                                    }}>
+                                                        {getPlayerTeam(playerId)}
+                                                    </span>
+                                                    <span style={{ 
+                                                        color: '#3498DB', 
+                                                        fontSize: '0.75rem'
+                                                    }}>
+                                                        {getPlayerPosition(playerId)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div style={{ textAlign: 'center', color: 'var(--silver)', padding: '2rem' }}>
+                                No roster found
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Right: Standings */}
+                    <div style={{
+                        background: 'var(--black)',
+                        border: '2px solid rgba(212, 175, 55, 0.3)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        maxHeight: '80vh',
+                        overflowY: 'auto'
+                    }}>
+                        <h3 style={{
+                            color: 'var(--gold)',
+                            fontFamily: 'Bebas Neue, cursive',
+                            fontSize: '1.3rem',
+                            letterSpacing: '0.1em',
+                            marginBottom: '1rem',
+                            textAlign: 'center'
+                        }}>
+                            STANDINGS
+                        </h3>
+
+                        {standings.map((team, idx) => (
+                            <div key={team.rosterId} style={{
+                                padding: '0.75rem',
+                                marginBottom: '0.5rem',
+                                background: idx < 4 ? 'rgba(212, 175, 55, 0.05)' : 'transparent',
+                                border: team.userId === sleeperUserId 
+                                    ? '2px solid var(--gold)' 
+                                    : '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '8px'
+                            }}>
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    marginBottom: '0.25rem'
+                                }}>
+                                    <span style={{
+                                        color: 'var(--gold)',
+                                        fontWeight: '700',
+                                        fontSize: '0.9rem'
+                                    }}>
+                                        #{idx + 1}
+                                    </span>
+                                    <span style={{
+                                        color: 'var(--white)',
+                                        fontSize: '0.85rem',
+                                        fontWeight: '600'
+                                    }}>
+                                        {team.displayName}
+                                    </span>
+                                </div>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    fontSize: '0.75rem'
+                                }}>
+                                    <span style={{ color: 'var(--silver)' }}>
+                                        {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}
+                                    </span>
+                                    <span style={{ color: 'var(--gold)' }}>
+                                        {team.pointsFor.toFixed(1)} PF
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     function OwnerDashboard() {
         const [selectedLeague, setSelectedLeague] = useState(null);
         const [activeLeagueId, setActiveLeagueId] = useState(1);
@@ -1060,7 +2086,11 @@
         };
 
         if (selectedLeague) {
-            return <LeagueDetail league={selectedLeague} onBack={() => setSelectedLeague(null)} />;
+            return <LeagueDetail 
+                league={selectedLeague} 
+                onBack={() => setSelectedLeague(null)} 
+                sleeperUserId={sleeperUser?.user_id}
+            />;
         }
 
         return (
