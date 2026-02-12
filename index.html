@@ -178,6 +178,30 @@
         gap: 1rem;
     }
 
+    @media (min-width: 768px) {
+        .left-column, .center-column, .right-column {
+            max-height: calc(100vh - 220px);
+            overflow-y: auto;
+        }
+        .left-column::-webkit-scrollbar,
+        .center-column::-webkit-scrollbar,
+        .right-column::-webkit-scrollbar {
+            width: 6px;
+        }
+        .left-column::-webkit-scrollbar-track,
+        .center-column::-webkit-scrollbar-track,
+        .right-column::-webkit-scrollbar-track {
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 3px;
+        }
+        .left-column::-webkit-scrollbar-thumb,
+        .center-column::-webkit-scrollbar-thumb,
+        .right-column::-webkit-scrollbar-thumb {
+            background: var(--gold);
+            border-radius: 3px;
+        }
+    }
+
     .league-window {
         background: var(--black);
         border: 2px solid rgba(212, 175, 55, 0.2);
@@ -1354,6 +1378,13 @@
                     <style dangerouslySetInnerHTML={{ __html: `
                         @media (min-width: 768px) {
                             .league-detail-grid { grid-template-columns: 220px 1fr 260px !important; }
+                            .league-detail-grid > div {
+                                max-height: calc(100vh - 200px);
+                                overflow-y: auto;
+                            }
+                            .league-detail-grid > div::-webkit-scrollbar { width: 6px; }
+                            .league-detail-grid > div::-webkit-scrollbar-track { background: rgba(212,175,55,0.1); border-radius: 3px; }
+                            .league-detail-grid > div::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
                         }
                         @media (min-width: 1200px) {
                             .league-detail-grid { grid-template-columns: 260px 1fr 300px !important; }
