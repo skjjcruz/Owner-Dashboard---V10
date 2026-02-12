@@ -879,22 +879,24 @@
         const [standings, setStandings] = useState([]);
         const [viewingOwnerId, setViewingOwnerId] = useState(sleeperUserId);
         const [statsData, setStatsData] = useState({});
+        const [currentLeague, setCurrentLeague] = useState(league);
+        const [activeYear, setActiveYear] = useState(league.season);
 
         useEffect(() => {
             loadLeagueDetails();
-        }, []);
+        }, [currentLeague]);
 
         async function loadLeagueDetails() {
             try {
-                if (!league.rosters || !league.users) {
+                if (!currentLeague.rosters || !currentLeague.users) {
                     throw new Error('League missing roster or user data');
                 }
 
-                const myRosterData = league.rosters.find(r => r.owner_id === sleeperUserId);
+                const myRosterData = currentLeague.rosters.find(r => r.owner_id === sleeperUserId);
                 setMyRoster(myRosterData);
 
-                const standingsData = league.rosters.map(roster => {
-                    const user = league.users.find(u => u.user_id === roster.owner_id);
+                const standingsData = currentLeague.rosters.map(roster => {
+                    const user = currentLeague.users.find(u => u.user_id === roster.owner_id);
                     return {
                         rosterId: roster.roster_id,
                         userId: roster.owner_id,
@@ -916,7 +918,7 @@
 
                 const [players, stats] = await Promise.all([
                     fetchAllPlayers(),
-                    fetchSeasonStats(league.season)
+                    fetchSeasonStats(currentLeague.season)
                 ]);
                 setPlayersData(players);
                 setStatsData(stats);
@@ -924,6 +926,38 @@
             } catch (err) {
                 console.error('Failed to load league details:', err);
                 setError(err.message || 'Failed to load league details');
+                setLoading(false);
+            }
+        }
+
+        async function switchYear(year) {
+            if (year === activeYear) return;
+            setLoading(true);
+            setError(null);
+            setActiveYear(year);
+            try {
+                const userLeagues = await fetchUserLeagues(sleeperUserId, year);
+                const match = userLeagues.find(l => l.name === currentLeague.name) || userLeagues[0];
+                if (!match) {
+                    setError('No leagues found for ' + year);
+                    setLoading(false);
+                    return;
+                }
+                const [rosters, users] = await Promise.all([
+                    fetchLeagueRosters(match.league_id),
+                    fetchLeagueUsers(match.league_id)
+                ]);
+                setViewingOwnerId(sleeperUserId);
+                setCurrentLeague({
+                    id: match.league_id,
+                    name: match.name,
+                    season: year,
+                    rosters,
+                    users
+                });
+            } catch (err) {
+                console.error('Failed to switch year:', err);
+                setError('Failed to load ' + year + ' data');
                 setLoading(false);
             }
         }
@@ -979,6 +1013,18 @@
             return colors[pos] || 'var(--silver)';
         }
 
+        function fantasyProsUrl(playerId) {
+            const player = playersData[playerId];
+            if (!player?.full_name) return null;
+            const slug = player.full_name
+                .toLowerCase()
+                .replace(/['\u2019.]/g, '')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+            return `https://www.fantasypros.com/nfl/players/${slug}.php`;
+        }
+
         if (error) {
             return (
                 <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--white)', padding: '2rem', textAlign: 'center' }}>
@@ -992,31 +1038,32 @@
         if (loading) {
             return (
                 <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)', gap: '1rem' }}>
-                    <div style={{ fontSize: '1.5rem' }}>Loading {league.name}...</div>
+                    <div style={{ fontSize: '1.5rem' }}>Loading {currentLeague.name}...</div>
                     <div style={{ fontSize: '0.9rem', color: 'var(--silver)' }}>Fetching player database & stats</div>
                 </div>
             );
         }
 
         // Currently viewed roster
-        const viewingRoster = league.rosters.find(r => r.owner_id === viewingOwnerId) || myRoster;
+        const viewingRoster = currentLeague.rosters.find(r => r.owner_id === viewingOwnerId) || myRoster;
         const viewingOwner = standings.find(t => t.userId === viewingOwnerId);
         const isViewingMyTeam = viewingOwnerId === sleeperUserId;
 
-        // PlayerRow with gold position box, clickable name, stats
+        // PlayerRow with gold position box, clickable name, stats on the right
         function PlayerRow({ playerId, section }) {
             const pos = getPlayerPosition(playerId);
             const pts = getPlayerFantasyPts(playerId);
             const statLine = getPlayerStatLine(playerId);
             const team = getPlayerTeam(playerId);
+            const fpUrl = fantasyProsUrl(playerId);
             const borderColor = section === 'starter' ? 'var(--gold)' : section === 'ir' ? '#E74C3C' : section === 'taxi' ? '#3498DB' : 'transparent';
             const bgColor = section === 'starter' ? 'rgba(212, 175, 55, 0.05)' : section === 'ir' ? 'rgba(231, 76, 60, 0.05)' : section === 'taxi' ? 'rgba(52, 152, 219, 0.05)' : 'rgba(255, 255, 255, 0.02)';
             return (
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    padding: '0.4rem 0.5rem',
-                    marginBottom: '0.25rem',
+                    padding: '0.45rem 0.6rem',
+                    marginBottom: '0.3rem',
                     background: bgColor,
                     borderLeft: borderColor !== 'transparent' ? `3px solid ${borderColor}` : 'none',
                     borderRadius: '4px',
@@ -1027,9 +1074,9 @@
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '34px',
+                        width: '36px',
                         flexShrink: 0,
-                        fontSize: '0.6rem',
+                        fontSize: '0.65rem',
                         fontWeight: '700',
                         color: getPositionColor(pos),
                         border: '1.5px solid var(--gold)',
@@ -1040,51 +1087,53 @@
                     }}>
                         {pos}
                     </span>
-                    {/* Name + stat line */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <a
-                                href={`https://sleeper.com/players/nfl/${playerId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                    color: 'var(--white)',
-                                    fontSize: '0.82rem',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    textDecoration: 'none',
-                                    transition: 'color 0.2s'
-                                }}
-                                onMouseEnter={e => e.target.style.color = 'var(--gold)'}
-                                onMouseLeave={e => e.target.style.color = 'var(--white)'}
-                            >
-                                {getPlayerName(playerId)}
-                            </a>
-                            <span style={{ flexShrink: 0, color: 'var(--silver)', fontSize: '0.6rem', opacity: 0.45 }}>{team}</span>
-                        </div>
+                    {/* Player name + team */}
+                    <a
+                        href={fpUrl || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            flex: 1,
+                            color: 'var(--white)',
+                            fontSize: '0.92rem',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            textDecoration: 'none',
+                            transition: 'color 0.2s',
+                            minWidth: 0
+                        }}
+                        onMouseEnter={e => e.target.style.color = 'var(--gold)'}
+                        onMouseLeave={e => e.target.style.color = 'var(--white)'}
+                    >
+                        {getPlayerName(playerId)} <span style={{ fontSize: '0.68rem', color: 'var(--silver)', opacity: 0.5 }}>{team}</span>
+                    </a>
+                    {/* Stats + pts on the right */}
+                    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                         {statLine && (
-                            <div style={{
-                                fontSize: '0.58rem',
+                            <span style={{
+                                fontSize: '0.65rem',
                                 color: 'var(--silver)',
                                 opacity: 0.6,
-                                marginTop: '1px',
                                 letterSpacing: '0.02em',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
+                                whiteSpace: 'nowrap'
                             }}>
                                 {statLine}
-                            </div>
+                            </span>
+                        )}
+                        {pts && (
+                            <span style={{
+                                fontSize: '0.78rem',
+                                color: 'var(--gold)',
+                                fontWeight: '700',
+                                whiteSpace: 'nowrap',
+                                minWidth: '42px',
+                                textAlign: 'right'
+                            }}>
+                                {pts}
+                            </span>
                         )}
                     </div>
-                    {/* Fantasy points */}
-                    {pts && (
-                        <div style={{ flexShrink: 0, textAlign: 'right', minWidth: '38px' }}>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--gold)', fontWeight: '700', lineHeight: '1.1' }}>{pts}</div>
-                            <div style={{ fontSize: '0.48rem', color: 'var(--silver)', opacity: 0.5, textTransform: 'uppercase' }}>pts</div>
-                        </div>
-                    )}
                 </div>
             );
         }
@@ -1100,26 +1149,26 @@
             return (
                 <>
                     {starters.length > 0 && (
-                        <div style={{ marginBottom: '1rem' }}>
-                            <div style={{ color: 'var(--gold)', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.4rem', paddingBottom: '0.35rem', borderBottom: '2px solid var(--gold)', letterSpacing: '0.08em' }}>STARTERS</div>
+                        <div style={{ marginBottom: '1.25rem' }}>
+                            <div style={{ color: 'var(--gold)', fontSize: '0.85rem', fontWeight: '700', marginBottom: '0.5rem', paddingBottom: '0.4rem', borderBottom: '2px solid var(--gold)', letterSpacing: '0.08em' }}>STARTERS</div>
                             {starters.map((id, i) => <PlayerRow key={i} playerId={id} section="starter" />)}
                         </div>
                     )}
                     {bench.length > 0 && (
-                        <div style={{ marginBottom: '1rem' }}>
-                            <div style={{ color: 'var(--silver)', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.4rem', paddingBottom: '0.35rem', borderBottom: '1px solid rgba(255,255,255,0.15)', letterSpacing: '0.08em' }}>BENCH</div>
+                        <div style={{ marginBottom: '1.25rem' }}>
+                            <div style={{ color: 'var(--silver)', fontSize: '0.85rem', fontWeight: '700', marginBottom: '0.5rem', paddingBottom: '0.4rem', borderBottom: '1px solid rgba(255,255,255,0.15)', letterSpacing: '0.08em' }}>BENCH</div>
                             {bench.map((id, i) => <PlayerRow key={i} playerId={id} section="bench" />)}
                         </div>
                     )}
                     {reserve.length > 0 && (
-                        <div style={{ marginBottom: '1rem' }}>
-                            <div style={{ color: '#E74C3C', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.4rem', paddingBottom: '0.35rem', borderBottom: '1px solid rgba(231,76,60,0.3)', letterSpacing: '0.08em' }}>INJURED RESERVE</div>
+                        <div style={{ marginBottom: '1.25rem' }}>
+                            <div style={{ color: '#E74C3C', fontSize: '0.85rem', fontWeight: '700', marginBottom: '0.5rem', paddingBottom: '0.4rem', borderBottom: '1px solid rgba(231,76,60,0.3)', letterSpacing: '0.08em' }}>INJURED RESERVE</div>
                             {reserve.map((id, i) => <PlayerRow key={i} playerId={id} section="ir" />)}
                         </div>
                     )}
                     {taxi.length > 0 && (
                         <div>
-                            <div style={{ color: '#3498DB', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.4rem', paddingBottom: '0.35rem', borderBottom: '1px solid rgba(52,152,219,0.3)', letterSpacing: '0.08em' }}>TAXI SQUAD</div>
+                            <div style={{ color: '#3498DB', fontSize: '0.85rem', fontWeight: '700', marginBottom: '0.5rem', paddingBottom: '0.4rem', borderBottom: '1px solid rgba(52,152,219,0.3)', letterSpacing: '0.08em' }}>TAXI SQUAD</div>
                             {taxi.map((id, i) => <PlayerRow key={i} playerId={id} section="taxi" />)}
                         </div>
                     )}
@@ -1145,19 +1194,19 @@
         const navButtons = [
             { label: 'Main', action: onBack },
             { label: 'Team Comps', url: 'https://skjjcruz.github.io/fantasy-football-owner-dashboard/' },
-            { label: 'Matchup', url: `https://sleeper.com/leagues/${league.id}/matchup` },
-            { label: 'Draft Board', url: `https://sleeper.com/leagues/${league.id}/draft` },
-            { label: 'Trades', url: `https://sleeper.com/leagues/${league.id}/trades` },
-            { label: 'Free Agents', url: `https://sleeper.com/leagues/${league.id}/players` }
+            { label: 'Matchup', url: `https://sleeper.com/leagues/${currentLeague.id}/matchup` },
+            { label: 'Draft Board', url: `https://sleeper.com/leagues/${currentLeague.id}/draft` },
+            { label: 'Trades', url: `https://sleeper.com/leagues/${currentLeague.id}/trades` },
+            { label: 'Free Agents', url: `https://sleeper.com/leagues/${currentLeague.id}/players` }
         ];
 
         return (
             <div className="app-container" style={{ paddingBottom: '60px' }}>
                 {/* Header */}
                 <header className="header" style={{ position: 'relative', marginBottom: '0', paddingBottom: '0.75rem' }}>
-                    <div className="header-title">{league.name}</div>
+                    <div className="header-title">{currentLeague.name}</div>
                     <div style={{ textAlign: 'center', color: 'var(--gold)', fontSize: '1.1rem', fontFamily: 'Oswald, sans-serif', marginTop: '0.25rem' }}>
-                        {league.season} SEASON
+                        {activeYear} SEASON
                     </div>
                 </header>
 
@@ -1227,13 +1276,13 @@
                                     fontSize: '0.68rem',
                                     fontWeight: '700',
                                     fontFamily: 'Oswald, sans-serif',
-                                    color: year === league.season ? 'var(--black)' : 'var(--silver)',
-                                    background: year === league.season ? 'var(--gold)' : 'transparent',
-                                    cursor: year === league.season ? 'default' : 'pointer',
-                                    opacity: year === league.season ? 1 : 0.4,
+                                    color: year === activeYear ? 'var(--black)' : 'var(--silver)',
+                                    background: year === activeYear ? 'var(--gold)' : 'transparent',
+                                    cursor: year === activeYear ? 'default' : 'pointer',
+                                    opacity: year === activeYear ? 1 : 0.4,
                                     transition: 'all 0.2s'
                                 }}
-                                onClick={() => { if (year !== league.season) onBack(); }}
+                                onClick={() => switchYear(year)}
                             >
                                 {year}
                             </div>
@@ -1260,7 +1309,7 @@
 
                         {/* LEFT COLUMN - Clickable Owners */}
                         <div style={{ background: 'var(--black)', border: '2px solid rgba(212, 175, 55, 0.3)', borderRadius: '12px', padding: '1rem' }}>
-                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.2rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)' }}>OWNERS</h3>
+                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.4rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)' }}>OWNERS</h3>
 
                             {standings.map((team, idx) => {
                                 const isViewing = team.userId === viewingOwnerId;
@@ -1282,17 +1331,17 @@
                                             transition: 'all 0.2s ease'
                                         }}
                                     >
-                                        <div style={{ width: '18px', color: 'var(--gold)', fontWeight: '700', fontSize: '0.7rem', textAlign: 'center', flexShrink: 0 }}>{idx + 1}</div>
+                                        <div style={{ width: '20px', color: 'var(--gold)', fontWeight: '700', fontSize: '0.8rem', textAlign: 'center', flexShrink: 0 }}>{idx + 1}</div>
                                         {team.avatar ? (
-                                            <img src={`https://sleepercdn.com/avatars/thumbs/${team.avatar}`} alt="" style={{ width: '28px', height: '28px', borderRadius: '50%', border: isViewing ? '2px solid var(--gold)' : '2px solid var(--charcoal)', flexShrink: 0 }} />
+                                            <img src={`https://sleepercdn.com/avatars/thumbs/${team.avatar}`} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', border: isViewing ? '2px solid var(--gold)' : '2px solid var(--charcoal)', flexShrink: 0 }} />
                                         ) : (
-                                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--charcoal)', border: isViewing ? '2px solid var(--gold)' : '2px solid rgba(255,255,255,0.1)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', color: 'var(--silver)' }}>{team.displayName.charAt(0)}</div>
+                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--charcoal)', border: isViewing ? '2px solid var(--gold)' : '2px solid rgba(255,255,255,0.1)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', color: 'var(--silver)' }}>{team.displayName.charAt(0)}</div>
                                         )}
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ color: isViewing ? 'var(--gold)' : isMe ? 'var(--gold)' : 'var(--white)', fontSize: '0.78rem', fontWeight: isViewing || isMe ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: '1.2' }}>
+                                            <div style={{ color: isViewing ? 'var(--gold)' : isMe ? 'var(--gold)' : 'var(--white)', fontSize: '0.88rem', fontWeight: isViewing || isMe ? '700' : '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: '1.2' }}>
                                                 {team.displayName}{isMe ? ' (You)' : ''}
                                             </div>
-                                            <div style={{ color: 'var(--silver)', fontSize: '0.6rem', opacity: 0.7 }}>
+                                            <div style={{ color: 'var(--silver)', fontSize: '0.7rem', opacity: 0.7 }}>
                                                 {team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''} · {team.pointsFor.toFixed(1)} PF
                                             </div>
                                         </div>
@@ -1303,7 +1352,7 @@
 
                         {/* CENTER COLUMN - Roster (changes when owner clicked) */}
                         <div style={{ background: 'var(--black)', border: '2px solid rgba(212, 175, 55, 0.3)', borderRadius: '12px', padding: '1.25rem' }}>
-                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.3rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)' }}>
+                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.5rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)' }}>
                                 {isViewingMyTeam ? 'MY ROSTER' : (viewingOwner?.displayName || 'TEAM') + "'S ROSTER"}
                             </h3>
                             {!isViewingMyTeam && (
@@ -1321,7 +1370,7 @@
 
                         {/* RIGHT COLUMN - Divisions (clickable teams) */}
                         <div style={{ background: 'var(--black)', border: '2px solid rgba(212, 175, 55, 0.3)', borderRadius: '12px', padding: '1rem' }}>
-                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.2rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)' }}>
+                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.4rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)' }}>
                                 {hasDivisions ? 'DIVISIONS' : 'LEAGUE STANDINGS'}
                             </h3>
 
@@ -1335,7 +1384,7 @@
                                 return (
                                     <div key={divKey} style={{ marginBottom: divIdx < divisionKeys.length - 1 ? '1rem' : 0 }}>
                                         {hasDivisions && (
-                                            <div style={{ color: 'var(--gold)', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.4rem', paddingBottom: '0.3rem', borderBottom: '1px solid rgba(212, 175, 55, 0.2)' }}>Division {divKey}</div>
+                                            <div style={{ color: 'var(--gold)', fontSize: '0.82rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', paddingBottom: '0.35rem', borderBottom: '1px solid rgba(212, 175, 55, 0.2)' }}>Division {divKey}</div>
                                         )}
                                         {divSorted.map(team => (
                                             <div
@@ -1345,8 +1394,8 @@
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'space-between',
-                                                    padding: '0.4rem 0.5rem',
-                                                    marginBottom: '0.2rem',
+                                                    padding: '0.5rem 0.6rem',
+                                                    marginBottom: '0.3rem',
                                                     background: team.userId === viewingOwnerId ? 'rgba(212, 175, 55, 0.12)' : 'transparent',
                                                     border: team.userId === viewingOwnerId ? '1px solid rgba(212, 175, 55, 0.4)' : '1px solid rgba(255, 255, 255, 0.05)',
                                                     borderRadius: '6px',
@@ -1354,17 +1403,17 @@
                                                     transition: 'all 0.2s'
                                                 }}
                                             >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0 }}>
                                                     {team.avatar ? (
-                                                        <img src={`https://sleepercdn.com/avatars/thumbs/${team.avatar}`} alt="" style={{ width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0 }} />
+                                                        <img src={`https://sleepercdn.com/avatars/thumbs/${team.avatar}`} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0 }} />
                                                     ) : (
-                                                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--charcoal)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', color: 'var(--silver)' }}>{team.displayName.charAt(0)}</div>
+                                                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--charcoal)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', color: 'var(--silver)' }}>{team.displayName.charAt(0)}</div>
                                                     )}
-                                                    <span style={{ color: team.userId === viewingOwnerId ? 'var(--gold)' : 'var(--white)', fontSize: '0.75rem', fontWeight: team.userId === viewingOwnerId ? '700' : '400', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.displayName}</span>
+                                                    <span style={{ color: team.userId === viewingOwnerId ? 'var(--gold)' : 'var(--white)', fontSize: '0.85rem', fontWeight: team.userId === viewingOwnerId ? '700' : '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.displayName}</span>
                                                 </div>
                                                 <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                                                    <div style={{ color: 'var(--silver)', fontSize: '0.68rem', fontWeight: '600' }}>{team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}</div>
-                                                    <div style={{ color: 'var(--gold)', fontSize: '0.58rem', opacity: 0.7 }}>{team.pointsFor.toFixed(1)}</div>
+                                                    <div style={{ color: 'var(--silver)', fontSize: '0.78rem', fontWeight: '600' }}>{team.wins}-{team.losses}{team.ties > 0 ? `-${team.ties}` : ''}</div>
+                                                    <div style={{ color: 'var(--gold)', fontSize: '0.68rem', opacity: 0.7 }}>{team.pointsFor.toFixed(1)}</div>
                                                 </div>
                                             </div>
                                         ))}
