@@ -739,6 +739,10 @@
         return await fetchJSON(`${SLEEPER_BASE_URL}/league/${leagueId}/users`);
     }
 
+    async function fetchLeagueInfo(leagueId) {
+        return await fetchJSON(`${SLEEPER_BASE_URL}/league/${leagueId}`);
+    }
+
     let _playersCache = null;
     async function fetchAllPlayers() {
         if (_playersCache) return _playersCache;
@@ -936,21 +940,57 @@
             setError(null);
             setActiveYear(year);
             try {
-                const userLeagues = await fetchUserLeagues(sleeperUserId, year);
-                const match = userLeagues.find(l => l.name === currentLeague.name) || userLeagues[0];
-                if (!match) {
+                const targetYear = parseInt(year);
+                const currentYear = parseInt(activeYear);
+                let targetLeagueId = null;
+
+                if (targetYear < currentYear) {
+                    // Going backward: walk previous_league_id chain
+                    let leagueId = currentLeague.id;
+                    for (let y = currentYear; y > targetYear && leagueId; y--) {
+                        const leagueInfo = await fetchLeagueInfo(leagueId);
+                        leagueId = leagueInfo?.previous_league_id || null;
+                    }
+                    targetLeagueId = leagueId;
+                } else {
+                    // Going forward: get user leagues for target year, then check which one chains back to current league
+                    const userLeagues = await fetchUserLeagues(sleeperUserId, year);
+                    for (const lg of userLeagues) {
+                        // Walk this league's previous_league_id chain to see if it connects to our current league
+                        let checkId = lg.previous_league_id;
+                        let steps = targetYear - currentYear;
+                        while (steps > 1 && checkId) {
+                            const info = await fetchLeagueInfo(checkId);
+                            checkId = info?.previous_league_id || null;
+                            steps--;
+                        }
+                        if (checkId === currentLeague.id) {
+                            targetLeagueId = lg.league_id;
+                            break;
+                        }
+                    }
+                    // Fallback: match by name if chain doesn't connect
+                    if (!targetLeagueId) {
+                        const nameMatch = userLeagues.find(l => l.name === currentLeague.name);
+                        targetLeagueId = nameMatch ? nameMatch.league_id : (userLeagues[0] ? userLeagues[0].league_id : null);
+                    }
+                }
+
+                if (!targetLeagueId) {
                     setError('No leagues found for ' + year);
                     setLoading(false);
                     return;
                 }
-                const [rosters, users] = await Promise.all([
-                    fetchLeagueRosters(match.league_id),
-                    fetchLeagueUsers(match.league_id)
+
+                const [leagueInfo, rosters, users] = await Promise.all([
+                    fetchLeagueInfo(targetLeagueId),
+                    fetchLeagueRosters(targetLeagueId),
+                    fetchLeagueUsers(targetLeagueId)
                 ]);
                 setViewingOwnerId(sleeperUserId);
                 setCurrentLeague({
-                    id: match.league_id,
-                    name: match.name,
+                    id: targetLeagueId,
+                    name: leagueInfo.name,
                     season: year,
                     rosters,
                     users
@@ -1093,7 +1133,6 @@
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
-                            flex: 1,
                             color: 'var(--white)',
                             fontSize: '0.92rem',
                             overflow: 'hidden',
@@ -1101,15 +1140,15 @@
                             whiteSpace: 'nowrap',
                             textDecoration: 'none',
                             transition: 'color 0.2s',
-                            minWidth: 0
+                            flexShrink: 0
                         }}
                         onMouseEnter={e => e.target.style.color = 'var(--gold)'}
                         onMouseLeave={e => e.target.style.color = 'var(--white)'}
                     >
                         {getPlayerName(playerId)} <span style={{ fontSize: '0.68rem', color: 'var(--silver)', opacity: 0.5 }}>{team}</span>
                     </a>
-                    {/* Stats + pts on the right */}
-                    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    {/* Stats centered in middle */}
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0 }}>
                         {statLine && (
                             <span style={{
                                 fontSize: '0.65rem',
@@ -1121,19 +1160,21 @@
                                 {statLine}
                             </span>
                         )}
-                        {pts && (
-                            <span style={{
-                                fontSize: '0.78rem',
-                                color: 'var(--gold)',
-                                fontWeight: '700',
-                                whiteSpace: 'nowrap',
-                                minWidth: '42px',
-                                textAlign: 'right'
-                            }}>
-                                {pts}
-                            </span>
-                        )}
                     </div>
+                    {/* Points on the right */}
+                    {pts && (
+                        <span style={{
+                            fontSize: '0.78rem',
+                            color: 'var(--gold)',
+                            fontWeight: '700',
+                            whiteSpace: 'nowrap',
+                            minWidth: '42px',
+                            textAlign: 'right',
+                            flexShrink: 0
+                        }}>
+                            {pts}
+                        </span>
+                    )}
                 </div>
             );
         }
