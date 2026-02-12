@@ -253,6 +253,12 @@
         gap: 0.5rem;
         padding-bottom: 0.5rem;
         border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--black);
+        margin: -1rem -1rem 0.75rem -1rem;
+        padding: 1rem 1rem 0.5rem 1rem;
     }
 
     .league-item {
@@ -432,6 +438,12 @@
         color: var(--gold);
         margin-bottom: 1rem;
         letter-spacing: 0.15em;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--black);
+        margin: -1.5rem -1.5rem 1rem -1.5rem;
+        padding: 1.5rem 1.5rem 0.5rem 1.5rem;
     }
 
     .event-item {
@@ -1395,7 +1407,7 @@
 
                         {/* LEFT COLUMN - Clickable Owners */}
                         <div style={{ background: 'var(--black)', border: '2px solid rgba(212, 175, 55, 0.3)', borderRadius: '12px', padding: '1rem' }}>
-                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.4rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)' }}>OWNERS</h3>
+                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.4rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)', position: 'sticky', top: 0, zIndex: 1, background: 'var(--black)', margin: '-1rem -1rem 0.75rem -1rem', padding: '1rem 1rem 0.5rem 1rem' }}>OWNERS</h3>
 
                             {standings.map((team, idx) => {
                                 const isViewing = team.userId === viewingOwnerId;
@@ -1438,7 +1450,7 @@
 
                         {/* CENTER COLUMN - Roster (changes when owner clicked) */}
                         <div style={{ background: 'var(--black)', border: '2px solid rgba(212, 175, 55, 0.3)', borderRadius: '12px', padding: '1.25rem' }}>
-                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.5rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)' }}>
+                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.5rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)', position: 'sticky', top: 0, zIndex: 1, background: 'var(--black)', margin: '-1.25rem -1.25rem 0.75rem -1.25rem', padding: '1.25rem 1.25rem 0.5rem 1.25rem' }}>
                                 {isViewingMyTeam ? 'MY ROSTER' : (viewingOwner?.displayName || 'TEAM') + "'S ROSTER"}
                             </h3>
                             {!isViewingMyTeam && (
@@ -1456,7 +1468,7 @@
 
                         {/* RIGHT COLUMN - Divisions (clickable teams) */}
                         <div style={{ background: 'var(--black)', border: '2px solid rgba(212, 175, 55, 0.3)', borderRadius: '12px', padding: '1rem' }}>
-                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.4rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)' }}>
+                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.4rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)', position: 'sticky', top: 0, zIndex: 1, background: 'var(--black)', margin: '-1rem -1rem 0.75rem -1rem', padding: '1rem 1rem 0.5rem 1rem' }}>
                                 {hasDivisions ? 'DIVISIONS' : 'LEAGUE STANDINGS'}
                             </h3>
 
