@@ -1364,7 +1364,7 @@
 
                         {/* LEFT COLUMN - Clickable Owners */}
                         <div style={{ background: 'var(--black)', border: '2px solid rgba(212, 175, 55, 0.3)', borderRadius: '12px', padding: '1rem' }}>
-                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.2rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)' }}>OWNERS</h3>
+                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.4rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)' }}>OWNERS</h3>
 
                             {standings.map((team, idx) => {
                                 const isViewing = team.userId === viewingOwnerId;
@@ -1386,7 +1386,7 @@
                                             transition: 'all 0.2s ease'
                                         }}
                                     >
-                                        <div style={{ width: '18px', color: 'var(--gold)', fontWeight: '700', fontSize: '0.7rem', textAlign: 'center', flexShrink: 0 }}>{idx + 1}</div>
+                                        <div style={{ width: '20px', color: 'var(--gold)', fontWeight: '700', fontSize: '0.8rem', textAlign: 'center', flexShrink: 0 }}>{idx + 1}</div>
                                         {team.avatar ? (
                                             <img src={`https://sleepercdn.com/avatars/thumbs/${team.avatar}`} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', border: isViewing ? '2px solid var(--gold)' : '2px solid var(--charcoal)', flexShrink: 0 }} />
                                         ) : (
