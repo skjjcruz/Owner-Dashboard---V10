@@ -213,7 +213,8 @@
     @media (min-width: 768px) {
         .league-window {
             max-height: 400px;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
     }
 
@@ -228,16 +229,22 @@
         }
     }
 
-    .league-window::-webkit-scrollbar {
+    .league-window-scroll {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    .league-window-scroll::-webkit-scrollbar {
         width: 6px;
     }
 
-    .league-window::-webkit-scrollbar-track {
+    .league-window-scroll::-webkit-scrollbar-track {
         background: rgba(212, 175, 55, 0.1);
         border-radius: 3px;
     }
 
-    .league-window::-webkit-scrollbar-thumb {
+    .league-window-scroll::-webkit-scrollbar-thumb {
         background: var(--gold);
         border-radius: 3px;
     }
@@ -253,12 +260,7 @@
         gap: 0.5rem;
         padding-bottom: 0.5rem;
         border-bottom: 1px solid rgba(212, 175, 55, 0.3);
-        position: sticky;
-        top: 0;
-        z-index: 1;
-        background: var(--black);
-        margin: -1rem -1rem 0.75rem -1rem;
-        padding: 1rem 1rem 0.5rem 1rem;
+        flex-shrink: 0;
     }
 
     .league-item {
@@ -414,20 +416,27 @@
     @media (min-width: 768px) {
         .key-events {
             max-height: 600px;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
     }
 
-    .key-events::-webkit-scrollbar {
+    .key-events-scroll {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    .key-events-scroll::-webkit-scrollbar {
         width: 6px;
     }
 
-    .key-events::-webkit-scrollbar-track {
+    .key-events-scroll::-webkit-scrollbar-track {
         background: rgba(212, 175, 55, 0.1);
         border-radius: 3px;
     }
 
-    .key-events::-webkit-scrollbar-thumb {
+    .key-events-scroll::-webkit-scrollbar-thumb {
         background: var(--gold);
         border-radius: 3px;
     }
@@ -438,12 +447,7 @@
         color: var(--gold);
         margin-bottom: 1rem;
         letter-spacing: 0.15em;
-        position: sticky;
-        top: 0;
-        z-index: 1;
-        background: var(--black);
-        margin: -1.5rem -1.5rem 1rem -1.5rem;
-        padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+        flex-shrink: 0;
     }
 
     .event-item {
@@ -1392,11 +1396,17 @@
                             .league-detail-grid { grid-template-columns: 220px 1fr 260px !important; }
                             .league-detail-grid > div {
                                 max-height: calc(100vh - 200px);
-                                overflow-y: auto;
+                                display: flex;
+                                flex-direction: column;
                             }
-                            .league-detail-grid > div::-webkit-scrollbar { width: 6px; }
-                            .league-detail-grid > div::-webkit-scrollbar-track { background: rgba(212,175,55,0.1); border-radius: 3px; }
-                            .league-detail-grid > div::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+                            .league-detail-scroll {
+                                flex: 1;
+                                overflow-y: auto;
+                                min-height: 0;
+                            }
+                            .league-detail-scroll::-webkit-scrollbar { width: 6px; }
+                            .league-detail-scroll::-webkit-scrollbar-track { background: rgba(212,175,55,0.1); border-radius: 3px; }
+                            .league-detail-scroll::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
                         }
                         @media (min-width: 1200px) {
                             .league-detail-grid { grid-template-columns: 260px 1fr 300px !important; }
@@ -1407,8 +1417,9 @@
 
                         {/* LEFT COLUMN - Clickable Owners */}
                         <div style={{ background: 'var(--black)', border: '2px solid rgba(212, 175, 55, 0.3)', borderRadius: '12px', padding: '1rem' }}>
-                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.4rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)', position: 'sticky', top: 0, zIndex: 1, background: 'var(--black)', margin: '-1rem -1rem 0.75rem -1rem', padding: '1rem 1rem 0.5rem 1rem' }}>OWNERS</h3>
+                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.4rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)', flexShrink: 0 }}>OWNERS</h3>
 
+                            <div className="league-detail-scroll">
                             {standings.map((team, idx) => {
                                 const isViewing = team.userId === viewingOwnerId;
                                 const isMe = team.userId === sleeperUserId;
@@ -1446,32 +1457,36 @@
                                     </div>
                                 );
                             })}
+                            </div>
                         </div>
 
                         {/* CENTER COLUMN - Roster (changes when owner clicked) */}
                         <div style={{ background: 'var(--black)', border: '2px solid rgba(212, 175, 55, 0.3)', borderRadius: '12px', padding: '1.25rem' }}>
-                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.5rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)', position: 'sticky', top: 0, zIndex: 1, background: 'var(--black)', margin: '-1.25rem -1.25rem 0.75rem -1.25rem', padding: '1.25rem 1.25rem 0.5rem 1.25rem' }}>
+                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.5rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)', flexShrink: 0 }}>
                                 {isViewingMyTeam ? 'MY ROSTER' : (viewingOwner?.displayName || 'TEAM') + "'S ROSTER"}
                             </h3>
-                            {!isViewingMyTeam && (
-                                <div
-                                    onClick={() => setViewingOwnerId(sleeperUserId)}
-                                    style={{ textAlign: 'center', marginBottom: '0.75rem', cursor: 'pointer', fontSize: '0.7rem', color: 'var(--gold)', opacity: 0.7, transition: 'opacity 0.2s' }}
-                                    onMouseEnter={e => e.target.style.opacity = 1}
-                                    onMouseLeave={e => e.target.style.opacity = 0.7}
-                                >
-                                    ← Back to My Roster
-                                </div>
-                            )}
-                            <RosterSection roster={viewingRoster} />
+                            <div className="league-detail-scroll">
+                                {!isViewingMyTeam && (
+                                    <div
+                                        onClick={() => setViewingOwnerId(sleeperUserId)}
+                                        style={{ textAlign: 'center', marginBottom: '0.75rem', cursor: 'pointer', fontSize: '0.7rem', color: 'var(--gold)', opacity: 0.7, transition: 'opacity 0.2s' }}
+                                        onMouseEnter={e => e.target.style.opacity = 1}
+                                        onMouseLeave={e => e.target.style.opacity = 0.7}
+                                    >
+                                        ← Back to My Roster
+                                    </div>
+                                )}
+                                <RosterSection roster={viewingRoster} />
+                            </div>
                         </div>
 
                         {/* RIGHT COLUMN - Divisions (clickable teams) */}
                         <div style={{ background: 'var(--black)', border: '2px solid rgba(212, 175, 55, 0.3)', borderRadius: '12px', padding: '1rem' }}>
-                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.4rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)', position: 'sticky', top: 0, zIndex: 1, background: 'var(--black)', margin: '-1rem -1rem 0.75rem -1rem', padding: '1rem 1rem 0.5rem 1rem' }}>
+                            <h3 style={{ color: 'var(--gold)', fontFamily: 'Bebas Neue, cursive', fontSize: '1.4rem', letterSpacing: '0.1em', marginBottom: '0.75rem', textAlign: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(212, 175, 55, 0.3)', flexShrink: 0 }}>
                                 {hasDivisions ? 'DIVISIONS' : 'LEAGUE STANDINGS'}
                             </h3>
 
+                            <div className="league-detail-scroll">
                             {divisionKeys.map((divKey, divIdx) => {
                                 const divTeams = divisions[divKey];
                                 const divSorted = [...divTeams].sort((a, b) => {
@@ -1518,6 +1533,7 @@
                                     </div>
                                 );
                             })}
+                            </div>
                         </div>
 
                     </div>
@@ -1637,15 +1653,17 @@
                     <div className="left-column">
                         <div className="key-events">
                             <div className="key-events-title">KEY UPCOMING EVENTS</div>
-                            {ownerData.keyEvents.map((event, idx) => (
-                                <div key={idx} className="event-item" title={event.details}>
-                                    <div className="event-header">
-                                        <span className="event-title">{event.title}</span>
-                                        <span className="event-date">{event.date}</span>
+                            <div className="key-events-scroll">
+                                {ownerData.keyEvents.map((event, idx) => (
+                                    <div key={idx} className="event-item" title={event.details}>
+                                        <div className="event-header">
+                                            <span className="event-title">{event.title}</span>
+                                            <span className="event-date">{event.date}</span>
+                                        </div>
+                                        <div className="event-league">{event.league}</div>
                                     </div>
-                                    <div className="event-league">{event.league}</div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
 
@@ -1695,36 +1713,38 @@
                                 </select>
                             </div>
 
-                            {loading ? (
-                                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gold)' }}>
-                                    Loading leagues...
-                                </div>
-                            ) : error ? (
-                                <div style={{ padding: '1rem', textAlign: 'center', color: '#E74C3C', fontSize: '0.85rem' }}>
-                                    {error}
-                                </div>
-                            ) : sleeperLeagues.length === 0 ? (
-                                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--silver)', fontSize: '0.85rem' }}>
-                                    No leagues found for {selectedYear}
-                                </div>
-                            ) : (
-                                sleeperLeagues.map(league => (
-                                    <div 
-                                        key={league.id} 
-                                        className={`league-item ${activeLeagueId === league.id ? 'active' : ''}`}
-                                        onClick={() => {
-                                            setActiveLeagueId(league.id);
-                                            setSelectedLeague(league);
-                                            console.log('League clicked:', league);
-                                        }}
-                                    >
-                                        <div className="league-item-name">{league.name}</div>
-                                        <div className="league-item-record">
-                                            {league.wins}-{league.losses}{league.ties > 0 ? `-${league.ties}` : ''} • {league.championships} 🏆
-                                        </div>
+                            <div className="league-window-scroll">
+                                {loading ? (
+                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gold)' }}>
+                                        Loading leagues...
                                     </div>
-                                ))
-                            )}
+                                ) : error ? (
+                                    <div style={{ padding: '1rem', textAlign: 'center', color: '#E74C3C', fontSize: '0.85rem' }}>
+                                        {error}
+                                    </div>
+                                ) : sleeperLeagues.length === 0 ? (
+                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--silver)', fontSize: '0.85rem' }}>
+                                        No leagues found for {selectedYear}
+                                    </div>
+                                ) : (
+                                    sleeperLeagues.map(league => (
+                                        <div
+                                            key={league.id}
+                                            className={`league-item ${activeLeagueId === league.id ? 'active' : ''}`}
+                                            onClick={() => {
+                                                setActiveLeagueId(league.id);
+                                                setSelectedLeague(league);
+                                                console.log('League clicked:', league);
+                                            }}
+                                        >
+                                            <div className="league-item-name">{league.name}</div>
+                                            <div className="league-item-record">
+                                                {league.wins}-{league.losses}{league.ties > 0 ? `-${league.ties}` : ''} • {league.championships} 🏆
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
                     </div>
 
