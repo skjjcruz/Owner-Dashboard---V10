@@ -951,6 +951,29 @@
             return pts !== null ? Number(pts).toFixed(1) : null;
         }
 
+        function getPlayerStatLine(playerId) {
+            const s = statsData[playerId];
+            if (!s) return null;
+            const pos = getPlayerPosition(playerId);
+            const fmt = (n) => n != null ? Math.round(n).toLocaleString() : '0';
+            switch (pos) {
+                case 'QB':
+                    return `${fmt(s.pass_yd)} YD · ${fmt(s.pass_td)} TD · ${fmt(s.pass_int)} INT`;
+                case 'RB':
+                    return `${fmt(s.rush_yd)} YD · ${fmt(s.rush_td)} TD · ${fmt(s.rec)} REC`;
+                case 'WR':
+                    return `${fmt(s.rec)} REC · ${fmt(s.rec_yd)} YD · ${fmt(s.rec_td)} TD`;
+                case 'TE':
+                    return `${fmt(s.rec)} REC · ${fmt(s.rec_yd)} YD · ${fmt(s.rec_td)} TD`;
+                case 'K':
+                    return `${fmt(s.fgm)} FG · ${fmt(s.xpm)} XP`;
+                case 'DEF':
+                    return s.pts_allow != null ? `${fmt(s.pts_allow)} PA` : null;
+                default:
+                    return null;
+            }
+        }
+
         function getPositionColor(pos) {
             const colors = { QB: '#FF6B6B', RB: '#4ECDC4', WR: '#45B7D1', TE: '#F7DC6F', K: '#BB8FCE', DEF: '#85929E' };
             return colors[pos] || 'var(--silver)';
@@ -984,6 +1007,7 @@
         function PlayerRow({ playerId, section }) {
             const pos = getPlayerPosition(playerId);
             const pts = getPlayerFantasyPts(playerId);
+            const statLine = getPlayerStatLine(playerId);
             const team = getPlayerTeam(playerId);
             const borderColor = section === 'starter' ? 'var(--gold)' : section === 'ir' ? '#E74C3C' : section === 'taxi' ? '#3498DB' : 'transparent';
             const bgColor = section === 'starter' ? 'rgba(212, 175, 55, 0.05)' : section === 'ir' ? 'rgba(231, 76, 60, 0.05)' : section === 'taxi' ? 'rgba(52, 152, 219, 0.05)' : 'rgba(255, 255, 255, 0.02)';
@@ -991,13 +1015,14 @@
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    padding: '0.35rem 0.5rem',
-                    marginBottom: '0.2rem',
+                    padding: '0.4rem 0.5rem',
+                    marginBottom: '0.25rem',
                     background: bgColor,
                     borderLeft: borderColor !== 'transparent' ? `3px solid ${borderColor}` : 'none',
                     borderRadius: '4px',
                     gap: '0.5rem'
                 }}>
+                    {/* Gold position box */}
                     <span style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -1015,46 +1040,51 @@
                     }}>
                         {pos}
                     </span>
-                    <a
-                        href={`https://sleeper.com/players/nfl/${playerId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                            flex: 1,
-                            color: 'var(--white)',
-                            fontSize: '0.82rem',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            textDecoration: 'none',
-                            transition: 'color 0.2s'
-                        }}
-                        onMouseEnter={e => e.target.style.color = 'var(--gold)'}
-                        onMouseLeave={e => e.target.style.color = 'var(--white)'}
-                    >
-                        {getPlayerName(playerId)}
-                    </a>
+                    {/* Name + stat line */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <a
+                                href={`https://sleeper.com/players/nfl/${playerId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    color: 'var(--white)',
+                                    fontSize: '0.82rem',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    textDecoration: 'none',
+                                    transition: 'color 0.2s'
+                                }}
+                                onMouseEnter={e => e.target.style.color = 'var(--gold)'}
+                                onMouseLeave={e => e.target.style.color = 'var(--white)'}
+                            >
+                                {getPlayerName(playerId)}
+                            </a>
+                            <span style={{ flexShrink: 0, color: 'var(--silver)', fontSize: '0.6rem', opacity: 0.45 }}>{team}</span>
+                        </div>
+                        {statLine && (
+                            <div style={{
+                                fontSize: '0.58rem',
+                                color: 'var(--silver)',
+                                opacity: 0.6,
+                                marginTop: '1px',
+                                letterSpacing: '0.02em',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                            }}>
+                                {statLine}
+                            </div>
+                        )}
+                    </div>
+                    {/* Fantasy points */}
                     {pts && (
-                        <span style={{
-                            flexShrink: 0,
-                            fontSize: '0.65rem',
-                            color: 'var(--gold)',
-                            fontWeight: '600',
-                            opacity: 0.85
-                        }}>
-                            {pts}
-                        </span>
+                        <div style={{ flexShrink: 0, textAlign: 'right', minWidth: '38px' }}>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--gold)', fontWeight: '700', lineHeight: '1.1' }}>{pts}</div>
+                            <div style={{ fontSize: '0.48rem', color: 'var(--silver)', opacity: 0.5, textTransform: 'uppercase' }}>pts</div>
+                        </div>
                     )}
-                    <span style={{
-                        flexShrink: 0,
-                        color: 'var(--silver)',
-                        fontSize: '0.65rem',
-                        opacity: 0.5,
-                        width: '28px',
-                        textAlign: 'right'
-                    }}>
-                        {team}
-                    </span>
                 </div>
             );
         }
