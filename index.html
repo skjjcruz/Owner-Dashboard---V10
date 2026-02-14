@@ -27,7 +27,7 @@
         box-sizing: border-box;
     }
 
-    body {
+        body {
         font-family: 'Oswald', sans-serif;
         background: var(--black);
         color: var(--white);
@@ -36,7 +36,6 @@
         min-height: 100vh;
         position: relative;
         -webkit-overflow-scrolling: touch;
-        overscroll-behavior: none;
     }
 
     /* Subdued logo background */
@@ -179,12 +178,14 @@
         gap: 1rem;
     }
 
-    @media (min-width: 768px) {
+   @media (min-width: 768px) {
         .left-column, .center-column, .right-column {
             max-height: calc(100vh - 220px);
             overflow-y: auto;
-            overscroll-behavior: contain;
+            overscroll-behavior: auto;
+            scroll-behavior: smooth;
         }
+
         .left-column::-webkit-scrollbar,
         .center-column::-webkit-scrollbar,
         .right-column::-webkit-scrollbar {
