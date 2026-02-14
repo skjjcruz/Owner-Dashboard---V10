@@ -1,1 +1,86 @@
+import streamlit as st
+import pandas as pd
+from sleeper_wrapper import League, Players
+
+st.set_page_config(layout="wide", page_title="BTM: 16-Team War Room")
+
+@st.cache_data(ttl=86400)
+def get_all_players():
+    return Players().get_all_players()
+
+# Weights tuned for a 22-starter, 250-275pt 16-team league
+DEEP_LEAGUE_WEIGHTS = {
+    "QB": 18, "RB": 14, "WR": 15, "TE": 10, "FLEX": 12, "SUPER_FLEX": 18,
+    "K": 7, "DEF": 7, "DL": 8, "LB": 13, "DB": 9, "IDP_FLEX": 10
+}
+
+def get_calibrated_benchmarks(df, league_details):
+    weeks = max(st.session_state.get('current_week', 1), 1)
+    league_avg = df['PF'].mean() / weeks
+    
+    # We use a 5% premium for 16-team leagues to keep the goal realistic
+    win_threshold = league_avg * 1.05 
+    
+    slots = league_details.get('roster_positions', [])
+    total_w = sum([DEEP_LEAGUE_WEIGHTS.get(s, 10) for s in slots])
+    
+    benchmarks = {}
+    for s in set(slots):
+        count = slots.count(s)
+        benchmarks[s] = round((DEEP_LEAGUE_WEIGHTS.get(s, 10) * count / total_w) * win_threshold, 1)
+    
+    return benchmarks, round(win_threshold, 1)
+
+with st.sidebar:
+    st.write("### 📡 War Room Connection")
+    l_id = st.text_input("Sleeper League ID", "1180557728257867776")
+    curr_week = st.number_input("Current Week", 1, 18, 1)
+    
+    if st.button("Sync & Analyze"):
+        st.session_state.current_week = curr_week
+        league = League(l_id)
+        rosters, users, l_details = league.get_rosters(), league.get_users(), league.get_league()
+        u_map = {u['user_id']: u['display_name'] for u in users}
+        
+        processed = []
+        for r in rosters:
+            owner = u_map.get(r['owner_id'], "Unknown")
+            ppg_proxy = (r['settings'].get('fpts', 0) / curr_week)
+            slots = l_details.get('roster_positions', [])
+            total_w = sum([DEEP_LEAGUE_WEIGHTS.get(s, 10) for s in slots])
+            
+            # Map actual PPG to positions accurately
+            pos_scores = {s: round(ppg_proxy * (DEEP_LEAGUE_WEIGHTS.get(s, 10) * slots.count(s) / total_w), 1) 
+                          for s in set(slots)}
+            
+            processed.append({"Owner": owner, "PF": r['settings'].get('fpts', 0), "Scores": pos_scores, "Roster": r['players']})
+        
+        st.session_state.df = pd.DataFrame(processed)
+        st.session_state.league_details = l_details
+        st.session_state.all_players = get_all_players()
+
+if "df" in st.session_state:
+    benchmarks, goal = get_calibrated_benchmarks(st.session_state.df, st.session_state.league_details)
+    st.title("🛡️ 16-Team Internal Roster Audit")
+    st.metric("Contender Goal", f"{goal} PPG", help="Based on League Average + 5% for a 16-team format")
+    
+    target_owner = st.selectbox("Select Team", st.session_state.df['Owner'])
+    owner_data = st.session_state.df[st.session_state.df['Owner'] == target_owner].iloc[0]
+    
+    audit_list = []
+    for pos, target in benchmarks.items():
+        actual = owner_data['Scores'].get(pos, 0)
+        diff = actual - target
+        status = "💎 SURPLUS" if diff > (target * 0.05) else "❌ GAP" if diff < -(target * 0.05) else "⚖️ SOLID"
+        
+        players = [st.session_state.all_players.get(str(pid), {}).get('full_name', 'Unknown') 
+                   for pid in owner_data['Roster'] if st.session_state.all_players.get(str(pid), {}).get('position') == pos]
+
+        audit_list.append({"Position": pos, "Target": target, "Actual": actual, "Status": status, "Players": ", ".join(players)})
+
+    def style_status(row):
+        color = "#00CC96" if "SURPLUS" in row.Status else "#EF553B" if "GAP" in row.Status else "#636EFA"
+        return [f'background-color: {color}; color: white'] * len(row)
+
+    st.dataframe(pd.DataFrame(audit_list).style.apply(style_status, axis=1), use_container_width=True, hide_index=True)
 
