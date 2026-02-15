@@ -234,6 +234,7 @@
     .league-window-scroll {
         flex: 1;
         overflow-y: auto;
+        overflow-x: hidden;
         min-height: 0;
     }
 
@@ -426,6 +427,7 @@
     .key-events-scroll {
         flex: 1;
         overflow-y: auto;
+        overflow-x: hidden;
         min-height: 0;
     }
 
@@ -972,7 +974,7 @@
                 position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
                 background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-start',
                 justifyContent: 'center', zIndex: 1000, padding: '1rem',
-                overflowY: 'auto', WebkitOverflowScrolling: 'touch'
+                overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch'
             }} onClick={onClose}>
                 <div style={{
                     background: 'linear-gradient(135deg, var(--off-black) 0%, var(--charcoal) 100%)',
@@ -1737,6 +1739,7 @@
                             .league-detail-scroll {
                                 flex: 1;
                                 overflow-y: auto;
+                                overflow-x: hidden;
                                 min-height: 0;
                             }
                             .league-detail-scroll::-webkit-scrollbar { width: 6px; }
