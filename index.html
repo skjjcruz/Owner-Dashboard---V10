@@ -27,7 +27,7 @@
         box-sizing: border-box;
     }
 
-    body {
+        body {
         font-family: 'Oswald', sans-serif;
         background: var(--black);
         color: var(--white);
@@ -36,7 +36,6 @@
         min-height: 100vh;
         position: relative;
         -webkit-overflow-scrolling: touch;
-        overscroll-behavior: none;
     }
 
     /* Subdued logo background */
@@ -180,13 +179,15 @@
         overflow-x: hidden;
     }
 
-    @media (min-width: 768px) {
+   @media (min-width: 768px) {
         .left-column, .center-column, .right-column {
             max-height: calc(100vh - 220px);
             overflow-y: auto;
             overflow-x: hidden;
             overscroll-behavior: contain;
+            scroll-behavior: smooth;
         }
+
         .left-column::-webkit-scrollbar,
         .center-column::-webkit-scrollbar,
         .right-column::-webkit-scrollbar {
@@ -1632,7 +1633,7 @@
             { label: 'Main', action: onBack },
             { label: 'Team Comps', url: 'https://skjjcruz.github.io/fantasy-football-owner-dashboard/' },
             { label: 'Matchup', url: `https://sleeper.com/leagues/${currentLeague.id}/matchup` },
-            { label: 'Draft Board', url: `https://sleeper.com/leagues/${currentLeague.id}/draft` },
+            { label: 'Draft Board', url: 'https://skjjcruz.github.io/Owner-Dashboard--V7/' },
             { label: 'Trades', url: `https://sleeper.com/leagues/${currentLeague.id}/trades` },
             { label: 'Free Agents', url: `https://sleeper.com/leagues/${currentLeague.id}/players` }
         ];
