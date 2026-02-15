@@ -817,11 +817,26 @@
     function loadCalendarEvents() {
         try {
             const raw = localStorage.getItem(CALENDAR_KEY);
-            if (raw) return JSON.parse(raw);
-            // Seed defaults on first load
+            if (raw) {
+                const saved = JSON.parse(raw);
+                // Merge: keep all saved events + add any new defaults not already present
+                const savedIds = new Set(saved.map(e => e.id));
+                const missing = DEFAULT_EVENTS.filter(d => !savedIds.has(d.id));
+                if (missing.length > 0) {
+                    const merged = [...saved, ...missing];
+                    saveCalendarEvents(merged);
+                    return merged;
+                }
+                return saved;
+            }
+            // First load — seed defaults
             saveCalendarEvents(DEFAULT_EVENTS);
             return DEFAULT_EVENTS;
-        } catch (e) { return []; }
+        } catch (e) {
+            // Corrupted storage — fall back to defaults instead of empty
+            saveCalendarEvents(DEFAULT_EVENTS);
+            return DEFAULT_EVENTS;
+        }
     }
 
     function saveCalendarEvents(events) {
