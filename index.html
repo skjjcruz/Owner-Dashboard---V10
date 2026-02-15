@@ -183,7 +183,8 @@
         .left-column, .center-column, .right-column {
             max-height: calc(100vh - 220px);
             overflow-y: auto;
-            overscroll-behavior: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
             scroll-behavior: smooth;
         }
 
@@ -726,12 +727,13 @@
             left: 0;
             right: 0;
             flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
             background: linear-gradient(180deg, transparent 0%, var(--black) 20%, var(--black) 100%);
-            padding: 1rem;
+            padding: 0.5rem 1rem;
             gap: 0.5rem;
             z-index: 50;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+            overflow-x: hidden;
             overscroll-behavior: contain;
         }
 
