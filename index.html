@@ -189,10 +189,14 @@
         }
 
         .right-column {
+            box-sizing: content-box;
+            max-height: calc(100vh - 180px);
             overflow-y: auto;
             overflow-x: hidden;
+            align-self: start;
             overscroll-behavior: contain;
             scroll-behavior: smooth;
+            padding-bottom: 2rem;
         }
 
         .left-column::-webkit-scrollbar,
