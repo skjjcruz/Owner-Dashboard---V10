@@ -843,6 +843,19 @@
         localStorage.setItem(CALENDAR_KEY, JSON.stringify(events));
     }
 
+    function exportCalendarEvents(events) {
+        const payload = { version: 1, exported: new Date().toISOString(), events };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'owner-dashboard-calendar.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
     function getUpcomingEvents(events) {
         const now = new Date();
         now.setHours(0, 0, 0, 0);
@@ -960,7 +973,7 @@
     }
 
     // ===== CALENDAR MODAL =====
-    function CalendarModal({ events, onClose, onAddEvent, onEditEvent, onDeleteEvent }) {
+    function CalendarModal({ events, onClose, onAddEvent, onEditEvent, onDeleteEvent, onExport, onImportFile }) {
         const today = new Date();
         const [viewYear, setViewYear] = useState(today.getFullYear());
         const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -1084,6 +1097,29 @@
                         fontFamily: 'Oswald, sans-serif', fontSize: '0.9rem', fontWeight: '700',
                         cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.08em'
                     }}>+ Add Event</button>
+
+                    {/* Backup / Restore */}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <button onClick={onExport} style={{
+                            flex: 1, padding: '0.5rem',
+                            background: 'transparent',
+                            border: '1px solid rgba(212,175,55,0.4)', borderRadius: '6px',
+                            color: 'var(--gold)', fontFamily: 'Oswald, sans-serif',
+                            fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer',
+                            textTransform: 'uppercase', letterSpacing: '0.06em'
+                        }}>&#11015; Export Backup</button>
+                        <label style={{
+                            flex: 1, padding: '0.5rem', textAlign: 'center',
+                            background: 'transparent',
+                            border: '1px solid rgba(212,175,55,0.4)', borderRadius: '6px',
+                            color: 'var(--gold)', fontFamily: 'Oswald, sans-serif',
+                            fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer',
+                            textTransform: 'uppercase', letterSpacing: '0.06em'
+                        }}>
+                            &#11014; Import Backup
+                            <input type="file" accept=".json" onChange={onImportFile} style={{ display: 'none' }} />
+                        </label>
+                    </div>
                 </div>
             </div>
         );
@@ -2308,6 +2344,27 @@
                             setShowEventForm(true);
                         }}
                         onDeleteEvent={(id) => handleDeleteEvent(id)}
+                        onExport={() => exportCalendarEvents(calendarEvents)}
+                        onImportFile={(e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                                try {
+                                    const parsed = JSON.parse(ev.target.result);
+                                    const imported = Array.isArray(parsed) ? parsed : parsed.events;
+                                    if (!Array.isArray(imported)) throw new Error('Invalid format');
+                                    if (confirm(`Restore ${imported.length} events from backup? This will replace your current calendar.`)) {
+                                        saveCalendarEvents(imported);
+                                        setCalendarEvents(imported);
+                                    }
+                                } catch (err) {
+                                    alert('Import failed: invalid backup file.');
+                                }
+                                e.target.value = '';
+                            };
+                            reader.readAsText(file);
+                        }}
                     />
                 )}
 
