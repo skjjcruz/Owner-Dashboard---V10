@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Free Agency Tracker - Owner Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #D4AF37;
+            --dark-gold: #B8941E;
+            --black: #0A0A0A;
+            --off-black: #1A1A1A;
+            --charcoal: #2A2A2A;
+            --silver: #C0C0C0;
+            --white: #FFFFFF;
+            --win-green: #2ECC71;
+            --loss-red: #E74C3C;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Oswald', sans-serif;
+            background: var(--black);
+            color: var(--white);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(212,175,55,0.05); }
+        ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }
+
+        /* ---- Header ---- */
+        .tracker-header {
+            background: linear-gradient(135deg, var(--off-black) 0%, var(--charcoal) 100%);
+            border-bottom: 2px solid var(--gold);
+            padding: 0.6rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+        .tracker-title {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 1.3rem;
+            color: var(--gold);
+            letter-spacing: 0.1em;
+            flex: 1;
+            white-space: nowrap;
+        }
+        .back-btn {
+            background: transparent;
+            border: 1.5px solid var(--gold);
+            color: var(--gold);
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.35rem 0.7rem;
+            border-radius: 4px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            flex-shrink: 0;
+        }
+        .back-btn:hover { background: rgba(212,175,55,0.12); }
+        .league-select {
+            background: var(--charcoal);
+            border: 1.5px solid rgba(212,175,55,0.4);
+            color: var(--white);
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.78rem;
+            padding: 0.35rem 0.6rem;
+            border-radius: 4px;
+            cursor: pointer;
+            max-width: 200px;
+        }
+        .faab-badge {
+            background: rgba(212,175,55,0.1);
+            border: 1px solid rgba(212,175,55,0.35);
+            color: var(--gold);
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.2rem 0.45rem;
+            border-radius: 3px;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+        }
+        .header-user {
+            color: var(--silver);
+            font-size: 0.65rem;
+            opacity: 0.55;
+            white-space: nowrap;
+        }
+
+        /* ---- Three-column grid ---- */
+        .tracker-grid {
+            display: grid;
+            grid-template-columns: 210px 1fr 300px;
+            height: calc(100vh - 48px);
+            overflow: hidden;
+        }
+        @media (max-width: 860px) {
+            .tracker-grid {
+                grid-template-columns: 1fr;
+                height: auto;
+                overflow: visible;
+            }
+        }
+
+        /* ---- Generic panel ---- */
+        .panel {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-right: 1px solid rgba(212,175,55,0.12);
+        }
+        .panel:last-child { border-right: none; }
+        .panel-header {
+            padding: 0.55rem 0.75rem;
+            background: rgba(212,175,55,0.06);
+            border-bottom: 1px solid rgba(212,175,55,0.18);
+            font-family: 'Bebas Neue', cursive;
+            font-size: 0.9rem;
+            color: var(--gold);
+            letter-spacing: 0.1em;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-shrink: 0;
+        }
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+
+        /* ---- Position badge ---- */
+        .pos-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            flex-shrink: 0;
+            font-size: 0.58rem;
+            font-weight: 700;
+            border: 1.5px solid var(--gold);
+            border-radius: 3px;
+            padding: 2px 0;
+            background: rgba(212,175,55,0.08);
+            letter-spacing: 0.02em;
+        }
+
+        /* ---- Player rows ---- */
+        .player-row {
+            display: flex;
+            align-items: center;
+            padding: 0.28rem 0.35rem;
+            margin-bottom: 0.2rem;
+            background: rgba(255,255,255,0.02);
+            border-radius: 4px;
+            gap: 0.4rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .player-row:hover { background: rgba(212,175,55,0.06); }
+        .player-name {
+            flex: 1;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+        .player-team {
+            font-size: 0.6rem;
+            color: var(--silver);
+            opacity: 0.45;
+        }
+        .pos-group-label {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 0.72rem;
+            color: var(--gold);
+            letter-spacing: 0.1em;
+            padding: 0.45rem 0 0.18rem;
+            opacity: 0.75;
+        }
+
+        /* ---- Center: filter bar + search ---- */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.22rem;
+            padding: 0.45rem 0.55rem;
+            border-bottom: 1px solid rgba(212,175,55,0.12);
+            flex-shrink: 0;
+        }
+        .filter-btn {
+            background: transparent;
+            border: 1px solid rgba(212,175,55,0.28);
+            color: var(--silver);
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 600;
+            padding: 0.18rem 0.38rem;
+            border-radius: 3px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            transition: all 0.12s;
+        }
+        .filter-btn.active {
+            background: var(--gold);
+            border-color: var(--gold);
+            color: var(--black);
+        }
+        .search-wrap {
+            padding: 0.45rem 0.55rem;
+            border-bottom: 1px solid rgba(212,175,55,0.12);
+            flex-shrink: 0;
+        }
+        .search-input {
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(212,175,55,0.28);
+            color: var(--white);
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.78rem;
+            padding: 0.38rem 0.55rem;
+            border-radius: 4px;
+        }
+        .search-input::placeholder { color: rgba(192,192,192,0.35); }
+        .search-input:focus { outline: none; border-color: rgba(212,175,55,0.6); }
+        .add-circle {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 1px solid rgba(212,175,55,0.45);
+            background: transparent;
+            color: var(--gold);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: all 0.12s;
+        }
+        .add-circle:hover { background: var(--gold); color: var(--black); }
+
+        /* ---- Quick-add bar (center panel) ---- */
+        .quick-add-bar {
+            padding: 0.45rem 0.55rem;
+            background: rgba(212,175,55,0.07);
+            border-bottom: 1px solid rgba(212,175,55,0.28);
+            flex-shrink: 0;
+        }
+
+        /* ---- Right: FA Targets ---- */
+        .budget-box {
+            margin: 0.5rem;
+            padding: 0.5rem 0.7rem;
+            background: rgba(212,175,55,0.07);
+            border: 1px solid rgba(212,175,55,0.3);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .budget-label {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 0.72rem;
+            color: var(--gold);
+            letter-spacing: 0.06em;
+        }
+        .budget-sub {
+            font-size: 0.55rem;
+            color: var(--silver);
+            opacity: 0.5;
+            display: block;
+        }
+        .budget-val {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--gold);
+            cursor: pointer;
+            letter-spacing: 0.02em;
+        }
+        .budget-input-inline {
+            background: transparent;
+            border: none;
+            border-bottom: 1.5px solid var(--gold);
+            color: var(--gold);
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            width: 90px;
+            text-align: right;
+            letter-spacing: 0.02em;
+        }
+        .budget-input-inline:focus { outline: none; }
+
+        .add-target-form {
+            display: flex;
+            gap: 0.25rem;
+            padding: 0.4rem 0.5rem;
+            border-bottom: 1px solid rgba(212,175,55,0.12);
+            flex-shrink: 0;
+        }
+        .t-input {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(212,175,55,0.22);
+            color: var(--white);
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.7rem;
+            padding: 0.28rem 0.38rem;
+            border-radius: 3px;
+            min-width: 0;
+        }
+        .t-input::placeholder { color: rgba(192,192,192,0.3); }
+        .t-input:focus { outline: none; border-color: rgba(212,175,55,0.55); }
+        .t-submit {
+            background: var(--gold);
+            border: none;
+            color: var(--black);
+            font-family: 'Oswald', sans-serif;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.28rem 0.55rem;
+            border-radius: 3px;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* ---- Targets table ---- */
+        .targets-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.72rem;
+        }
+        .targets-table th {
+            color: var(--gold);
+            font-family: 'Bebas Neue', cursive;
+            font-size: 0.68rem;
+            letter-spacing: 0.07em;
+            padding: 0.28rem 0.35rem;
+            border-bottom: 1px solid rgba(212,175,55,0.28);
+            font-weight: 400;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .targets-table th:nth-child(1),
+        .targets-table th:nth-child(2) { text-align: left; }
+        .targets-table td {
+            padding: 0.28rem 0.35rem;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            text-align: right;
+            white-space: nowrap;
+        }
+        .targets-table td:nth-child(1),
+        .targets-table td:nth-child(2) { text-align: left; }
+        .targets-table td:nth-child(2) {
+            max-width: 88px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .targets-table tr:hover td { background: rgba(212,175,55,0.04); }
+        .del-btn {
+            background: transparent;
+            border: none;
+            color: rgba(231,76,60,0.55);
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 0 0.15rem;
+            line-height: 1;
+        }
+        .del-btn:hover { color: #E74C3C; }
+        .final-row td {
+            border-top: 1.5px solid rgba(212,175,55,0.35);
+            font-weight: 700;
+            padding-top: 0.38rem;
+        }
+
+        /* ---- States ---- */
+        .center-msg {
+            text-align: center;
+            color: var(--silver);
+            opacity: 0.55;
+            padding: 2rem 1rem;
+            font-size: 0.8rem;
+        }
+        .err-msg { color: #E74C3C; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // ===== AUTH =====
+        const AUTH_KEY = 'od_auth_v1';
+        const authRaw = localStorage.getItem(AUTH_KEY);
+        if (!authRaw) window.location.href = 'login.html';
+        let sleeperUsername = '';
+        try {
+            sleeperUsername = JSON.parse(authRaw).username || '';
+        } catch (e) {
+            localStorage.removeItem(AUTH_KEY);
+            window.location.href = 'login.html';
+        }
+
+        // ===== SLEEPER API =====
+        const SLEEPER_BASE = 'https://api.sleeper.app/v1';
+        async function apiFetch(url) {
+            const r = await fetch(url);
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        }
+        const fetchUser      = u  => apiFetch(`${SLEEPER_BASE}/user/${encodeURIComponent(u)}`);
+        const fetchLeagues   = (uid, yr) => apiFetch(`${SLEEPER_BASE}/user/${uid}/leagues/nfl/${yr}`);
+        const fetchRosters   = id => apiFetch(`${SLEEPER_BASE}/league/${id}/rosters`);
+        const fetchLeagueInfo= id => apiFetch(`${SLEEPER_BASE}/league/${id}`);
+
+        let _playersCache = null;
+        async function fetchPlayers() {
+            if (_playersCache) return _playersCache;
+            _playersCache = await apiFetch(`${SLEEPER_BASE}/players/nfl`);
+            return _playersCache;
+        }
+
+        // ===== CONSTANTS =====
+        const SEASON = '2025';
+        const FA_KEY = id => `od_fa_targets_v1_${id}`;
+
+        const POS_COLORS = {
+            QB:'#FF6B6B', RB:'#4ECDC4', WR:'#45B7D1', TE:'#F7DC6F',
+            K:'#BB8FCE',  DEF:'#85929E', LB:'#F0A500', DL:'#E67E22',
+            DB:'#5DADE2', CB:'#5DADE2', S:'#5DADE2', SS:'#5DADE2', FS:'#5DADE2',
+            DE:'#E67E22', DT:'#E67E22', NT:'#E67E22', OLB:'#F0A500',
+            ILB:'#F0A500', MLB:'#F0A500'
+        };
+        const posColor = p => POS_COLORS[p] || 'var(--silver)';
+
+        // Normalize IDP sub-positions into display groups
+        function normPos(pos) {
+            if (!pos) return null;
+            if (['DB','CB','S','SS','FS'].includes(pos)) return 'DB';
+            if (['DL','DE','DT','NT','IDL','EDGE'].includes(pos)) return 'DL';
+            if (['LB','OLB','ILB','MLB'].includes(pos)) return 'LB';
+            return pos;
+        }
+        const POS_ORDER = { QB:0, RB:1, WR:2, TE:3, K:4, DEF:5, DL:6, LB:7, DB:8 };
+        const posOrder = pos => POS_ORDER[normPos(pos)] ?? 9;
+
+        const FA_POS_FILTERS = ['ALL','QB','RB','WR','TE','K','DEF','LB','DL','DB'];
+        const RELEVANT_POS = new Set([
+            'QB','RB','WR','TE','K','DEF',
+            'LB','OLB','ILB','MLB',
+            'DL','DE','DT','NT','IDL','EDGE',
+            'DB','CB','S','SS','FS'
+        ]);
+
+        // ===== TARGET STORAGE =====
+        function loadTargets(leagueId) {
+            try {
+                const raw = localStorage.getItem(FA_KEY(leagueId));
+                return raw ? JSON.parse(raw) : { startingBudget: 1000, targets: [] };
+            } catch (e) {
+                return { startingBudget: 1000, targets: [] };
+            }
+        }
+        function saveTargets(leagueId, data) {
+            localStorage.setItem(FA_KEY(leagueId), JSON.stringify(data));
+        }
+
+        // ===== APP =====
+        function FreeAgencyTracker() {
+            // Init state
+            const [phase, setPhase]   = useState('boot'); // boot | ready | error
+            const [errMsg, setErrMsg] = useState('');
+            const [userId, setUserId] = useState('');
+            const [leagues, setLeagues]   = useState([]);
+            const [leagueId, setLeagueId] = useState('');
+
+            // League data
+            const [leagueInfo, setLeagueInfo]   = useState(null);
+            const [myRoster, setMyRoster]         = useState(null);
+            const [allRosters, setAllRosters]     = useState([]);
+            const [playersData, setPlayersData]   = useState({});
+            const [leagueLoading, setLeagueLoading] = useState(false);
+
+            // FA filter
+            const [posFilter, setPosFilter] = useState('ALL');
+            const [search, setSearch]       = useState('');
+
+            // Targets
+            const [targets, setTargets]           = useState([]);
+            const [startingBudget, setStartingBudget] = useState(1000);
+            const [editingBudget, setEditingBudget]   = useState(false);
+            const [budgetDraft, setBudgetDraft]       = useState('1000');
+
+            // Add-target form (manual)
+            const [fPos, setFPos]   = useState('');
+            const [fName, setFName] = useState('');
+            const [fCost, setFCost] = useState('');
+
+            // Quick-add (from center panel click)
+            const [quickPlayer, setQuickPlayer] = useState(null);
+            const [quickCost, setQuickCost]     = useState('');
+
+            // ---- Bootstrap ----
+            useEffect(() => { boot(); }, []);
+
+            async function boot() {
+                try {
+                    const user = await fetchUser(sleeperUsername);
+                    setUserId(user.user_id);
+                    const lgs = await fetchLeagues(user.user_id, SEASON);
+                    setLeagues(lgs || []);
+                    if (lgs && lgs.length > 0) setLeagueId(lgs[0].league_id);
+                    setPhase('ready');
+                } catch (e) {
+                    setErrMsg('Failed to connect to Sleeper. Check your network and try again.');
+                    setPhase('error');
+                }
+            }
+
+            // ---- Load league data whenever leagueId or userId changes ----
+            useEffect(() => {
+                if (!leagueId || !userId || phase !== 'ready') return;
+                loadLeague();
+            }, [leagueId, userId, phase]);
+
+            async function loadLeague() {
+                setLeagueLoading(true);
+                setMyRoster(null);
+                setAllRosters([]);
+                setPlayersData({});
+                setPosFilter('ALL');
+                setSearch('');
+                try {
+                    const [rosters, info, players] = await Promise.all([
+                        fetchRosters(leagueId),
+                        fetchLeagueInfo(leagueId),
+                        fetchPlayers()
+                    ]);
+                    const myR = rosters.find(r => r.owner_id === userId) || null;
+                    setMyRoster(myR);
+                    setAllRosters(rosters);
+                    setLeagueInfo(info);
+                    setPlayersData(players);
+
+                    // Load saved targets for this league
+                    const saved = loadTargets(leagueId);
+                    setTargets(saved.targets || []);
+
+                    // Pre-fill starting budget from FAAB remaining if available
+                    const totalBudget = info?.settings?.waiver_budget || 0;
+                    if (totalBudget > 0 && myR) {
+                        const used = myR?.settings?.waiver_budget_used || 0;
+                        const remaining = Math.max(0, totalBudget - used);
+                        const budgetToUse = saved.startingBudget !== 1000 ? saved.startingBudget : remaining;
+                        setStartingBudget(budgetToUse);
+                        setBudgetDraft(String(budgetToUse));
+                    } else {
+                        setStartingBudget(saved.startingBudget || 1000);
+                        setBudgetDraft(String(saved.startingBudget || 1000));
+                    }
+                } catch (e) {
+                    console.error('League load failed:', e);
+                } finally {
+                    setLeagueLoading(false);
+                }
+            }
+
+            // Persist targets whenever they change
+            useEffect(() => {
+                if (!leagueId) return;
+                saveTargets(leagueId, { startingBudget, targets });
+            }, [targets, startingBudget, leagueId]);
+
+            // ---- Derived data ----
+
+            // All player IDs already on a roster in this league
+            const takenIds = useMemo(() =>
+                new Set(allRosters.flatMap(r => r.players || [])),
+                [allRosters]
+            );
+
+            // My roster players grouped by position
+            const myGrouped = useMemo(() => {
+                if (!myRoster?.players || !Object.keys(playersData).length) return {};
+                const g = {};
+                for (const id of myRoster.players) {
+                    const p = playersData[id];
+                    if (!p) continue;
+                    const grp = normPos(p.position) || 'Other';
+                    if (!g[grp]) g[grp] = [];
+                    g[grp].push({ id, p });
+                }
+                return g;
+            }, [myRoster, playersData]);
+            const myGroups = Object.keys(myGrouped).sort((a, b) => posOrder(a) - posOrder(b));
+
+            // Free agents
+            const freeAgents = useMemo(() => {
+                if (!Object.keys(playersData).length || !allRosters.length) return [];
+                return Object.entries(playersData)
+                    .filter(([id, p]) =>
+                        !takenIds.has(id) &&
+                        p.team &&
+                        p.team.trim() !== '' &&
+                        RELEVANT_POS.has(p.position)
+                    )
+                    .map(([id, p]) => ({
+                        id,
+                        name: p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || id,
+                        pos: p.position,
+                        norm: normPos(p.position),
+                        team: p.team
+                    }))
+                    .sort((a, b) => posOrder(a.pos) - posOrder(b.pos) || a.name.localeCompare(b.name));
+            }, [playersData, takenIds]);
+
+            const filteredFAs = useMemo(() => freeAgents.filter(fa => {
+                const posOk = posFilter === 'ALL' || fa.norm === posFilter || fa.pos === posFilter;
+                const q = search.toLowerCase();
+                const srchOk = !q || fa.name.toLowerCase().includes(q) || (fa.team || '').toLowerCase().includes(q);
+                return posOk && srchOk;
+            }), [freeAgents, posFilter, search]);
+
+            // Running totals for targets table
+            const targetRows = useMemo(() => {
+                let bal = startingBudget;
+                return targets.map(t => {
+                    const before = bal;
+                    const after  = before - t.cost;
+                    bal = after;
+                    return { ...t, faDollar: before, remaining: after };
+                });
+            }, [targets, startingBudget]);
+
+            const finalBalance = targetRows.length > 0
+                ? targetRows[targetRows.length - 1].remaining
+                : startingBudget;
+
+            // ---- Handlers ----
+
+            function addTarget(pos, name, cost) {
+                const c = parseInt(cost);
+                if (!name.trim() || isNaN(c) || c < 0) return;
+                setTargets(prev => [...prev, {
+                    id: Date.now().toString(),
+                    pos: (pos || '?').toUpperCase(),
+                    name: name.trim(),
+                    cost: c
+                }]);
+            }
+
+            function deleteTarget(id) {
+                setTargets(prev => prev.filter(t => t.id !== id));
+            }
+
+            function handleFormAdd(e) {
+                e.preventDefault();
+                addTarget(fPos, fName, fCost);
+                setFPos(''); setFName(''); setFCost('');
+            }
+
+            function handleQuickAdd(e) {
+                e.preventDefault();
+                if (!quickPlayer) return;
+                addTarget(quickPlayer.norm || quickPlayer.pos, quickPlayer.name, quickCost);
+                setQuickPlayer(null);
+                setQuickCost('');
+            }
+
+            function commitBudget() {
+                const v = parseInt(budgetDraft);
+                if (!isNaN(v) && v >= 0) setStartingBudget(v);
+                setEditingBudget(false);
+            }
+
+            function remColor(val) {
+                if (val < 0) return '#E74C3C';
+                if (val < startingBudget * 0.1) return '#E67E22';
+                if (val < startingBudget * 0.25) return '#F0A500';
+                return '#2ECC71';
+            }
+
+            // ---- Render: boot / error ----
+            if (phase === 'boot') return (
+                <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'0.75rem' }}>
+                    <div style={{ color:'var(--gold)', fontFamily:'Bebas Neue,cursive', fontSize:'1.4rem', letterSpacing:'0.12em' }}>LOADING FREE AGENCY TRACKER</div>
+                    <div style={{ color:'var(--silver)', fontSize:'0.75rem', opacity:0.6 }}>Connecting to Sleeper API...</div>
+                </div>
+            );
+            if (phase === 'error') return (
+                <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem' }}>
+                    <div style={{ textAlign:'center' }}>
+                        <div style={{ color:'#E74C3C', marginBottom:'1rem', fontSize:'0.9rem' }}>{errMsg}</div>
+                        <button onClick={() => window.location.href='index.html'}
+                            style={{ padding:'0.5rem 1.2rem', background:'var(--gold)', border:'none', borderRadius:'4px',
+                                     cursor:'pointer', fontFamily:'Oswald,sans-serif', fontWeight:700, fontSize:'0.85rem' }}>
+                            &larr; Back to Dashboard
+                        </button>
+                    </div>
+                </div>
+            );
+
+            const faabTotal = leagueInfo?.settings?.waiver_budget || 0;
+            const faabUsed  = myRoster?.settings?.waiver_budget_used || 0;
+            const faabLeft  = faabTotal - faabUsed;
+
+            // ---- Main render ----
+            return (
+                <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden' }}>
+
+                    {/* ===== HEADER ===== */}
+                    <div className="tracker-header">
+                        <button className="back-btn" onClick={() => window.location.href='index.html'}>&larr; Dashboard</button>
+                        <div className="tracker-title">&#9889; FREE AGENCY TRACKER</div>
+                        <select className="league-select" value={leagueId} onChange={e => setLeagueId(e.target.value)}>
+                            {leagues.map(l => <option key={l.league_id} value={l.league_id}>{l.name}</option>)}
+                        </select>
+                        {faabTotal > 0 && myRoster && (
+                            <span className="faab-badge">FAAB: ${faabLeft.toLocaleString()} remaining</span>
+                        )}
+                        <span className="header-user">{sleeperUsername}</span>
+                    </div>
+
+                    {leagueLoading ? (
+                        <div className="center-msg" style={{ paddingTop:'4rem' }}>Loading league data...</div>
+                    ) : (
+                        <div className="tracker-grid">
+
+                            {/* ===== LEFT: MY ROSTER ===== */}
+                            <div className="panel">
+                                <div className="panel-header">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <circle cx="12" cy="8" r="4"/>
+                                        <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+                                    </svg>
+                                    MY ROSTER
+                                    {myRoster && (
+                                        <span style={{ marginLeft:'auto', color:'var(--silver)', fontSize:'0.6rem', opacity:0.55 }}>
+                                            {myRoster.players?.length || 0} players
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="panel-body">
+                                    {myGroups.length === 0 && (
+                                        <div className="center-msg">No roster data</div>
+                                    )}
+                                    {myGroups.map(grp => (
+                                        <div key={grp}>
+                                            <div className="pos-group-label">{grp}</div>
+                                            {myGrouped[grp].map(({ id, p }) => (
+                                                <div key={id} className="player-row" style={{ cursor:'default' }}>
+                                                    <span className="pos-badge" style={{ color: posColor(p.position) }}>
+                                                        {p.position || '?'}
+                                                    </span>
+                                                    <span className="player-name">
+                                                        {p.full_name || `${p.first_name||''} ${p.last_name||''}`.trim() || id}
+                                                        <span className="player-team"> {p.team || ''}</span>
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* ===== CENTER: FREE AGENTS ===== */}
+                            <div className="panel">
+                                <div className="panel-header">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <circle cx="11" cy="11" r="8"/>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                    </svg>
+                                    AVAILABLE FREE AGENTS
+                                    <span style={{ marginLeft:'auto', color:'var(--silver)', fontSize:'0.6rem', opacity:0.55 }}>
+                                        {filteredFAs.length}
+                                    </span>
+                                </div>
+
+                                {/* Position filter */}
+                                <div className="filter-bar">
+                                    {FA_POS_FILTERS.map(p => (
+                                        <button key={p}
+                                            className={`filter-btn${posFilter === p ? ' active' : ''}`}
+                                            onClick={() => setPosFilter(p)}>
+                                            {p}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Search */}
+                                <div className="search-wrap">
+                                    <input className="search-input"
+                                        placeholder="Search by name or team..."
+                                        value={search}
+                                        onChange={e => setSearch(e.target.value)} />
+                                </div>
+
+                                {/* Quick-add bar */}
+                                {quickPlayer && (
+                                    <div className="quick-add-bar">
+                                        <form onSubmit={handleQuickAdd}
+                                            style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+                                            <span style={{ flex:1, color:'var(--gold)', fontSize:'0.75rem',
+                                                           overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                                + <strong>{quickPlayer.name}</strong>
+                                                <span style={{ color:'var(--silver)', opacity:0.6 }}> ({quickPlayer.norm || quickPlayer.pos})</span>
+                                            </span>
+                                            <input className="t-input" style={{ width:'70px' }}
+                                                type="number" placeholder="Bid $"
+                                                value={quickCost}
+                                                onChange={e => setQuickCost(e.target.value)}
+                                                autoFocus min="0" />
+                                            <button type="submit" className="t-submit">Add</button>
+                                            <button type="button"
+                                                onClick={() => setQuickPlayer(null)}
+                                                style={{ background:'transparent', border:'none',
+                                                         color:'var(--silver)', cursor:'pointer', fontSize:'1.1rem', lineHeight:1 }}>
+                                                &times;
+                                            </button>
+                                        </form>
+                                    </div>
+                                )}
+
+                                {/* Player list */}
+                                <div className="panel-body">
+                                    {filteredFAs.length === 0 && (
+                                        <div className="center-msg">
+                                            {Object.keys(playersData).length === 0
+                                                ? 'Loading player data...'
+                                                : 'No free agents found'}
+                                        </div>
+                                    )}
+                                    {filteredFAs.map(fa => (
+                                        <div key={fa.id} className="player-row"
+                                            onClick={() => { setQuickPlayer(fa); setQuickCost(''); }}>
+                                            <span className="pos-badge" style={{ color: posColor(fa.pos) }}>
+                                                {fa.pos}
+                                            </span>
+                                            <span className="player-name">
+                                                {fa.name}
+                                                <span className="player-team"> {fa.team}</span>
+                                            </span>
+                                            <span className="add-circle" title="Add to targets">+</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* ===== RIGHT: FA TARGETS ===== */}
+                            <div className="panel">
+                                <div className="panel-header">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                    </svg>
+                                    FA TARGETS
+                                    {targets.length > 0 && (
+                                        <span style={{ marginLeft:'auto', color:'var(--silver)', fontSize:'0.6rem', opacity:0.55 }}>
+                                            {targets.length} player{targets.length !== 1 ? 's' : ''}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Starting budget */}
+                                <div className="budget-box">
+                                    <div>
+                                        <div className="budget-label">Starting FA $</div>
+                                        <span className="budget-sub">tap value to edit</span>
+                                    </div>
+                                    {editingBudget ? (
+                                        <input className="budget-input-inline"
+                                            type="number" min="0"
+                                            value={budgetDraft}
+                                            onChange={e => setBudgetDraft(e.target.value)}
+                                            onBlur={commitBudget}
+                                            onKeyDown={e => e.key === 'Enter' && commitBudget()}
+                                            autoFocus />
+                                    ) : (
+                                        <div className="budget-val" onClick={() => { setEditingBudget(true); setBudgetDraft(String(startingBudget)); }}>
+                                            ${startingBudget.toLocaleString()}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Manual add form */}
+                                <form className="add-target-form" onSubmit={handleFormAdd}>
+                                    <input className="t-input" style={{ width:'40px' }}
+                                        placeholder="POS" value={fPos}
+                                        onChange={e => setFPos(e.target.value)} maxLength={3} />
+                                    <input className="t-input" style={{ flex:1 }}
+                                        placeholder="Player name" value={fName}
+                                        onChange={e => setFName(e.target.value)} />
+                                    <input className="t-input" style={{ width:'48px' }}
+                                        type="number" placeholder="$" value={fCost} min="0"
+                                        onChange={e => setFCost(e.target.value)} />
+                                    <button type="submit" className="t-submit">+ Add</button>
+                                </form>
+
+                                {/* Targets table */}
+                                <div className="panel-body" style={{ padding:'0 0.4rem 0.5rem' }}>
+                                    <table className="targets-table">
+                                        <thead>
+                                            <tr>
+                                                <th>PSN</th>
+                                                <th>Name</th>
+                                                <th>Cost</th>
+                                                <th>FA$</th>
+                                                <th>Rem.</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {targetRows.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={6} style={{ textAlign:'center', color:'var(--silver)', opacity:0.45, padding:'1.5rem 0', fontSize:'0.72rem' }}>
+                                                        Click a free agent or use the form above
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {targetRows.map(row => (
+                                                <tr key={row.id}>
+                                                    <td>
+                                                        <span className="pos-badge"
+                                                            style={{ color: posColor(row.pos), width:'28px', fontSize:'0.55rem' }}>
+                                                            {row.pos}
+                                                        </span>
+                                                    </td>
+                                                    <td title={row.name}>{row.name}</td>
+                                                    <td>{row.cost}</td>
+                                                    <td>{row.faDollar.toLocaleString()}</td>
+                                                    <td style={{ color: remColor(row.remaining), fontWeight:700 }}>
+                                                        {row.remaining.toLocaleString()}
+                                                    </td>
+                                                    <td>
+                                                        <button className="del-btn"
+                                                            onClick={() => deleteTarget(row.id)}
+                                                            title="Remove">&times;</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {targetRows.length > 0 && (
+                                                <tr className="final-row">
+                                                    <td colSpan={4}
+                                                        style={{ fontFamily:'Bebas Neue,cursive', fontSize:'0.72rem',
+                                                                 color:'var(--gold)', letterSpacing:'0.06em',
+                                                                 textAlign:'right', paddingRight:'0.35rem' }}>
+                                                        BALANCE REMAINING
+                                                    </td>
+                                                    <td style={{ color: remColor(finalBalance), fontWeight:700 }}>
+                                                        {finalBalance.toLocaleString()}
+                                                    </td>
+                                                    <td></td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<FreeAgencyTracker />);
+    </script>
+</body>
+</html>
