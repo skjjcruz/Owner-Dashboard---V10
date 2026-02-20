@@ -401,8 +401,8 @@
         const posOrder  = pos => POS_ORDER[normPos(pos)] ?? 9;
 
         // Base sets — overridden per-league below
-        const IDP_POS_FILTERS = ['ALL','QB','RB','WR','TE','K','LB','DL','DB'];
-        const DEF_POS_FILTERS = ['ALL','QB','RB','WR','TE','K','DEF'];
+        const IDP_POS_FILTERS = ['ALL','RK','QB','RB','WR','TE','K','LB','DL','DB'];
+        const DEF_POS_FILTERS = ['ALL','RK','QB','RB','WR','TE','K','DEF'];
         const IDP_RELEVANT = new Set([
             'QB','RB','WR','TE','K',
             'LB','OLB','ILB','MLB',
@@ -610,7 +610,8 @@
                         name: p.full_name || `${p.first_name||''} ${p.last_name||''}`.trim() || id,
                         pos: p.position,
                         norm: normPos(p.position),
-                        team: p.team
+                        team: p.team,
+                        yrsExp: p.years_exp ?? null
                     }))
                     .sort((a, b) => {
                         const posOrd = posOrder(a.pos) - posOrder(b.pos);
@@ -622,13 +623,16 @@
 
             const filteredFAs = useMemo(() => {
                 const list = freeAgents.filter(fa => {
-                    const posOk  = posFilter === 'ALL' || fa.norm === posFilter || fa.pos === posFilter;
+                    let posOk;
+                    if (posFilter === 'ALL')       posOk = true;
+                    else if (posFilter === 'RK')   posOk = fa.yrsExp === 0;
+                    else                           posOk = fa.norm === posFilter || fa.pos === posFilter;
                     const q      = search.toLowerCase();
                     const srchOk = !q || fa.name.toLowerCase().includes(q) || (fa.team||'').toLowerCase().includes(q);
                     return posOk && srchOk;
                 });
-                // ALL view: rank purely by total points, no position grouping
-                if (posFilter === 'ALL') {
+                // ALL and RK views: rank purely by total points, no position grouping
+                if (posFilter === 'ALL' || posFilter === 'RK') {
                     list.sort((a, b) => getPts(b.id) - getPts(a.id));
                 }
                 return list;
