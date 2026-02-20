@@ -397,12 +397,12 @@
             if (['LB','OLB','ILB','MLB'].includes(pos)) return 'LB';
             return pos;
         }
-        const POS_ORDER = { QB:0, RB:1, WR:2, TE:3, K:4, DEF:5, DL:6, LB:7, DB:8 };
+        const POS_ORDER = { QB:0, RB:1, WR:2, TE:3, K:4, DL:5, LB:6, DB:7 };
         const posOrder  = pos => POS_ORDER[normPos(pos)] ?? 9;
 
-        const FA_POS_FILTERS = ['ALL','QB','RB','WR','TE','K','DEF','LB','DL','DB'];
+        const FA_POS_FILTERS = ['ALL','QB','RB','WR','TE','K','LB','DL','DB'];
         const RELEVANT_POS   = new Set([
-            'QB','RB','WR','TE','K','DEF',
+            'QB','RB','WR','TE','K',
             'LB','OLB','ILB','MLB',
             'DL','DE','DT','NT','IDL','EDGE',
             'DB','CB','S','SS','FS'
