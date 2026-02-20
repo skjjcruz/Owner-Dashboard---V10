@@ -95,7 +95,7 @@
         /* ---- Three-column grid ---- */
         .tracker-grid {
             display: grid;
-            grid-template-columns: 260px 350px 1fr;
+            grid-template-columns: 320px 310px 1fr;
             height: calc(100vh - 46px);
             overflow: hidden;
         }
@@ -116,7 +116,7 @@
             background: rgba(212,175,55,0.06);
             border-bottom: 1px solid rgba(212,175,55,0.18);
             font-family: 'Bebas Neue', cursive;
-            font-size: 0.88rem;
+            font-size: 0.95rem;
             color: var(--gold);
             letter-spacing: 0.1em;
             display: flex;
@@ -140,7 +140,7 @@
         }
         .stat-lbl {
             font-family: 'Bebas Neue', cursive;
-            font-size: 0.6rem;
+            font-size: 0.66rem;
             color: var(--gold);
             letter-spacing: 0.07em;
             opacity: 0.7;
@@ -153,9 +153,9 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 30px;
+            width: 34px;
             flex-shrink: 0;
-            font-size: 0.55rem;
+            font-size: 0.62rem;
             font-weight: 700;
             border: 1.5px solid var(--gold);
             border-radius: 3px;
@@ -178,27 +178,27 @@
         .player-row:hover { background: rgba(212,175,55,0.06); }
         .player-name {
             flex: 1;
-            font-size: 0.76rem;
+            font-size: 0.84rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             min-width: 0;
         }
         .player-team {
-            font-size: 0.58rem;
+            font-size: 0.65rem;
             color: var(--silver);
             opacity: 0.4;
         }
         /* Stat cell */
         .sc {
-            font-size: 0.62rem;
+            font-size: 0.68rem;
             font-weight: 600;
             text-align: right;
             flex-shrink: 0;
         }
         .pos-group-label {
             font-family: 'Bebas Neue', cursive;
-            font-size: 0.68rem;
+            font-size: 0.76rem;
             color: var(--gold);
             letter-spacing: 0.1em;
             padding: 0.38rem 0 0.14rem;
@@ -219,9 +219,9 @@
             border: 1px solid rgba(212,175,55,0.27);
             color: var(--silver);
             font-family: 'Oswald', sans-serif;
-            font-size: 0.6rem;
+            font-size: 0.67rem;
             font-weight: 600;
-            padding: 0.16rem 0.36rem;
+            padding: 0.18rem 0.4rem;
             border-radius: 3px;
             cursor: pointer;
             text-transform: uppercase;
@@ -240,8 +240,8 @@
             border: 1px solid rgba(212,175,55,0.27);
             color: var(--white);
             font-family: 'Oswald', sans-serif;
-            font-size: 0.76rem;
-            padding: 0.35rem 0.5rem;
+            font-size: 0.83rem;
+            padding: 0.38rem 0.55rem;
             border-radius: 4px;
         }
         .search-input::placeholder { color: rgba(192,192,192,0.33); }
@@ -347,11 +347,11 @@
         }
 
         /* ---- Targets table ---- */
-        .targets-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
+        .targets-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
         .targets-table th {
             color: var(--gold);
             font-family: 'Bebas Neue', cursive;
-            font-size: 0.66rem;
+            font-size: 0.72rem;
             letter-spacing: 0.07em;
             padding: 0.26rem 0.3rem;
             border-bottom: 1px solid rgba(212,175,55,0.26);
@@ -756,7 +756,7 @@
             function StatHeader({ addBtn }) {
                 return (
                     <div className="stat-col-hdr">
-                        <span style={{ width:'30px', flexShrink:0 }}></span>
+                        <span style={{ width:'34px', flexShrink:0 }}></span>
                         <span style={{ flex:1 }}></span>
                         <span className="stat-lbl" style={{ width:`${SW.yrs}px` }}>YRS</span>
                         <span className="stat-lbl" style={{ width:`${SW.pts}px` }}>PTS</span>
