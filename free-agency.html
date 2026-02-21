@@ -532,26 +532,32 @@
 
             // ---- Helpers ----
 
-            // Calculate raw pts from stats object.
-            // Sleeper pre-calculates pts_half_ppr/pts_ppr/pts_std for offensive players only;
-            // IDP defensive players have no such field, so we fall back to applying the
-            // league's own scoring_settings weights to the raw stat fields.
+            // Compute fantasy pts using the league's actual scoring_settings weights,
+            // applied to raw stat fields — works for both offensive and IDP players.
+            // Mirrors the Team Comps page's fantasyPointsFromScoring() approach:
+            // always use scoring_settings when available so IDP defensive stats aren't
+            // silently zeroed out by Sleeper's pre-calculated pts_half_ppr = 0.
             function calcRawPts(s) {
                 if (!s) return null;
-                const pre = s.pts_half_ppr ?? s.pts_ppr ?? s.pts_std ?? null;
-                if (pre !== null) return Number(pre);
                 const scoring = leagueInfo?.scoring_settings;
-                if (!scoring) return null;
-                let total = 0, hasAny = false;
-                for (const [field, weight] of Object.entries(scoring)) {
-                    if (s[field] != null) { total += s[field] * weight; hasAny = true; }
+                if (scoring) {
+                    let total = 0;
+                    for (const [field, weight] of Object.entries(scoring)) {
+                        if (typeof weight !== 'number') continue;
+                        if (s[field] != null) total += Number(s[field]) * weight;
+                    }
+                    return total;
                 }
-                return hasAny ? total : null;
+                // Fallback: Sleeper's pre-calculated totals (offensive players only)
+                const pre = s.pts_half_ppr ?? s.pts_ppr ?? s.pts_std ?? null;
+                return pre !== null ? Number(pre) : null;
             }
 
             // Raw pts for sorting (returns -1 when no data so players with data sort above those without)
             function getPts(id) {
-                const raw = calcRawPts(statsData[id]);
+                const s = statsData[id];
+                if (!s) return -1;
+                const raw = calcRawPts(s);
                 return raw !== null ? raw : -1;
             }
 

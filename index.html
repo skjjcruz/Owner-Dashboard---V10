@@ -1484,20 +1484,25 @@
             return player?.team || '';
         }
 
-        // Sleeper pre-calculates pts_half_ppr/pts_ppr/pts_std only for offensive players.
-        // For IDP defensive players those fields are absent, so fall back to applying the
-        // league's scoring_settings weights to the raw stat fields.
+        // Compute fantasy pts using the league's actual scoring_settings weights,
+        // applied to raw stat fields — works for both offensive and IDP players.
+        // Mirrors the Team Comps page's fantasyPointsFromScoring() approach:
+        // always use scoring_settings when available so IDP defensive stats aren't
+        // silently zeroed out by Sleeper's pre-calculated pts_half_ppr = 0.
         function calcRawPts(s) {
             if (!s) return null;
-            const pre = s.pts_half_ppr ?? s.pts_ppr ?? s.pts_std ?? null;
-            if (pre !== null) return Number(pre);
             const scoring = currentLeague?.scoring_settings;
-            if (!scoring) return null;
-            let total = 0, hasAny = false;
-            for (const [field, weight] of Object.entries(scoring)) {
-                if (s[field] != null) { total += s[field] * weight; hasAny = true; }
+            if (scoring) {
+                let total = 0;
+                for (const [field, weight] of Object.entries(scoring)) {
+                    if (typeof weight !== 'number') continue;
+                    if (s[field] != null) total += Number(s[field]) * weight;
+                }
+                return total;
             }
-            return hasAny ? total : null;
+            // Fallback: Sleeper's pre-calculated totals (offensive players only)
+            const pre = s.pts_half_ppr ?? s.pts_ppr ?? s.pts_std ?? null;
+            return pre !== null ? Number(pre) : null;
         }
 
         function getPlayerStats(playerId) {
