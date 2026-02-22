@@ -603,6 +603,23 @@
             const posFilters    = isIDP ? IDP_POS_FILTERS : DEF_POS_FILTERS;
             const relevantPosSet = isIDP ? IDP_RELEVANT    : DEF_RELEVANT;
 
+            // Section color lookup: playerId → { border, bg }
+            const sectionMap = useMemo(() => {
+                const map = new Map();
+                if (!myRoster) return map;
+                const starterSet = new Set(myRoster.starters || []);
+                const reserveSet = new Set(myRoster.reserve  || []);
+                const taxiSet    = new Set(myRoster.taxi     || []);
+                for (const id of myRoster.players || []) {
+                    if      (starterSet.has(id)) map.set(id, { border:'#2ECC71', bg:'rgba(46,204,113,0.06)'  });
+                    else if (reserveSet.has(id)) map.set(id, { border:'#E74C3C', bg:'rgba(231,76,60,0.06)'   });
+                    else if (taxiSet.has(id))    map.set(id, { border:'#9B59B6', bg:'rgba(155,89,182,0.06)'  });
+                    else                         map.set(id, { border:null,      bg:'rgba(255,255,255,0.02)' });
+                }
+                return map;
+            }, [myRoster]);
+
+            // Position-grouped roster for layout
             const myGrouped = useMemo(() => {
                 if (!myRoster?.players || !Object.keys(playersData).length) return {};
                 const g = {};
@@ -613,7 +630,6 @@
                     if (!g[grp]) g[grp] = [];
                     g[grp].push({ id, p });
                 }
-                // Sort each position group by 2025 pts descending
                 for (const grp of Object.keys(g)) {
                     g[grp].sort((a, b) => getPts(b.id) - getPts(a.id));
                 }
@@ -792,15 +808,20 @@
                                                 const st = getStats(id);
                                                 const pName = p.full_name || `${p.first_name||''} ${p.last_name||''}`.trim() || id;
                                                 const url = fpUrl(pName);
+                                                const { border, bg } = sectionMap.get(id) || { border:null, bg:'rgba(255,255,255,0.02)' };
                                                 return (
-                                                    <div key={id} className="player-row" style={{ cursor:'default' }}>
+                                                    <div key={id} className="player-row" style={{
+                                                        cursor:'default',
+                                                        borderLeft: border ? `3px solid ${border}` : 'none',
+                                                        background: bg,
+                                                    }}>
                                                         <span className="pos-badge" style={{ color: posColor(p.position) }}>
                                                             {p.position || '?'}
                                                         </span>
                                                         <a className="player-name" href={url || '#'} target="_blank" rel="noopener noreferrer"
-                                                            style={{ color: posColor(p.position) }}
+                                                            style={{ color:'var(--white)' }}
                                                             onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
-                                                            onMouseLeave={e => e.currentTarget.style.color=posColor(p.position)}>
+                                                            onMouseLeave={e => e.currentTarget.style.color='var(--white)'}>
                                                             {pName} <span className="player-team">{p.team||''}</span>
                                                         </a>
                                                         <span className="sc" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
