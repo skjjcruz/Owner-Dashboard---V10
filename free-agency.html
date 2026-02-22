@@ -186,7 +186,7 @@
         .player-row:hover { background: rgba(212,175,55,0.06); }
         .player-name {
             flex: 1;
-            font-size: 1.0rem;
+            font-size: 1.1rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -798,8 +798,9 @@
                                                             {p.position || '?'}
                                                         </span>
                                                         <a className="player-name" href={url || '#'} target="_blank" rel="noopener noreferrer"
+                                                            style={{ color: posColor(p.position) }}
                                                             onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
-                                                            onMouseLeave={e => e.currentTarget.style.color='inherit'}>
+                                                            onMouseLeave={e => e.currentTarget.style.color=posColor(p.position)}>
                                                             {pName} <span className="player-team">{p.team||''}</span>
                                                         </a>
                                                         <span className="sc" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
