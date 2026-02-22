@@ -84,7 +84,7 @@
         /* ---- Three-column grid ---- */
         .tracker-grid {
             display: grid;
-            grid-template-columns: 320px 1fr 340px;
+            grid-template-columns: 320px 1fr 290px;
             height: calc(100vh - 46px);
             overflow: hidden;
         }
@@ -184,8 +184,17 @@
             transition: background 0.12s;
         }
         .player-row:hover { background: rgba(212,175,55,0.06); }
-        .player-name {
+        /* Wraps name + team abbreviation as a tight flex cluster */
+        .name-team-wrap {
             flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: baseline;
+            gap: 0.18rem;
+            overflow: hidden;
+        }
+        .player-name {
+            flex: 0 1 auto;
             font-size: 1.0rem;
             white-space: nowrap;
             overflow: hidden;
@@ -245,13 +254,13 @@
         .search-input::placeholder { color: rgba(192,192,192,0.33); }
         .search-input:focus { outline: none; border-color: rgba(212,175,55,0.58); }
         .add-circle {
-            width: 20px;
-            height: 20px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
-            border: 1px solid rgba(212,175,55,0.42);
+            border: 1px solid rgba(212,175,55,0.52);
             background: transparent;
             color: var(--gold);
-            font-size: 0.82rem;
+            font-size: 1.05rem;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -796,15 +805,17 @@
                                                         <span className="pos-badge" style={{ color: posColor(p.position) }}>
                                                             {p.position || '?'}
                                                         </span>
-                                                        <span className="player-name">
-                                                            <a href={url || '#'} target="_blank" rel="noopener noreferrer"
-                                                                style={{ color:'inherit', textDecoration:'none' }}
-                                                                onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
-                                                                onMouseLeave={e => e.currentTarget.style.color='inherit'}>
-                                                                {pName}
-                                                            </a>
+                                                        <span className="name-team-wrap">
+                                                            <span className="player-name">
+                                                                <a href={url || '#'} target="_blank" rel="noopener noreferrer"
+                                                                    style={{ color:'inherit', textDecoration:'none' }}
+                                                                    onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
+                                                                    onMouseLeave={e => e.currentTarget.style.color='inherit'}>
+                                                                    {pName}
+                                                                </a>
+                                                            </span>
+                                                            <span className="player-team">{p.team||''}</span>
                                                         </span>
-                                                        <span className="player-team">{p.team||''}</span>
                                                         <span className="sc" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
                                                         <span className="sc" style={{ width:`${SW.pts}px`, color:'var(--gold)' }}>{st.pts}</span>
                                                         <span className="sc" style={{ width:`${SW.gp}px`, color:'var(--silver)', opacity:0.65 }}>{st.gp}</span>
@@ -876,16 +887,18 @@
                                                 <span className="pos-badge" style={{ color: posColor(fa.pos) }}>
                                                     {fa.pos}
                                                 </span>
-                                                <span className="player-name">
-                                                    <a href={url || '#'} target="_blank" rel="noopener noreferrer"
-                                                        onClick={e => e.stopPropagation()}
-                                                        style={{ color:'inherit', textDecoration:'none' }}
-                                                        onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
-                                                        onMouseLeave={e => e.currentTarget.style.color='inherit'}>
-                                                        {fa.name}
-                                                    </a>
+                                                <span className="name-team-wrap">
+                                                    <span className="player-name">
+                                                        <a href={url || '#'} target="_blank" rel="noopener noreferrer"
+                                                            onClick={e => e.stopPropagation()}
+                                                            style={{ color:'inherit', textDecoration:'none' }}
+                                                            onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
+                                                            onMouseLeave={e => e.currentTarget.style.color='inherit'}>
+                                                            {fa.name}
+                                                        </a>
+                                                    </span>
+                                                    <span className="player-team">{fa.team}</span>
                                                 </span>
-                                                <span className="player-team">{fa.team}</span>
                                                 <span className="sc" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
                                                 <span className="sc" style={{ width:`${SW.pts}px`, color:'var(--gold)' }}>{st.pts}</span>
                                                 <span className="sc" style={{ width:`${SW.gp}px`, color:'var(--silver)', opacity:0.65 }}>{st.gp}</span>
@@ -940,9 +953,9 @@
                                 <div className="stat-col-hdr" style={{ padding:'0.18rem 0.38rem' }}>
                                     <span style={{ width:'30px', flexShrink:0 }}></span>
                                     <span style={{ flex:1, minWidth:0 }}></span>
-                                    <span className="stat-lbl" style={{ width:'36px' }}>COST</span>
-                                    <span className="stat-lbl" style={{ width:'38px' }}>FA$</span>
-                                    <span className="stat-lbl" style={{ width:'46px' }}>REM.</span>
+                                    <span className="stat-lbl" style={{ width:'30px' }}>COST</span>
+                                    <span className="stat-lbl" style={{ width:'32px' }}>FA$</span>
+                                    <span className="stat-lbl" style={{ width:'38px' }}>REM.</span>
                                     <span style={{ width:'20px', flexShrink:0 }}></span>
                                 </div>
 
@@ -960,9 +973,9 @@
                                             <span className="player-name" style={{ fontSize:'0.82rem' }} title={row.name}>
                                                 {row.name}
                                             </span>
-                                            <span className="sc" style={{ width:'36px', color:'var(--silver)', opacity:0.65 }}>{row.cost}</span>
-                                            <span className="sc" style={{ width:'38px', color:'var(--silver)', opacity:0.65 }}>{row.faDollar.toLocaleString()}</span>
-                                            <span className="sc" style={{ width:'46px', color:remColor(row.remaining), fontWeight:700 }}>{row.remaining.toLocaleString()}</span>
+                                            <span className="sc" style={{ width:'30px', color:'var(--silver)', opacity:0.65 }}>{row.cost}</span>
+                                            <span className="sc" style={{ width:'32px', color:'var(--silver)', opacity:0.65 }}>{row.faDollar.toLocaleString()}</span>
+                                            <span className="sc" style={{ width:'38px', color:remColor(row.remaining), fontWeight:700 }}>{row.remaining.toLocaleString()}</span>
                                             <button className="del-btn" onClick={() => deleteTarget(row.id)} title="Remove">&times;</button>
                                         </div>
                                     ))}
@@ -975,7 +988,7 @@
                                                            textAlign:'right', paddingRight:'0.3rem' }}>
                                                 BALANCE REMAINING
                                             </span>
-                                            <span className="sc" style={{ width:'46px', color:remColor(finalBalance), fontWeight:700 }}>
+                                            <span className="sc" style={{ width:'38px', color:remColor(finalBalance), fontWeight:700 }}>
                                                 {finalBalance.toLocaleString()}
                                             </span>
                                             <span style={{ width:'20px', flexShrink:0 }}></span>
