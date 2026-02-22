@@ -603,25 +603,39 @@
             const posFilters    = isIDP ? IDP_POS_FILTERS : DEF_POS_FILTERS;
             const relevantPosSet = isIDP ? IDP_RELEVANT    : DEF_RELEVANT;
 
-            const rosterSections = useMemo(() => {
-                if (!myRoster?.players || !Object.keys(playersData).length)
-                    return { starters:[], bench:[], ir:[], taxi:[] };
+            // Section color lookup: playerId → { border, bg }
+            const sectionMap = useMemo(() => {
+                const map = new Map();
+                if (!myRoster) return map;
                 const starterSet = new Set(myRoster.starters || []);
                 const reserveSet = new Set(myRoster.reserve  || []);
                 const taxiSet    = new Set(myRoster.taxi     || []);
-                const starters = [], bench = [], ir = [], taxi = [];
+                for (const id of myRoster.players || []) {
+                    if      (starterSet.has(id)) map.set(id, { border:'#2ECC71', bg:'rgba(46,204,113,0.06)'  });
+                    else if (reserveSet.has(id)) map.set(id, { border:'#E74C3C', bg:'rgba(231,76,60,0.06)'   });
+                    else if (taxiSet.has(id))    map.set(id, { border:'#9B59B6', bg:'rgba(155,89,182,0.06)'  });
+                    else                         map.set(id, { border:null,      bg:'rgba(255,255,255,0.02)' });
+                }
+                return map;
+            }, [myRoster]);
+
+            // Position-grouped roster for layout
+            const myGrouped = useMemo(() => {
+                if (!myRoster?.players || !Object.keys(playersData).length) return {};
+                const g = {};
                 for (const id of myRoster.players) {
                     const p = playersData[id];
                     if (!p) continue;
-                    const row = { id, p };
-                    if      (starterSet.has(id)) starters.push(row);
-                    else if (reserveSet.has(id)) ir.push(row);
-                    else if (taxiSet.has(id))    taxi.push(row);
-                    else                         bench.push(row);
+                    const grp = normPos(p.position) || 'Other';
+                    if (!g[grp]) g[grp] = [];
+                    g[grp].push({ id, p });
                 }
-                const byPts = arr => arr.sort((a, b) => getPts(b.id) - getPts(a.id));
-                return { starters: byPts(starters), bench: byPts(bench), ir: byPts(ir), taxi: byPts(taxi) };
+                for (const grp of Object.keys(g)) {
+                    g[grp].sort((a, b) => getPts(b.id) - getPts(a.id));
+                }
+                return g;
             }, [myRoster, playersData, statsData]);
+            const myGroups = Object.keys(myGrouped).sort((a, b) => posOrder(a) - posOrder(b));
 
             const freeAgents = useMemo(() => {
                 if (!Object.keys(playersData).length || !allRosters.length) return [];
@@ -786,47 +800,39 @@
                                 </div>
                                 <StatHeader addBtn={false} />
                                 <div className="panel-body">
-                                    {!myRoster && <div className="center-msg">No roster data</div>}
-                                    {[
-                                        { key:'starters', label:'STARTERS',       border:'#2ECC71', bg:'rgba(46,204,113,0.06)'  },
-                                        { key:'bench',    label:'BENCH',           border:null,      bg:'rgba(255,255,255,0.02)' },
-                                        { key:'ir',       label:'INJURED RESERVE', border:'#E74C3C', bg:'rgba(231,76,60,0.06)'   },
-                                        { key:'taxi',     label:'TAXI SQUAD',      border:'#9B59B6', bg:'rgba(155,89,182,0.06)'  },
-                                    ].map(({ key, label, border, bg }) => {
-                                        const rows = rosterSections[key] || [];
-                                        if (!rows.length) return null;
-                                        return (
-                                            <div key={key}>
-                                                <div className="pos-group-label" style={{ color: border || 'var(--silver)' }}>{label}</div>
-                                                {rows.map(({ id, p }) => {
-                                                    const st = getStats(id);
-                                                    const pName = p.full_name || `${p.first_name||''} ${p.last_name||''}`.trim() || id;
-                                                    const url = fpUrl(pName);
-                                                    return (
-                                                        <div key={id} className="player-row" style={{
-                                                            cursor:'default',
-                                                            borderLeft: border ? `3px solid ${border}` : 'none',
-                                                            background: bg,
-                                                        }}>
-                                                            <span className="pos-badge" style={{ color: posColor(p.position) }}>
-                                                                {p.position || '?'}
-                                                            </span>
-                                                            <a className="player-name" href={url || '#'} target="_blank" rel="noopener noreferrer"
-                                                                style={{ color:'var(--white)' }}
-                                                                onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
-                                                                onMouseLeave={e => e.currentTarget.style.color='var(--white)'}>
-                                                                {pName} <span className="player-team">{p.team||''}</span>
-                                                            </a>
-                                                            <span className="sc" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
-                                                            <span className="sc" style={{ width:`${SW.pts}px`, color:'var(--gold)' }}>{st.pts}</span>
-                                                            <span className="sc" style={{ width:`${SW.gp}px`, color:'var(--silver)', opacity:0.65 }}>{st.gp}</span>
-                                                            <span className="sc" style={{ width:`${SW.avg}px`, color:'var(--silver)', opacity:0.65 }}>{st.avg}</span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        );
-                                    })}
+                                    {myGroups.length === 0 && <div className="center-msg">No roster data</div>}
+                                    {myGroups.map(grp => (
+                                        <div key={grp}>
+                                            <div className="pos-group-label">{grp}</div>
+                                            {myGrouped[grp].map(({ id, p }) => {
+                                                const st = getStats(id);
+                                                const pName = p.full_name || `${p.first_name||''} ${p.last_name||''}`.trim() || id;
+                                                const url = fpUrl(pName);
+                                                const { border, bg } = sectionMap.get(id) || { border:null, bg:'rgba(255,255,255,0.02)' };
+                                                return (
+                                                    <div key={id} className="player-row" style={{
+                                                        cursor:'default',
+                                                        borderLeft: border ? `3px solid ${border}` : 'none',
+                                                        background: bg,
+                                                    }}>
+                                                        <span className="pos-badge" style={{ color: posColor(p.position) }}>
+                                                            {p.position || '?'}
+                                                        </span>
+                                                        <a className="player-name" href={url || '#'} target="_blank" rel="noopener noreferrer"
+                                                            style={{ color:'var(--white)' }}
+                                                            onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
+                                                            onMouseLeave={e => e.currentTarget.style.color='var(--white)'}>
+                                                            {pName} <span className="player-team">{p.team||''}</span>
+                                                        </a>
+                                                        <span className="sc" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
+                                                        <span className="sc" style={{ width:`${SW.pts}px`, color:'var(--gold)' }}>{st.pts}</span>
+                                                        <span className="sc" style={{ width:`${SW.gp}px`, color:'var(--silver)', opacity:0.65 }}>{st.gp}</span>
+                                                        <span className="sc" style={{ width:`${SW.avg}px`, color:'var(--silver)', opacity:0.65 }}>{st.avg}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
