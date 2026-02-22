@@ -611,10 +611,10 @@
                 const reserveSet = new Set(myRoster.reserve  || []);
                 const taxiSet    = new Set(myRoster.taxi     || []);
                 for (const id of myRoster.players || []) {
-                    if      (starterSet.has(id)) map.set(id, { border:'#2ECC71', bg:'rgba(46,204,113,0.06)'  });
-                    else if (reserveSet.has(id)) map.set(id, { border:'#E74C3C', bg:'rgba(231,76,60,0.06)'   });
-                    else if (taxiSet.has(id))    map.set(id, { border:'#9B59B6', bg:'rgba(155,89,182,0.06)'  });
-                    else                         map.set(id, { border:null,      bg:'rgba(255,255,255,0.02)' });
+                    if      (starterSet.has(id)) map.set(id, { border:'var(--gold)', bg:'rgba(212,175,55,0.05)'  });
+                    else if (reserveSet.has(id)) map.set(id, { border:'#E74C3C',     bg:'rgba(231,76,60,0.05)'   });
+                    else if (taxiSet.has(id))    map.set(id, { border:'#3498DB',     bg:'rgba(52,152,219,0.05)'  });
+                    else                         map.set(id, { border:null,          bg:'rgba(255,255,255,0.02)' });
                 }
                 return map;
             }, [myRoster]);
@@ -815,14 +815,24 @@
                                                         borderLeft: border ? `3px solid ${border}` : 'none',
                                                         background: bg,
                                                     }}>
-                                                        <span className="pos-badge" style={{ color: posColor(p.position) }}>
+                                                        <span style={{
+                                                            display:'inline-flex', alignItems:'center', justifyContent:'center',
+                                                            width:'36px', flexShrink:0,
+                                                            fontSize:'0.65rem', fontWeight:'700',
+                                                            color: posColor(p.position),
+                                                            border:'1.5px solid var(--gold)',
+                                                            borderRadius:'3px',
+                                                            padding:'2px 0',
+                                                            background:'rgba(212,175,55,0.08)',
+                                                            letterSpacing:'0.02em'
+                                                        }}>
                                                             {p.position || '?'}
                                                         </span>
                                                         <a className="player-name" href={url || '#'} target="_blank" rel="noopener noreferrer"
                                                             style={{ color:'var(--white)' }}
                                                             onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
                                                             onMouseLeave={e => e.currentTarget.style.color='var(--white)'}>
-                                                            {pName} <span className="player-team">{p.team||''}</span>
+                                                            {pName} <span style={{ fontSize:'0.68rem', color:'var(--silver)', opacity:0.5 }}>{p.team||''}</span>
                                                         </a>
                                                         <span className="sc" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
                                                         <span className="sc" style={{ width:`${SW.pts}px`, color:'var(--gold)' }}>{st.pts}</span>
