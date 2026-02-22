@@ -184,24 +184,33 @@
             transition: background 0.12s;
         }
         .player-row:hover { background: rgba(212,175,55,0.06); }
-        .player-name {
+        /* name + team cluster: wrapper fills the flex:1 slot,
+           name inside shrinks to content so team sits flush after it */
+        .name-team-wrap {
             flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: baseline;
+            gap: 0.2rem;
+            overflow: hidden;
+        }
+        .player-name {
+            flex: 1;           /* standalone (FA targets): fills space */
             font-size: 1.0rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             min-width: 0;
         }
+        .name-team-wrap > .player-name {
+            flex: 0 1 auto;    /* inside wrapper: only as wide as text */
+        }
         .player-team {
             font-size: 0.6rem;
             color: var(--silver);
             opacity: 0.45;
             flex-shrink: 0;
-            width: 28px;
-            text-align: right;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
         /* Stat cell */
         .sc {
@@ -741,7 +750,6 @@
                     <div className="stat-col-hdr">
                         <span style={{ width:'34px', flexShrink:0 }}></span>
                         <span style={{ flex:1 }}></span>
-                        <span style={{ width:'28px', flexShrink:0 }}></span>
                         <span className="stat-lbl" style={{ width:`${SW.yrs}px` }}>YRS</span>
                         <span className="stat-lbl" style={{ width:`${SW.pts}px` }}>PTS</span>
                         <span className="stat-lbl" style={{ width:`${SW.gp}px` }}>GP</span>
@@ -801,15 +809,17 @@
                                                         <span className="pos-badge" style={{ color: posColor(p.position) }}>
                                                             {p.position || '?'}
                                                         </span>
-                                                        <span className="player-name">
-                                                            <a href={url || '#'} target="_blank" rel="noopener noreferrer"
-                                                                style={{ color:'inherit', textDecoration:'none' }}
-                                                                onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
-                                                                onMouseLeave={e => e.currentTarget.style.color='inherit'}>
-                                                                {pName}
-                                                            </a>
+                                                        <span className="name-team-wrap">
+                                                            <span className="player-name">
+                                                                <a href={url || '#'} target="_blank" rel="noopener noreferrer"
+                                                                    style={{ color:'inherit', textDecoration:'none' }}
+                                                                    onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
+                                                                    onMouseLeave={e => e.currentTarget.style.color='inherit'}>
+                                                                    {pName}
+                                                                </a>
+                                                            </span>
+                                                            <span className="player-team">{p.team||''}</span>
                                                         </span>
-                                                        <span className="player-team">{p.team||''}</span>
                                                         <span className="sc" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
                                                         <span className="sc" style={{ width:`${SW.pts}px`, color:'var(--gold)' }}>{st.pts}</span>
                                                         <span className="sc" style={{ width:`${SW.gp}px`, color:'var(--silver)', opacity:0.65 }}>{st.gp}</span>
@@ -881,16 +891,18 @@
                                                 <span className="pos-badge" style={{ color: posColor(fa.pos) }}>
                                                     {fa.pos}
                                                 </span>
-                                                <span className="player-name">
-                                                    <a href={url || '#'} target="_blank" rel="noopener noreferrer"
-                                                        onClick={e => e.stopPropagation()}
-                                                        style={{ color:'inherit', textDecoration:'none' }}
-                                                        onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
-                                                        onMouseLeave={e => e.currentTarget.style.color='inherit'}>
-                                                        {fa.name}
-                                                    </a>
+                                                <span className="name-team-wrap">
+                                                    <span className="player-name">
+                                                        <a href={url || '#'} target="_blank" rel="noopener noreferrer"
+                                                            onClick={e => e.stopPropagation()}
+                                                            style={{ color:'inherit', textDecoration:'none' }}
+                                                            onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
+                                                            onMouseLeave={e => e.currentTarget.style.color='inherit'}>
+                                                            {fa.name}
+                                                        </a>
+                                                    </span>
+                                                    <span className="player-team">{fa.team}</span>
                                                 </span>
-                                                <span className="player-team">{fa.team}</span>
                                                 <span className="sc" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
                                                 <span className="sc" style={{ width:`${SW.pts}px`, color:'var(--gold)' }}>{st.pts}</span>
                                                 <span className="sc" style={{ width:`${SW.gp}px`, color:'var(--silver)', opacity:0.65 }}>{st.gp}</span>
