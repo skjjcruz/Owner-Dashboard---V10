@@ -186,16 +186,18 @@
         .player-row:hover { background: rgba(212,175,55,0.06); }
         .player-name {
             flex: 1;
-            font-size: 0.92rem;
+            font-size: 1.0rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             min-width: 0;
         }
         .player-team {
-            font-size: 0.65rem;
+            font-size: 0.62rem;
             color: var(--silver);
             opacity: 0.4;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
         /* Stat cell */
         .sc {
@@ -801,8 +803,8 @@
                                                                 onMouseLeave={e => e.currentTarget.style.color='inherit'}>
                                                                 {pName}
                                                             </a>
-                                                            <span className="player-team"> {p.team||''}</span>
                                                         </span>
+                                                        <span className="player-team">{p.team||''}</span>
                                                         <span className="sc" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
                                                         <span className="sc" style={{ width:`${SW.pts}px`, color:'var(--gold)' }}>{st.pts}</span>
                                                         <span className="sc" style={{ width:`${SW.gp}px`, color:'var(--silver)', opacity:0.65 }}>{st.gp}</span>
@@ -882,8 +884,8 @@
                                                         onMouseLeave={e => e.currentTarget.style.color='inherit'}>
                                                         {fa.name}
                                                     </a>
-                                                    <span className="player-team"> {fa.team}</span>
                                                 </span>
+                                                <span className="player-team">{fa.team}</span>
                                                 <span className="sc" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
                                                 <span className="sc" style={{ width:`${SW.pts}px`, color:'var(--gold)' }}>{st.pts}</span>
                                                 <span className="sc" style={{ width:`${SW.gp}px`, color:'var(--silver)', opacity:0.65 }}>{st.gp}</span>
