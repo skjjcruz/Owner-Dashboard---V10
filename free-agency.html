@@ -283,11 +283,8 @@
             table-layout: fixed;
         }
         .roster-table thead th {
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            background: #0a0a0a;
-            box-shadow: 0 -8px 0 8px #0a0a0a;
+            position: static;
+            background: rgba(10,10,10,0.97);
             color: var(--gold);
             padding: 0.32rem 0.45rem;
             font-family: 'Bebas Neue', cursive;
@@ -947,21 +944,34 @@
                                     </div>
                                     <div className="ph-sub"></div>
                                 </div>
+                                {myGroups.length > 0 && (
+                                    <table className="roster-table" style={{flexShrink:0}}>
+                                        <thead>
+                                            <tr>
+                                                <th className="rth-pos">POS</th>
+                                                <th className="rth-player">PLAYER</th>
+                                                <th className="rth-yrs">YRS</th>
+                                                <th className="rth-pts">PTS</th>
+                                                <th className="rth-gp">GP</th>
+                                                <th className="rth-avg">AVG</th>
+                                                <th className="rth-proj">PROJ</th>
+                                            </tr>
+                                        </thead>
+                                    </table>
+                                )}
                                 <div className="panel-body" style={{padding:0}}>
                                     {myGroups.length === 0 && <div className="center-msg">No roster data</div>}
                                     {myGroups.length > 0 && (
                                         <table className="roster-table">
-                                            <thead>
-                                                <tr>
-                                                    <th className="rth-pos">POS</th>
-                                                    <th className="rth-player">PLAYER</th>
-                                                    <th className="rth-yrs">YRS</th>
-                                                    <th className="rth-pts">PTS</th>
-                                                    <th className="rth-gp">GP</th>
-                                                    <th className="rth-avg">AVG</th>
-                                                    <th className="rth-proj">PROJ</th>
-                                                </tr>
-                                            </thead>
+                                            <colgroup>
+                                                <col style={{width:'44px'}}/>
+                                                <col/>
+                                                <col style={{width:'40px'}}/>
+                                                <col style={{width:'56px'}}/>
+                                                <col style={{width:'36px'}}/>
+                                                <col style={{width:'52px'}}/>
+                                                <col style={{width:'48px'}}/>
+                                            </colgroup>
                                             <tbody>
                                                 {myGroups.flatMap(grp => [
                                                     <tr key={`${grp}-hdr`} className="rt-group">
