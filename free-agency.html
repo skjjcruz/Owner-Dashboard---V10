@@ -441,6 +441,7 @@
             const [phase, setPhase]   = useState('boot');
             const [errMsg, setErrMsg] = useState('');
             const [userId, setUserId] = useState('');
+            const [userAvatar, setUserAvatar] = useState('');
             const [leagues, setLeagues]   = useState([]);
             const [leagueId, setLeagueId] = useState('');
 
@@ -473,6 +474,7 @@
                 try {
                     const user = await fetchUser(sleeperUsername);
                     setUserId(user.user_id);
+                    if (user.avatar) setUserAvatar(user.avatar);
                     // Fetch 2026 leagues only
                     const lgs = await fetchLeagues(user.user_id, SEASON);
                     setLeagues(lgs || []);
@@ -796,6 +798,13 @@
                                             <circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
                                         </svg>
                                         MY ROSTER
+                                        {userAvatar && (
+                                            <img
+                                                src={`https://sleepercdn.com/avatars/thumbs/${userAvatar}`}
+                                                alt=""
+                                                style={{ width:'22px', height:'22px', borderRadius:'50%', border:'1.5px solid var(--gold)', flexShrink:0, marginLeft:'0.3rem' }}
+                                            />
+                                        )}
                                         {myRoster && (
                                             <span style={{ marginLeft:'auto', color:'var(--silver)', fontSize:'0.58rem', opacity:0.5 }}>
                                                 {myRoster.players?.length || 0} players
