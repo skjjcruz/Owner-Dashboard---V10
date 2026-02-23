@@ -302,6 +302,7 @@
         .roster-table thead th.rth-pts    { width: 56px; }
         .roster-table thead th.rth-gp     { width: 36px; }
         .roster-table thead th.rth-avg    { width: 52px; }
+        .roster-table thead th.rth-proj   { width: 48px; opacity: 0.6; }
         .roster-table td {
             padding: 0.27rem 0.45rem;
             vertical-align: middle;
@@ -334,6 +335,7 @@
         .roster-table td.rtd-player a:hover { color: var(--gold); }
         .roster-table td.rtd-num  { color: var(--silver); opacity: 0.75; }
         .roster-table td.rtd-pts  { color: var(--gold); opacity: 1; }
+        .roster-table td.rtd-proj { color: var(--silver); opacity: 0.5; }
         /* Group header row */
         .roster-table tr.rt-group td {
             background: rgba(8,8,8,0.95);
@@ -427,7 +429,7 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect, useMemo, useRef } = React;
 
         // ===== AUTH =====
         const AUTH_KEY = 'od_auth_v1';
@@ -509,7 +511,7 @@
         const DEF_RELEVANT = new Set(['QB','RB','WR','TE','K','DEF']);
 
         // Shared stat column widths (px)
-        const SW = { yrs:24, pts:34, gp:22, avg:32 };
+        const SW = { yrs:24, pts:34, gp:22, avg:32, proj:38 };
 
         // ===== TARGET STORAGE =====
         function loadTargets(leagueId) {
@@ -530,6 +532,9 @@
             const [errMsg, setErrMsg] = useState('');
             const [userId, setUserId] = useState('');
             const [userAvatar, setUserAvatar] = useState('');
+            const [nflWeek, setNflWeek]       = useState(null);
+            const [projStats, setProjStats]   = useState({});
+            const projInFlight = useRef(new Set());
             const [leagues, setLeagues]   = useState([]);
             const [leagueId, setLeagueId] = useState('');
 
@@ -560,9 +565,13 @@
 
             async function boot() {
                 try {
-                    const user = await fetchUser(sleeperUsername);
+                    const [user, nflState] = await Promise.all([
+                        fetchUser(sleeperUsername),
+                        apiFetch('https://api.sleeper.app/v1/state/nfl'),
+                    ]);
                     setUserId(user.user_id);
                     if (user.avatar) setUserAvatar(user.avatar);
+                    setNflWeek(Number(nflState?.week) || 1);
                     // Fetch 2026 leagues only
                     const lgs = await fetchLeagues(user.user_id, SEASON);
                     setLeagues(lgs || []);
@@ -690,6 +699,28 @@
                 if ((myRoster.reserve  || []).includes(id)) return 'ps-ir';
                 if ((myRoster.taxi     || []).includes(id)) return 'ps-taxi';
                 return '';
+            }
+
+            function getProj(pid) {
+                const p = String(pid);
+                if (!nflWeek || !leagueInfo) return '';
+                const cached = projStats[p];
+                if (cached !== undefined) {
+                    if (cached === null) return '—';
+                    const pts = calcRawPts(cached);
+                    return pts ? Number(pts).toFixed(1) : '0.0';
+                }
+                if (!projInFlight.current.has(p)) {
+                    projInFlight.current.add(p);
+                    apiFetch(`${SLEEPER_BASE}/projections/nfl/player/${p}?season_type=regular&season=${SEASON}&week=${nflWeek}`)
+                        .then(data => {
+                            const stats = data?.stats && typeof data.stats === 'object' ? data.stats : data;
+                            setProjStats(prev => ({ ...prev, [p]: (stats && typeof stats === 'object') ? stats : null }));
+                        })
+                        .catch(() => setProjStats(prev => ({ ...prev, [p]: null })))
+                        .finally(() => projInFlight.current.delete(p));
+                }
+                return '…';
             }
 
             // ---- Derived data ----
@@ -862,6 +893,7 @@
                         <span className="stat-lbl" style={{ width:`${SW.pts}px` }}>PTS</span>
                         <span className="stat-lbl" style={{ width:`${SW.gp}px` }}>GP</span>
                         <span className="stat-lbl" style={{ width:`${SW.avg}px` }}>AVG</span>
+                        <span className="stat-lbl" style={{ width:`${SW.proj}px`, opacity:0.5 }}>PROJ</span>
                         {addBtn && <span style={{ width:'20px' }}></span>}
                     </div>
                 );
@@ -921,12 +953,13 @@
                                                     <th className="rth-pts">PTS</th>
                                                     <th className="rth-gp">GP</th>
                                                     <th className="rth-avg">AVG</th>
+                                                    <th className="rth-proj">PROJ</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {myGroups.flatMap(grp => [
                                                     <tr key={`${grp}-hdr`} className="rt-group">
-                                                        <td colSpan={6}>
+                                                        <td colSpan={7}>
                                                             <div className="rt-gw">
                                                                 <span>{grp}</span>
                                                                 <span>({myGrouped[grp].length})</span>
@@ -951,10 +984,11 @@
                                                                 <td className="rtd-num rtd-pts">{st.pts}</td>
                                                                 <td className="rtd-num">{st.gp}</td>
                                                                 <td className="rtd-num">{st.avg}</td>
+                                                                <td className="rtd-num rtd-proj">{getProj(id)}</td>
                                                             </tr>
                                                         );
                                                     }),
-                                                    <tr key={`${grp}-sep`} className="rt-sep"><td colSpan={6}></td></tr>,
+                                                    <tr key={`${grp}-sep`} className="rt-sep"><td colSpan={7}></td></tr>,
                                                 ])}
                                             </tbody>
                                         </table>
@@ -1031,6 +1065,7 @@
                                                 <span className="sc" style={{ width:`${SW.pts}px`, color:'var(--gold)' }}>{st.pts}</span>
                                                 <span className="sc" style={{ width:`${SW.gp}px`, color:'var(--silver)', opacity:0.65 }}>{st.gp}</span>
                                                 <span className="sc" style={{ width:`${SW.avg}px`, color:'var(--silver)', opacity:0.65 }}>{st.avg}</span>
+                                                <span className="sc" style={{ width:`${SW.proj}px`, color:'var(--silver)', opacity:0.45 }}>{getProj(fa.id)}</span>
                                                 <span className="add-circle" title="Add to targets">+</span>
                                             </div>
                                         );
