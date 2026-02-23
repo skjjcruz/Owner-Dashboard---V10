@@ -557,6 +557,7 @@
 
             const [quickPlayer, setQuickPlayer] = useState(null);
             const [quickCost, setQuickCost]     = useState('');
+            const [dropTarget, setDropTarget]   = useState(false);
 
             // ---- Bootstrap ----
             useEffect(() => { boot(); }, []);
@@ -1065,6 +1066,8 @@
                                         const url = fpUrl(fa.name);
                                         return (
                                             <div key={fa.id} className="player-row"
+                                                draggable="true"
+                                                onDragStart={e => { e.dataTransfer.effectAllowed='copy'; e.dataTransfer.setData('fa-id', fa.id); }}
                                                 onClick={() => { setQuickPlayer(fa); setQuickCost(''); }}>
                                                 <span className="pos-badge" style={{ color: posColor(fa.pos) }}>
                                                     {fa.pos}
@@ -1137,9 +1140,21 @@
                                 </div>
 
                                 {/* Targets list — div-based rows matching left/center player-row layout */}
-                                <div className="panel-body" style={{ padding:'0.4rem 0.38rem' }}>
+                                <div className="panel-body" style={{ padding:'0.4rem 0.38rem',
+                                        outline: dropTarget ? '2px dashed rgba(212,175,55,0.6)' : 'none',
+                                        outlineOffset: '-3px',
+                                        transition: 'outline 0.1s' }}
+                                    onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect='copy'; setDropTarget(true); }}
+                                    onDragLeave={() => setDropTarget(false)}
+                                    onDrop={e => {
+                                        e.preventDefault();
+                                        setDropTarget(false);
+                                        const id = e.dataTransfer.getData('fa-id');
+                                        const fa = filteredFAs.find(f => f.id === id);
+                                        if (fa) { setQuickPlayer(fa); setQuickCost(''); }
+                                    }}>
                                     {targetRows.length === 0 && (
-                                        <div className="center-msg">Click a free agent or use the form above</div>
+                                        <div className="center-msg">{dropTarget ? 'Drop to add target' : 'Drag a free agent here or use the form above'}</div>
                                     )}
                                     {targetRows.map(row => (
                                         <div key={row.id} className="player-row">
