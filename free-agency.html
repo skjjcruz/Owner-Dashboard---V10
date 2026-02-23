@@ -927,8 +927,8 @@
                                         </svg>
                                         MY ROSTER
                                         {myRoster && (
-                                            <span style={{ color:'var(--silver)', fontSize:'0.65rem', opacity:0.55, marginLeft:'0.4rem' }}>
-                                                {myRoster.settings?.wins || 0}-{myRoster.settings?.losses || 0}{(myRoster.settings?.ties || 0) > 0 ? `-${myRoster.settings.ties}` : ''}
+                                            <span style={{ color:'var(--silver)', fontSize:'1.3rem', marginLeft:'0.4rem' }}>
+                                                ({myRoster.settings?.wins || 0}-{myRoster.settings?.losses || 0}{(myRoster.settings?.ties || 0) > 0 ? `-${myRoster.settings.ties}` : ''})
                                             </span>
                                         )}
                                         {userAvatar && (
