@@ -84,7 +84,7 @@
         /* ---- Three-column grid ---- */
         .tracker-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 290px;
+            grid-template-columns: 1fr 1fr 360px;
             height: calc(100vh - 46px);
             overflow: hidden;
             gap: 0.6rem;
@@ -1004,9 +1004,6 @@
                                             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                                         </svg>
                                         AVAILABLE FREE AGENTS
-                                        <span style={{ marginLeft:'auto', color:'var(--silver)', fontSize:'0.58rem', opacity:0.5 }}>
-                                            {filteredFAs.length}
-                                        </span>
                                     </div>
                                     <div className="ph-sub">
                                         {posFilters.map(p => (
@@ -1015,6 +1012,9 @@
                                         ))}
                                         <input className="search-input" placeholder="Search..."
                                             value={search} onChange={e => setSearch(e.target.value)} />
+                                        <span style={{ marginLeft:'auto', color:'var(--silver)', fontSize:'0.58rem', opacity:0.45, flexShrink:0 }}>
+                                            {filteredFAs.length}
+                                        </span>
                                     </div>
                                 </div>
 
