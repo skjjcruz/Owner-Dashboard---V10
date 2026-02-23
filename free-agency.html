@@ -926,6 +926,11 @@
                                             <circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
                                         </svg>
                                         MY ROSTER
+                                        {myRoster && (
+                                            <span style={{ color:'var(--silver)', fontSize:'0.65rem', opacity:0.55, marginLeft:'0.4rem' }}>
+                                                {myRoster.settings?.wins || 0}-{myRoster.settings?.losses || 0}{(myRoster.settings?.ties || 0) > 0 ? `-${myRoster.settings.ties}` : ''}
+                                            </span>
+                                        )}
                                         {userAvatar && (
                                             <img
                                                 src={`https://sleepercdn.com/avatars/thumbs/${userAvatar}`}
