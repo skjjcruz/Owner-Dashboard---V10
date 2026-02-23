@@ -276,6 +276,94 @@
             flex-shrink: 0;
         }
 
+        /* ---- Roster Table (My Roster panel) ---- */
+        .roster-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .roster-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: rgba(10,10,10,0.97);
+            color: var(--gold);
+            padding: 0.32rem 0.45rem;
+            font-family: 'Bebas Neue', cursive;
+            font-size: 0.72rem;
+            font-weight: 400;
+            letter-spacing: 0.07em;
+            border-bottom: 1px solid rgba(212,175,55,0.18);
+            text-align: right;
+        }
+        .roster-table thead th.rth-pos    { text-align: center; width: 44px; }
+        .roster-table thead th.rth-player { text-align: left; }
+        .roster-table thead th.rth-yrs    { width: 40px; }
+        .roster-table thead th.rth-pts    { width: 56px; }
+        .roster-table thead th.rth-gp     { width: 36px; }
+        .roster-table thead th.rth-avg    { width: 52px; }
+        .roster-table td {
+            padding: 0.27rem 0.45rem;
+            vertical-align: middle;
+            text-align: right;
+            font-size: 0.72rem;
+            font-weight: 600;
+            border: none;
+        }
+        .roster-table td.rtd-pos {
+            text-align: center;
+            width: 44px;
+            font-family: 'Bebas Neue', cursive;
+            font-size: 0.68rem;
+            font-weight: 400;
+            color: var(--gold);
+            background: rgba(212,175,55,0.13);
+            letter-spacing: 0.04em;
+        }
+        .roster-table td.rtd-player {
+            text-align: left;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            font-size: 0.82rem;
+        }
+        .roster-table td.rtd-player a {
+            color: var(--white);
+            text-decoration: none;
+        }
+        .roster-table td.rtd-player a:hover { color: var(--gold); }
+        .roster-table td.rtd-num  { color: var(--silver); opacity: 0.75; }
+        .roster-table td.rtd-pts  { color: var(--gold); opacity: 1; }
+        /* Group header row */
+        .roster-table tr.rt-group td {
+            background: rgba(8,8,8,0.95);
+            color: var(--gold);
+            font-family: 'Bebas Neue', cursive;
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            padding: 0.28rem 0.45rem;
+            border-bottom: 1px solid rgba(212,175,55,0.12);
+            text-align: left;
+            opacity: 1;
+        }
+        .roster-table tr.rt-group .rt-gw {
+            display: flex;
+            justify-content: space-between;
+        }
+        /* Separator row */
+        .roster-table tr.rt-sep td {
+            background: rgba(212,175,55,0.07);
+            height: 2px;
+            padding: 0;
+        }
+        /* Status colors on player cell */
+        .roster-table td.ps-starter { background: rgba(6,78,59,0.55);   color: #ecfdf5 !important; opacity:1 !important; }
+        .roster-table td.ps-ir      { background: rgba(127,29,29,0.55); color: #fee2e2 !important; opacity:1 !important; }
+        .roster-table td.ps-taxi    { background: rgba(49,46,129,0.55);  color: #e0e7ff !important; opacity:1 !important; }
+        /* Row hover */
+        .roster-table tbody tr:not(.rt-group):not(.rt-sep):hover td { background: rgba(212,175,55,0.07); }
+        .roster-table tbody tr:not(.rt-group):not(.rt-sep):hover td.rtd-pos { background: rgba(212,175,55,0.22); }
+
         /* ---- Right: FA Targets ---- */
         .budget-input-inline {
             background: transparent;
@@ -596,6 +684,14 @@
                 return { yrs, pts, gp, avg };
             }
 
+            function rosterStatusClass(id) {
+                if (!myRoster) return '';
+                if ((myRoster.starters || []).includes(id)) return 'ps-starter';
+                if ((myRoster.reserve  || []).includes(id)) return 'ps-ir';
+                if ((myRoster.taxi     || []).includes(id)) return 'ps-taxi';
+                return '';
+            }
+
             // ---- Derived data ----
             const takenIds = useMemo(() =>
                 new Set(allRosters.flatMap(r => r.players || [])),
@@ -813,51 +909,56 @@
                                     </div>
                                     <div className="ph-sub"></div>
                                 </div>
-                                <StatHeader addBtn={false} />
-                                <div className="panel-body">
+                                <div className="panel-body" style={{padding:0}}>
                                     {myGroups.length === 0 && <div className="center-msg">No roster data</div>}
-                                    {myGroups.map(grp => (
-                                        <div key={grp}>
-                                            <div className="pos-group-label">{grp}</div>
-                                            {myGrouped[grp].map(({ id, p }) => {
-                                                const st = getStats(id);
-                                                const pName = p.full_name || `${p.first_name||''} ${p.last_name||''}`.trim() || id;
-                                                const url = fpUrl(pName);
-                                                const { border, bg } = sectionMap.get(id) || { border:null, bg:'rgba(255,255,255,0.02)' };
-                                                return (
-                                                    <div key={id} className="player-row" style={{
-                                                        cursor:'default',
-                                                        borderLeft: border ? `3px solid ${border}` : 'none',
-                                                        background: bg,
-                                                    }}>
-                                                        <span style={{
-                                                            display:'inline-flex', alignItems:'center', justifyContent:'center',
-                                                            width:'34px', flexShrink:0,
-                                                            fontSize:'0.65rem', fontWeight:'700',
-                                                            color: posColor(p.position),
-                                                            border:'1.5px solid var(--gold)',
-                                                            borderRadius:'3px',
-                                                            padding:'2px 0',
-                                                            background:'rgba(212,175,55,0.08)',
-                                                            letterSpacing:'0.02em'
-                                                        }}>
-                                                            {p.position || '?'}
-                                                        </span>
-                                                        <a className="player-name" href={url || '#'} target="_blank" rel="noopener noreferrer"
-                                                            style={{ color:'var(--white)' }}
-                                                            onMouseEnter={e => e.currentTarget.style.color='var(--gold)'}
-                                                            onMouseLeave={e => e.currentTarget.style.color='var(--white)'}>
-                                                            {pName} <span style={{ fontSize:'0.68rem', color:'var(--silver)', opacity:0.5 }}>{p.team||''}</span>
-                                                        </a>
-                                                        <span className="sc" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
-                                                        <span className="sc" style={{ width:`${SW.pts}px`, color:'var(--gold)' }}>{st.pts}</span>
-                                                        <span className="sc" style={{ width:`${SW.gp}px`, color:'var(--silver)', opacity:0.65 }}>{st.gp}</span>
-                                                        <span className="sc" style={{ width:`${SW.avg}px`, color:'var(--silver)', opacity:0.65 }}>{st.avg}</span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    ))}
+                                    {myGroups.length > 0 && (
+                                        <table className="roster-table">
+                                            <thead>
+                                                <tr>
+                                                    <th className="rth-pos">POS</th>
+                                                    <th className="rth-player">PLAYER</th>
+                                                    <th className="rth-yrs">YRS</th>
+                                                    <th className="rth-pts">PTS</th>
+                                                    <th className="rth-gp">GP</th>
+                                                    <th className="rth-avg">AVG</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {myGroups.flatMap(grp => [
+                                                    <tr key={`${grp}-hdr`} className="rt-group">
+                                                        <td colSpan={6}>
+                                                            <div className="rt-gw">
+                                                                <span>{grp}</span>
+                                                                <span>({myGrouped[grp].length})</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>,
+                                                    ...myGrouped[grp].map(({ id, p }) => {
+                                                        const st = getStats(id);
+                                                        const pName = p.full_name || `${p.first_name||''} ${p.last_name||''}`.trim() || id;
+                                                        const url = fpUrl(pName);
+                                                        const sc = rosterStatusClass(id);
+                                                        return (
+                                                            <tr key={id}>
+                                                                <td className="rtd-pos">{p.position || '?'}</td>
+                                                                <td className={`rtd-player${sc ? ' '+sc : ''}`}>
+                                                                    <a href={url || '#'} target="_blank" rel="noopener noreferrer">
+                                                                        {pName}
+                                                                        <span style={{fontSize:'0.65rem', color:'var(--silver)', opacity:0.55, marginLeft:'0.3rem'}}>{p.team||''}</span>
+                                                                    </a>
+                                                                </td>
+                                                                <td className="rtd-num">{st.yrs}</td>
+                                                                <td className="rtd-num rtd-pts">{st.pts}</td>
+                                                                <td className="rtd-num">{st.gp}</td>
+                                                                <td className="rtd-num">{st.avg}</td>
+                                                            </tr>
+                                                        );
+                                                    }),
+                                                    <tr key={`${grp}-sep`} className="rt-sep"><td colSpan={6}></td></tr>,
+                                                ])}
+                                            </tbody>
+                                        </table>
+                                    )}
                                 </div>
                             </div>
 
