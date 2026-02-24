@@ -1154,6 +1154,14 @@
         return await fetchJSON(`${SLEEPER_BASE_URL}/league/${leagueId}`);
     }
 
+    async function fetchWinnersBracket(leagueId) {
+        try {
+            return await fetchJSON(`${SLEEPER_BASE_URL}/league/${leagueId}/winners_bracket`);
+        } catch (e) {
+            return [];
+        }
+    }
+
     let _playersCache = null;
     async function fetchAllPlayers() {
         if (_playersCache) return _playersCache;
@@ -1987,6 +1995,8 @@
         const [sleeperLeagues, setSleeperLeagues] = useState([]);
         const [activeLeagueId, setActiveLeagueId] = useState(null);
         const [selectedLeague, setSelectedLeague] = useState(null);
+        const [trophies, setTrophies] = useState([]);
+        const [trophiesLoading, setTrophiesLoading] = useState(false);
 
         // Calendar state
         const [calendarEvents, setCalendarEvents] = useState(() => loadCalendarEvents());
@@ -2043,6 +2053,61 @@
         useEffect(() => {
             loadSleeperData();
         }, [selectedYear]);
+
+        useEffect(() => {
+            if (!sleeperUser) return;
+            loadTrophies(sleeperUser.user_id);
+        }, [sleeperUser?.user_id]);
+
+        async function loadTrophies(userId) {
+            setTrophiesLoading(true);
+            const TROPHY_YEARS = ['2019', '2020', '2021', '2022', '2023', '2024', '2025'];
+            const found = [];
+
+            await Promise.all(TROPHY_YEARS.map(async (year) => {
+                try {
+                    const leagues = await fetchUserLeagues(userId, year);
+                    if (!leagues || leagues.length === 0) return;
+
+                    await Promise.all(leagues.map(async (league) => {
+                        try {
+                            const [bracket, rosters] = await Promise.all([
+                                fetchWinnersBracket(league.league_id),
+                                fetchLeagueRosters(league.league_id)
+                            ]);
+
+                            if (!bracket || bracket.length === 0) return;
+
+                            // Find the championship game: highest round, matchup 1
+                            const maxRound = Math.max(...bracket.map(m => m.r));
+                            const championship = bracket.find(m => m.r === maxRound && m.m === 1);
+                            if (!championship || !championship.w) return;
+
+                            // Get owner's roster_id in this league
+                            const myRoster = rosters.find(r => r.owner_id === userId);
+                            if (!myRoster) return;
+
+                            if (championship.w === myRoster.roster_id) {
+                                found.push({
+                                    year: parseInt(year),
+                                    league: league.name,
+                                    icon: '🏆'
+                                });
+                            }
+                        } catch (e) {
+                            // skip this league silently
+                        }
+                    }));
+                } catch (e) {
+                    // skip this year silently
+                }
+            }));
+
+            // Sort newest first
+            found.sort((a, b) => b.year - a.year);
+            setTrophies(found);
+            setTrophiesLoading(false);
+        }
 
         async function loadSleeperData() {
             setLoading(true);
@@ -2179,13 +2244,19 @@
                             <div className="trophy-case">
                                 <div className="trophy-case-title">TROPHY CASE</div>
                                 <div className="trophies">
-                                    {ownerData.trophies.map((trophy, idx) => (
-                                        <div key={idx} className="trophy">
-                                            <div className="trophy-icon">{trophy.icon}</div>
-                                            <div className="trophy-year">{trophy.year}</div>
-                                            <div className="trophy-label">{trophy.league}</div>
-                                        </div>
-                                    ))}
+                                    {trophiesLoading ? (
+                                        <div style={{ color: 'var(--silver)', fontSize: '0.8rem', opacity: 0.7, padding: '0.5rem' }}>Loading...</div>
+                                    ) : trophies.length === 0 ? (
+                                        <div style={{ color: 'var(--silver)', fontSize: '0.8rem', opacity: 0.7, padding: '0.5rem' }}>No championships yet</div>
+                                    ) : (
+                                        trophies.map((trophy, idx) => (
+                                            <div key={idx} className="trophy">
+                                                <div className="trophy-icon">{trophy.icon}</div>
+                                                <div className="trophy-year">{trophy.year}</div>
+                                                <div className="trophy-label">{trophy.league}</div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
 

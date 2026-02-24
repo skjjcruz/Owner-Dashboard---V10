@@ -555,8 +555,11 @@
             const [fName, setFName] = useState('');
             const [fCost, setFCost] = useState('');
 
-            const [quickPlayer, setQuickPlayer] = useState(null);
-            const [quickCost, setQuickCost]     = useState('');
+            const [quickPlayer, setQuickPlayer]   = useState(null);
+            const [quickCost, setQuickCost]       = useState('');
+            const [dropTarget, setDropTarget]     = useState(false);
+            const [editingCostId, setEditingCostId] = useState(null);
+            const [editingCostVal, setEditingCostVal] = useState('');
 
             // ---- Bootstrap ----
             useEffect(() => { boot(); }, []);
@@ -838,6 +841,11 @@
                 }]);
             }
             function deleteTarget(id) { setTargets(prev => prev.filter(t => t.id !== id)); }
+            function updateTargetCost(id, val) {
+                const c = parseInt(val);
+                if (isNaN(c) || c < 0) return;
+                setTargets(prev => prev.map(t => t.id === id ? { ...t, cost: c } : t));
+            }
             function handleFormAdd(e) {
                 e.preventDefault();
                 addTarget(fPos, fName, fCost);
@@ -1065,6 +1073,8 @@
                                         const url = fpUrl(fa.name);
                                         return (
                                             <div key={fa.id} className="player-row"
+                                                draggable="true"
+                                                onDragStart={e => { e.dataTransfer.effectAllowed='copy'; e.dataTransfer.setData('fa-id', fa.id); }}
                                                 onClick={() => { setQuickPlayer(fa); setQuickCost(''); }}>
                                                 <span className="pos-badge" style={{ color: posColor(fa.pos) }}>
                                                     {fa.pos}
@@ -1137,9 +1147,31 @@
                                 </div>
 
                                 {/* Targets list — div-based rows matching left/center player-row layout */}
-                                <div className="panel-body" style={{ padding:'0.4rem 0.38rem' }}>
+                                <div className="panel-body" style={{ padding:'0.4rem 0.38rem',
+                                        outline: dropTarget ? '2px dashed rgba(212,175,55,0.6)' : 'none',
+                                        outlineOffset: '-3px',
+                                        transition: 'outline 0.1s' }}
+                                    onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect='copy'; setDropTarget(true); }}
+                                    onDragLeave={() => setDropTarget(false)}
+                                    onDrop={e => {
+                                        e.preventDefault();
+                                        setDropTarget(false);
+                                        const id = e.dataTransfer.getData('fa-id');
+                                        const fa = filteredFAs.find(f => f.id === id);
+                                        if (fa) {
+                                            const newId = Date.now().toString();
+                                            setTargets(prev => [...prev, {
+                                                id: newId,
+                                                pos: (fa.norm || fa.pos || '?').toUpperCase(),
+                                                name: fa.name,
+                                                cost: 0
+                                            }]);
+                                            setEditingCostId(newId);
+                                            setEditingCostVal('');
+                                        }
+                                    }}>
                                     {targetRows.length === 0 && (
-                                        <div className="center-msg">Click a free agent or use the form above</div>
+                                        <div className="center-msg">{dropTarget ? 'Drop to add target' : 'Drag a free agent here or use the form above'}</div>
                                     )}
                                     {targetRows.map(row => (
                                         <div key={row.id} className="player-row">
@@ -1150,7 +1182,26 @@
                                             <span className="player-name" style={{ fontSize:'0.82rem' }} title={row.name}>
                                                 {row.name}
                                             </span>
-                                            <span className="sc" style={{ width:'30px', color:'var(--silver)', opacity:0.65 }}>{row.cost}</span>
+                                            {editingCostId === row.id ? (
+                                                <input type="number" min="0" autoFocus
+                                                    value={editingCostVal}
+                                                    onChange={e => setEditingCostVal(e.target.value)}
+                                                    onBlur={() => { updateTargetCost(row.id, editingCostVal || '0'); setEditingCostId(null); }}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter') { updateTargetCost(row.id, editingCostVal || '0'); setEditingCostId(null); }
+                                                        if (e.key === 'Escape') setEditingCostId(null);
+                                                    }}
+                                                    style={{ width:'30px', background:'transparent', border:'1px solid rgba(212,175,55,0.5)',
+                                                             borderRadius:'3px', color:'var(--gold)', fontSize:'0.72rem',
+                                                             textAlign:'right', padding:'0 2px', outline:'none' }} />
+                                            ) : (
+                                                <span className="sc" title="Click to edit bid"
+                                                    onClick={() => { setEditingCostId(row.id); setEditingCostVal(String(row.cost)); }}
+                                                    style={{ width:'30px', color: row.cost === 0 ? 'rgba(212,175,55,0.4)' : 'var(--silver)',
+                                                             opacity: row.cost === 0 ? 1 : 0.65, cursor:'pointer' }}>
+                                                    {row.cost === 0 ? '$?' : row.cost}
+                                                </span>
+                                            )}
                                             <span className="sc" style={{ width:'32px', color:'var(--silver)', opacity:0.65 }}>{row.faDollar.toLocaleString()}</span>
                                             <span className="sc" style={{ width:'38px', color:remColor(row.remaining), fontWeight:700 }}>{row.remaining.toLocaleString()}</span>
                                             <button className="del-btn" onClick={() => deleteTarget(row.id)} title="Remove">&times;</button>
