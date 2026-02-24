@@ -422,6 +422,127 @@
         letter-spacing: 0.1em;
     }
 
+    .earnings-box {
+        cursor: pointer;
+        transition: border-color 0.2s;
+    }
+    .earnings-box:hover {
+        border-color: rgba(212, 175, 55, 0.5);
+    }
+    .earnings-edit-hint {
+        font-size: 0.68rem;
+        color: var(--gold);
+        opacity: 0.6;
+        margin-top: 0.35rem;
+        letter-spacing: 0.05em;
+    }
+
+    /* Earnings Modal */
+    .earnings-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 1rem;
+    }
+    .earnings-modal {
+        background: var(--charcoal);
+        border: 1px solid rgba(212,175,55,0.3);
+        border-radius: 12px;
+        width: 100%;
+        max-width: 520px;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .earnings-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid rgba(212,175,55,0.15);
+    }
+    .earnings-modal-title {
+        font-family: 'Bebas Neue', cursive;
+        font-size: 1.4rem;
+        color: var(--gold);
+        letter-spacing: 0.15em;
+    }
+    .earnings-modal-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.25rem 1.5rem;
+    }
+    .earnings-entry-row {
+        display: grid;
+        grid-template-columns: 3rem 1fr 1fr auto;
+        gap: 0.5rem;
+        align-items: center;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        font-size: 0.85rem;
+    }
+    .earnings-entry-year {
+        color: var(--gold);
+        font-weight: 700;
+        font-family: 'Oswald', sans-serif;
+    }
+    .earnings-entry-league {
+        color: var(--white);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .earnings-entry-desc {
+        color: var(--silver);
+        font-size: 0.78rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .earnings-entry-amount {
+        color: var(--win-green);
+        font-weight: 700;
+        font-family: 'Oswald', sans-serif;
+        text-align: right;
+        white-space: nowrap;
+    }
+    .earnings-total-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0 0.25rem;
+        margin-top: 0.5rem;
+        border-top: 2px solid rgba(212,175,55,0.25);
+    }
+    .earnings-add-form {
+        border-top: 1px solid rgba(212,175,55,0.15);
+        padding: 1.25rem 1.5rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.6rem;
+    }
+    .earnings-input {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(212,175,55,0.2);
+        border-radius: 6px;
+        color: var(--white);
+        padding: 0.45rem 0.65rem;
+        font-size: 0.82rem;
+        font-family: 'Oswald', sans-serif;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .earnings-input:focus {
+        outline: none;
+        border-color: rgba(212,175,55,0.55);
+    }
+    .earnings-input::placeholder { color: rgba(255,255,255,0.3); }
+
     /* Key Events */
     .key-events {
         background: var(--black);
@@ -841,6 +962,22 @@
 
     function saveCalendarEvents(events) {
         localStorage.setItem(CALENDAR_KEY, JSON.stringify(events));
+    }
+
+    // ===== EARNINGS DATA LAYER =====
+    const EARNINGS_KEY = 'od_earnings_entries';
+
+    function loadEarnings() {
+        try {
+            const raw = localStorage.getItem(EARNINGS_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveEarnings(entries) {
+        localStorage.setItem(EARNINGS_KEY, JSON.stringify(entries));
     }
 
     function exportCalendarEvents(events) {
@@ -1985,6 +2122,88 @@
         );
     }
 
+    // Earnings Modal
+    function EarningsModal({ entries, onAdd, onDelete, onClose }) {
+        const YEARS = ['2026','2025','2024','2023','2022','2021','2020','2019','2018'];
+        const [form, setForm] = React.useState({ year: '2024', league: '', description: '', amount: '' });
+        const [formError, setFormError] = React.useState('');
+
+        const sorted = [...entries].sort((a, b) => b.year - a.year || a.league.localeCompare(b.league));
+        const total = entries.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+
+        function handleAdd(e) {
+            e.preventDefault();
+            if (!form.league.trim()) { setFormError('League name is required.'); return; }
+            const amount = parseFloat(form.amount);
+            if (isNaN(amount) || amount === 0) { setFormError('Enter a valid amount.'); return; }
+            setFormError('');
+            onAdd({ id: Date.now().toString(), year: form.year, league: form.league.trim(), description: form.description.trim(), amount });
+            setForm(f => ({ ...f, league: '', description: '', amount: '' }));
+        }
+
+        return (
+            <div className="earnings-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+                <div className="earnings-modal">
+                    <div className="earnings-modal-header">
+                        <div className="earnings-modal-title">EARNINGS TRACKER</div>
+                        <div onClick={onClose} style={{ cursor: 'pointer', color: 'var(--silver)', fontSize: '1.4rem', lineHeight: 1 }}>×</div>
+                    </div>
+
+                    <div className="earnings-modal-body">
+                        {sorted.length === 0 ? (
+                            <div style={{ textAlign: 'center', color: 'var(--silver)', padding: '2rem 0', fontSize: '0.85rem', opacity: 0.7 }}>
+                                No entries yet. Add your first payout below.
+                            </div>
+                        ) : (
+                            <>
+                                <div style={{ display: 'grid', gridTemplateColumns: '3rem 1fr 1fr auto auto', gap: '0.5rem', padding: '0 0 0.4rem', borderBottom: '1px solid rgba(212,175,55,0.2)', marginBottom: '0.25rem' }}>
+                                    <div style={{ fontSize: '0.68rem', color: 'var(--silver)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Year</div>
+                                    <div style={{ fontSize: '0.68rem', color: 'var(--silver)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>League</div>
+                                    <div style={{ fontSize: '0.68rem', color: 'var(--silver)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Note</div>
+                                    <div style={{ fontSize: '0.68rem', color: 'var(--silver)', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right' }}>Amount</div>
+                                    <div></div>
+                                </div>
+                                {sorted.map(entry => (
+                                    <div key={entry.id} style={{ display: 'grid', gridTemplateColumns: '3rem 1fr 1fr auto auto', gap: '0.5rem', alignItems: 'center', padding: '0.55rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <div className="earnings-entry-year">{entry.year}</div>
+                                        <div className="earnings-entry-league">{entry.league}</div>
+                                        <div className="earnings-entry-desc">{entry.description || '—'}</div>
+                                        <div className="earnings-entry-amount">${parseFloat(entry.amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+                                        <div onClick={() => onDelete(entry.id)} style={{ cursor: 'pointer', color: 'rgba(231,76,60,0.7)', fontSize: '1rem', lineHeight: 1, paddingLeft: '0.25rem' }} title="Delete">×</div>
+                                    </div>
+                                ))}
+                                <div className="earnings-total-row">
+                                    <div style={{ fontFamily: 'Bebas Neue, cursive', fontSize: '1rem', color: 'var(--silver)', letterSpacing: '0.12em' }}>TOTAL EARNINGS</div>
+                                    <div style={{ fontFamily: 'Bebas Neue, cursive', fontSize: '1.3rem', color: 'var(--win-green)', letterSpacing: '0.05em' }}>
+                                        ${total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    <form className="earnings-add-form" onSubmit={handleAdd}>
+                        <div style={{ gridColumn: '1 / -1', fontFamily: 'Bebas Neue, cursive', fontSize: '1rem', color: 'var(--gold)', letterSpacing: '0.12em', marginBottom: '0.1rem' }}>ADD PAYOUT</div>
+                        <select className="earnings-input" value={form.year} onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
+                            style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--white)' }}>
+                            {YEARS.map(y => <option key={y} value={y} style={{ background: '#1a1a1a' }}>{y}</option>)}
+                        </select>
+                        <input className="earnings-input" placeholder="League name" value={form.league}
+                            onChange={e => setForm(f => ({ ...f, league: e.target.value }))} />
+                        <input className="earnings-input" placeholder="Note (e.g. Champion)" value={form.description}
+                            onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+                        <input className="earnings-input" placeholder="Amount ($)" type="number" min="0" step="1" value={form.amount}
+                            onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+                        {formError && <div style={{ gridColumn: '1 / -1', color: '#E74C3C', fontSize: '0.78rem' }}>{formError}</div>}
+                        <button type="submit" style={{ gridColumn: '1 / -1', background: 'var(--gold)', color: 'var(--black)', border: 'none', borderRadius: '6px', padding: '0.55rem', fontFamily: 'Bebas Neue, cursive', fontSize: '1rem', letterSpacing: '0.1em', cursor: 'pointer' }}>
+                            ADD ENTRY
+                        </button>
+                    </form>
+                </div>
+            </div>
+        );
+    }
+
     // Main Dashboard
     function OwnerDashboard() {
         const [showSettings, setShowSettings] = useState(false);
@@ -1997,6 +2216,24 @@
         const [selectedLeague, setSelectedLeague] = useState(null);
         const [trophies, setTrophies] = useState([]);
         const [trophiesLoading, setTrophiesLoading] = useState(false);
+
+        // Earnings state
+        const [earningsEntries, setEarningsEntries] = useState(() => loadEarnings());
+        const [showEarnings, setShowEarnings] = useState(false);
+
+        const totalEarnings = earningsEntries.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+
+        function handleAddEarning(entry) {
+            const updated = [...earningsEntries, entry];
+            setEarningsEntries(updated);
+            saveEarnings(updated);
+        }
+
+        function handleDeleteEarning(id) {
+            const updated = earningsEntries.filter(e => e.id !== id);
+            setEarningsEntries(updated);
+            saveEarnings(updated);
+        }
 
         // Calendar state
         const [calendarEvents, setCalendarEvents] = useState(() => loadCalendarEvents());
@@ -2267,10 +2504,13 @@
                                 </div>
                             </div>
 
-                            <div className="earnings-box">
+                            <div className="earnings-box" onClick={() => setShowEarnings(true)} title="Click to manage earnings">
                                 <div className="earnings-title">EARNINGS</div>
-                                <div className="earnings-amount">{ownerData.earnings}</div>
+                                <div className="earnings-amount">
+                                    ${totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                </div>
                                 <div className="earnings-label">Total Winnings</div>
+                                <div className="earnings-edit-hint">+ LOG PAYOUT</div>
                             </div>
                         </div>
 
@@ -2431,6 +2671,15 @@
                 </div>
 
                 {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
+                {showEarnings && (
+                    <EarningsModal
+                        entries={earningsEntries}
+                        onAdd={handleAddEarning}
+                        onDelete={handleDeleteEarning}
+                        onClose={() => setShowEarnings(false)}
+                    />
+                )}
 
                 {/* Calendar Modal */}
                 {showCalendar && (
