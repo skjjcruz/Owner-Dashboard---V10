@@ -2055,9 +2055,10 @@
         }, [selectedYear]);
 
         useEffect(() => {
-            if (!sleeperUser) return;
-            loadTrophies(sleeperUser.user_id);
-        }, [sleeperUser?.user_id]);
+            if (sleeperUser?.user_id) {
+                loadTrophies(sleeperUser.user_id);
+            }
+        }, [sleeperUser]);
 
         async function loadTrophies(userId) {
             setTrophiesLoading(true);
@@ -2076,18 +2077,23 @@
                                 fetchLeagueRosters(league.league_id)
                             ]);
 
-                            if (!bracket || bracket.length === 0) return;
+                            if (!Array.isArray(bracket) || bracket.length === 0) return;
 
-                            // Find the championship game: highest round, matchup 1
+                            // Find the championship: highest round, any completed game (w is set)
                             const maxRound = Math.max(...bracket.map(m => m.r));
-                            const championship = bracket.find(m => m.r === maxRound && m.m === 1);
-                            if (!championship || !championship.w) return;
+                            const finalGames = bracket.filter(m => m.r === maxRound && m.w != null);
+                            if (finalGames.length === 0) return;
+                            // Championship is the first (and usually only) final-round game
+                            const championship = finalGames[0];
 
                             // Get owner's roster_id in this league
                             const myRoster = rosters.find(r => r.owner_id === userId);
                             if (!myRoster) return;
 
+                            console.log(`[Trophies] ${year} ${league.name}: champion roster=${championship.w}, my roster=${myRoster.roster_id}`);
+
                             if (championship.w === myRoster.roster_id) {
+                                console.log(`[Trophies] 🏆 Found championship! ${year} - ${league.name}`);
                                 found.push({
                                     year: parseInt(year),
                                     league: league.name,
@@ -2095,16 +2101,17 @@
                                 });
                             }
                         } catch (e) {
-                            // skip this league silently
+                            console.warn(`[Trophies] Error checking league ${league.name} (${year}):`, e);
                         }
                     }));
                 } catch (e) {
-                    // skip this year silently
+                    console.warn(`[Trophies] Error fetching leagues for ${year}:`, e);
                 }
             }));
 
             // Sort newest first
             found.sort((a, b) => b.year - a.year);
+            console.log('[Trophies] Final trophies:', found);
             setTrophies(found);
             setTrophiesLoading(false);
         }
