@@ -980,6 +980,49 @@
         localStorage.setItem(EARNINGS_KEY, JSON.stringify(entries));
     }
 
+    // ===== FULL DATA BACKUP / RESTORE =====
+    function exportAllData(calendarEvents, earningsEntries, username) {
+        const payload = {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            username: username || '',
+            calendar: calendarEvents,
+            earnings: earningsEntries
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `od-backup-${dateStr}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importAllData(file, onSuccess, onError) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (typeof parsed !== 'object' || parsed === null) throw new Error('Invalid file');
+                const calendar = Array.isArray(parsed.calendar) ? parsed.calendar : null;
+                const earnings = Array.isArray(parsed.earnings) ? parsed.earnings : null;
+                if (!calendar && !earnings) throw new Error('No recognisable data found in file');
+                onSuccess({ calendar, earnings });
+            } catch (err) {
+                onError(err.message || 'Could not read backup file');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function hasUserData(calendarEvents, earningsEntries) {
+        const defaultIds = new Set(DEFAULT_EVENTS.map(d => d.id));
+        const hasCustomCalendar = calendarEvents.some(e => !defaultIds.has(e.id));
+        const hasEarnings = earningsEntries.length > 0;
+        return hasCustomCalendar || hasEarnings;
+    }
+
     function exportCalendarEvents(events) {
         const payload = { version: 1, exported: new Date().toISOString(), events };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -1387,7 +1430,31 @@
     };
 
     // Settings Modal
-    function SettingsModal({ onClose }) {
+    function SettingsModal({ onClose, calendarEvents, earningsEntries, onRestore }) {
+        const [restoreMsg, setRestoreMsg] = React.useState('');
+        const fileInputRef = React.useRef(null);
+
+        function handleExport() {
+            exportAllData(calendarEvents, earningsEntries, sleeperUsername);
+        }
+
+        function handleFileChange(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            importAllData(
+                file,
+                ({ calendar, earnings }) => {
+                    onRestore({ calendar, earnings });
+                    const parts = [];
+                    if (calendar) parts.push(`${calendar.length} calendar events`);
+                    if (earnings) parts.push(`${earnings.length} earnings entries`);
+                    setRestoreMsg(`✓ Restored: ${parts.join(' and ')}`);
+                },
+                (msg) => setRestoreMsg(`✗ ${msg}`)
+            );
+            e.target.value = '';
+        }
+
         return (
             <div style={{
                 position: 'fixed',
@@ -1430,6 +1497,56 @@
                         </div>
                     </div>
 
+                    {/* Data Backup section */}
+                    <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '8px' }}>
+                        <div style={{ fontFamily: 'Bebas Neue, cursive', fontSize: '1rem', color: 'var(--gold)', letterSpacing: '0.12em', marginBottom: '0.75rem' }}>
+                            DATA BACKUP
+                        </div>
+                        <div style={{ fontSize: '0.73rem', color: 'var(--silver)', marginBottom: '0.85rem', lineHeight: 1.5 }}>
+                            Save your earnings and key events to a file. Restore it any time — useful when adding to your home screen or after clearing your browser.
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.6rem' }}>
+                            <button onClick={handleExport} style={{
+                                flex: 1,
+                                padding: '0.6rem',
+                                background: 'var(--gold)',
+                                border: 'none',
+                                borderRadius: '6px',
+                                color: 'var(--black)',
+                                fontFamily: 'Oswald, sans-serif',
+                                fontSize: '0.82rem',
+                                fontWeight: '700',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em',
+                                cursor: 'pointer'
+                            }}>
+                                ↓ Export
+                            </button>
+                            <button onClick={() => fileInputRef.current.click()} style={{
+                                flex: 1,
+                                padding: '0.6rem',
+                                background: 'transparent',
+                                border: '1px solid var(--gold)',
+                                borderRadius: '6px',
+                                color: 'var(--gold)',
+                                fontFamily: 'Oswald, sans-serif',
+                                fontSize: '0.82rem',
+                                fontWeight: '700',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em',
+                                cursor: 'pointer'
+                            }}>
+                                ↑ Restore
+                            </button>
+                            <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileChange} />
+                        </div>
+                        {restoreMsg && (
+                            <div style={{ marginTop: '0.6rem', fontSize: '0.73rem', color: restoreMsg.startsWith('✓') ? 'var(--win-green)' : '#E74C3C' }}>
+                                {restoreMsg}
+                            </div>
+                        )}
+                    </div>
+
                     <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column' }}>
                         <button onClick={handleLogout} style={{
                             padding: '0.75rem',
@@ -1462,18 +1579,6 @@
                         }}>
                             Close
                         </button>
-                    </div>
-
-                    <div style={{
-                        marginTop: '1.5rem',
-                        padding: '1rem',
-                        background: 'rgba(212, 175, 55, 0.1)',
-                        borderRadius: '6px',
-                        fontSize: '0.75rem',
-                        color: 'var(--silver)',
-                        textAlign: 'center'
-                    }}>
-                        LeagueSafe sync coming in Phase 3
                     </div>
                 </div>
             </div>
@@ -2223,6 +2328,12 @@
 
         const totalEarnings = earningsEntries.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
 
+        // Restore banner — show when the app loads with no user data (fresh PWA install / cleared cache)
+        const [showRestoreBanner, setShowRestoreBanner] = useState(
+            () => !hasUserData(loadCalendarEvents(), loadEarnings())
+        );
+        const restoreBannerFileRef = React.useRef(null);
+
         function handleAddEarning(entry) {
             const updated = [...earningsEntries, entry];
             setEarningsEntries(updated);
@@ -2233,6 +2344,17 @@
             const updated = earningsEntries.filter(e => e.id !== id);
             setEarningsEntries(updated);
             saveEarnings(updated);
+        }
+
+        function handleRestore({ calendar, earnings }) {
+            if (calendar) {
+                setCalendarEvents(calendar);
+                saveCalendarEvents(calendar);
+            }
+            if (earnings) {
+                setEarningsEntries(earnings);
+                saveEarnings(earnings);
+            }
         }
 
         // Calendar state
@@ -2443,6 +2565,27 @@
                         <path d="M12 1v6m0 6v6m-5.2-7.8l-4.3-4.2m12.9 0l4.3 4.2M1 12h6m6 0h6m-7.8 5.2l-4.2 4.3m0-12.9l4.2 4.3" stroke="var(--gold)"/>
                     </svg>
                 </header>
+
+                {showRestoreBanner && (
+                    <div style={{ background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.35)', borderRadius: '8px', padding: '0.7rem 1rem', margin: '0.75rem 1rem 0', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--silver)' }}>
+                        <span style={{ flex: 1 }}>Have a backup file? Restore your earnings and events from a previous session.</span>
+                        <button
+                            onClick={() => restoreBannerFileRef.current.click()}
+                            style={{ background: 'var(--gold)', color: 'var(--black)', border: 'none', borderRadius: '5px', padding: '0.35rem 0.9rem', fontFamily: 'Oswald, sans-serif', fontSize: '0.78rem', fontWeight: '700', letterSpacing: '0.05em', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            ↑ Restore Backup
+                        </button>
+                        <input ref={restoreBannerFileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={e => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            importAllData(file, ({ calendar, earnings }) => {
+                                handleRestore({ calendar, earnings });
+                                setShowRestoreBanner(false);
+                            }, () => {});
+                            e.target.value = '';
+                        }} />
+                        <span onClick={() => setShowRestoreBanner(false)} style={{ cursor: 'pointer', color: 'var(--silver)', opacity: 0.6, fontSize: '1.1rem', lineHeight: 1 }}>×</span>
+                    </div>
+                )}
 
                 <div className="main-layout">
                     {/* Left - Key Events */}
@@ -2670,7 +2813,14 @@
                     </div>
                 </div>
 
-                {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+                {showSettings && (
+                    <SettingsModal
+                        onClose={() => setShowSettings(false)}
+                        calendarEvents={calendarEvents}
+                        earningsEntries={earningsEntries}
+                        onRestore={handleRestore}
+                    />
+                )}
 
                 {showEarnings && (
                     <EarningsModal
