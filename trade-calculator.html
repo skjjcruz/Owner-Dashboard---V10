@@ -330,6 +330,33 @@
         }
         .grudge-type-btn:hover { border-color: var(--gold); color: var(--gold); }
         .log-section-hdr { font-size: 0.6rem; color: var(--silver); opacity: 0.5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.2rem; }
+
+        /* Outcome flow buttons */
+        .outcome-btn {
+            font-family: 'Oswald', sans-serif; font-size: 0.72rem; font-weight: 700;
+            letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+            padding: 0.35rem 0.75rem; border-radius: 4px; border: 1.5px solid;
+            transition: all 0.15s; background: transparent;
+        }
+        .outcome-btn:hover { filter: brightness(1.2); }
+        .outcome-btn.primary  { color:#2ECC71; border-color:#2ECC71; }
+        .outcome-btn.primary:hover { background:rgba(46,204,113,0.12); }
+        .outcome-btn.danger   { color:#E74C3C; border-color:#E74C3C; }
+        .outcome-btn.danger:hover  { background:rgba(231,76,60,0.12); }
+        .outcome-btn.neutral  { color:#5DADE2; border-color:#5DADE2; }
+        .outcome-btn.neutral:hover { background:rgba(93,173,226,0.12); }
+        .outcome-btn.gold     { color:var(--gold); border-color:var(--gold); }
+        .outcome-btn.gold:hover    { background:rgba(212,175,55,0.12); }
+        .outcome-btn.amber    { color:#F0A500; border-color:#F0A500; }
+        .outcome-btn.amber:hover   { background:rgba(240,165,0,0.12); }
+        .outcome-btn.purple   { color:#BB8FCE; border-color:#BB8FCE; }
+        .outcome-btn.purple:hover  { background:rgba(187,143,206,0.12); }
+        .outcome-row { display:flex; gap:0.4rem; flex-wrap:wrap; }
+        .outcome-question { font-size:0.68rem; color:var(--silver); opacity:0.8; margin-bottom:0.4rem; font-style:italic; }
+        .back-link { background:transparent; border:none; color:rgba(255,255,255,0.3); font-size:0.62rem; cursor:pointer; padding:0.2rem 0; font-family:'Oswald',sans-serif; }
+        .back-link:hover { color:var(--silver); }
+        .counter-verdict-row { display:flex; align-items:center; gap:0.5rem; padding:0.4rem 0.6rem; border-radius:5px; }
+        .derived-dna-chip { font-size:0.55rem; font-weight:700; padding:0.1rem 0.35rem; border-radius:3px; letter-spacing:0.05em; text-transform:uppercase; border:1px solid; }
     </style>
 </head>
 <body>
@@ -448,11 +475,21 @@ const DNA_TYPES = {
 
 // ─── GRUDGE TAX ───────────────────────────────────────────────────────────────
 const GRUDGE_TYPES = {
-    REJECTED: { label:'They Rejected Offer', impact:-15, color:'#E74C3C', icon:'✗' },
-    LOWBALL:  { label:'Sent Lowball',         impact:-8,  color:'#E67E22', icon:'↓' },
-    FLEECED:  { label:'Fleeced Them',         impact:-20, color:'#C0392B', icon:'⚠' },
-    FAIR:     { label:'Fair Deal Done',        impact:+6,  color:'#2ECC71', icon:'✓' },
-    GOODWILL: { label:'Built Goodwill',        impact:+12, color:'#D4AF37', icon:'★' },
+    // ── Accepted outcomes ───────────────────────────────────────────────────
+    ACCEPTED_FAIR: { label:'Accepted — Fair Trade',   impact:+5,  color:'#2ECC71', icon:'✓', cat:'accepted',
+        dnaSignal:{ STALWART:3 } },
+    ACCEPTED_WON:  { label:'Accepted — Fleeced Them', impact:-8,  color:'#E67E22', icon:'⬆', cat:'accepted',
+        dnaSignal:{ FLEECER:3, DOMINATOR:1 } },
+    ACCEPTED_LOST: { label:'Accepted — Got Fleeced',  impact:+10, color:'#BB8FCE', icon:'⬇', cat:'accepted',
+        dnaSignal:{ ACCEPTOR:3, DESPERATE:2 } },
+    // ── Rejected ────────────────────────────────────────────────────────────
+    REJECTED:      { label:'Rejected',                 impact:-15, color:'#E74C3C', icon:'✗', cat:'rejected',
+        dnaSignal:{ DOMINATOR:3, FLEECER:1 } },
+    // ── Counter-offer outcomes ───────────────────────────────────────────────
+    COUNTER_FAIR:     { label:'Counter — Fair',     impact:+3,  color:'#5DADE2', icon:'↔', cat:'counter',
+        dnaSignal:{ STALWART:2, FLEECER:1 } },
+    COUNTER_LOWBALL:  { label:'Counter — Lowball',  impact:-10, color:'#E67E22', icon:'↓', cat:'counter',
+        dnaSignal:{ FLEECER:3, DOMINATOR:2 } },
 };
 const grudgeDecay = d => d < 30 ? 1.0 : d < 60 ? 0.6 : d < 90 ? 0.3 : 0.1;
 
@@ -544,6 +581,25 @@ function calcPsychTaxes(myAssessment, theirAssessment, theirDnaKey, theirPosture
             desc:'Actively shopping. Trade conversations are welcomed.' });
     }
     return taxes;
+}
+
+// ─── AUTO-DERIVE DNA FROM HISTORY ────────────────────────────────────────────
+// Tallies dnaSignal weights from all logged interactions against an owner.
+// Returns a DNA key string when signal is strong enough, or null.
+function deriveDNAFromHistory(theirOwnerId, allGrudges) {
+    const entries = allGrudges.filter(g => g.theirOwnerId === theirOwnerId);
+    if (entries.length < 3) return null;
+    const scores = { FLEECER:0, DOMINATOR:0, STALWART:0, ACCEPTOR:0, DESPERATE:0 };
+    for (const g of entries) {
+        const sig = GRUDGE_TYPES[g.type]?.dnaSignal || {};
+        for (const [dna, w] of Object.entries(sig)) scores[dna] = (scores[dna]||0) + w;
+    }
+    const ranked = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+    // Require ≥3 signal points and at least 50% more than the runner-up
+    const [top, second] = ranked;
+    if (top[1] < 3) return null;
+    if (second && top[1] < second[1] * 1.5) return null; // too ambiguous
+    return top[0];
 }
 
 // ─── STORAGE ─────────────────────────────────────────────────────────────────
@@ -982,6 +1038,11 @@ function TradeCalculator() {
     // Phase 3 — Grudge Tax
     const [grudges,       setGrudges]       = useState([]);
 
+    // Phase 4 — Outcome Flow
+    const [outcomeStep,   setOutcomeStep]   = useState(null); // null | 'accepted' | 'counter'
+    const [counterIds,    setCounterIds]    = useState({ A:[], B:[] });
+    const [counterSearch, setCounterSearch] = useState({ A:'', B:'' });
+
     // Bootstrap
     useEffect(() => { boot(); }, []);
 
@@ -1417,7 +1478,28 @@ function TradeCalculator() {
 
                                 {/* DNA Selector */}
                                 <div>
-                                    <div style={{ fontSize:'0.58rem', color:'var(--silver)', opacity:0.5, marginBottom:'0.2rem', textTransform:'uppercase', letterSpacing:'0.06em' }}>Owner DNA</div>
+                                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.2rem' }}>
+                                        <span style={{ fontSize:'0.58rem', color:'var(--silver)', opacity:0.5, textTransform:'uppercase', letterSpacing:'0.06em' }}>Owner DNA</span>
+                                        {(() => {
+                                            const derived = deriveDNAFromHistory(a.ownerId, grudges);
+                                            if (!derived) return null;
+                                            const d = DNA_TYPES[derived];
+                                            const isMatch = dnaKey === derived;
+                                            return (
+                                                <div style={{ display:'flex', alignItems:'center', gap:'0.3rem' }}>
+                                                    <span className="derived-dna-chip" style={{ color:d?.color, borderColor:`${d?.color}55`, background:`${d?.color}10` }}>
+                                                        AUTO: {d?.label}
+                                                    </span>
+                                                    {!isMatch && (
+                                                        <button style={{ background:'transparent', border:'none', fontSize:'0.58rem', color:'var(--gold)', cursor:'pointer', textDecoration:'underline', padding:0 }}
+                                                            onClick={() => updateDna(a.ownerId, derived)}>
+                                                            Sync
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
                                     <select
                                         className="dna-select"
                                         value={dnaKey}
@@ -1850,40 +1932,160 @@ function TradeCalculator() {
                             </div>
                         </div>
 
-                        {/* Log Outcome + Grudge History */}
-                        {myOwnerId && otherOwnerId && (
-                            <div>
-                                <div className="log-section-hdr">Log Outcome</div>
-                                <div className="grudge-add-row">
-                                    {Object.entries(GRUDGE_TYPES).map(([key, g]) => (
-                                        <button key={key} className="grudge-type-btn"
-                                            style={{ borderColor:`${g.color}55`, color:g.color }}
-                                            onClick={() => logGrudge(key)}>
-                                            {g.icon} {g.label}
-                                        </button>
-                                    ))}
-                                </div>
-                                {grudgeTax.entries.length > 0 && (
-                                    <div className="grudge-log" style={{ marginTop:'0.4rem' }}>
-                                        {grudgeTax.entries.slice(0,5).map(e => {
-                                            const gt = GRUDGE_TYPES[e.type];
-                                            const ageDays = Math.round((Date.now()-new Date(e.date).getTime())/86400000);
-                                            const dnaMult = { FLEECER:0.7,DOMINATOR:1.6,STALWART:1.2,ACCEPTOR:0.8,DESPERATE:0.5,NONE:1.0 }[otherDnaKey]||1.0;
-                                            const eff = Math.round((gt?.impact||0)*grudgeDecay(ageDays)*dnaMult);
-                                            return (
-                                                <div key={e.id} className="grudge-entry">
-                                                    <span className="grudge-icon" style={{ color:gt?.color }}>{gt?.icon}</span>
-                                                    <span className="grudge-label" style={{ color:gt?.color }}>{gt?.label}</span>
-                                                    <span className="grudge-date">{e.date} · {ageDays}d ago</span>
-                                                    <span className="grudge-impact" style={{ color: eff<0?'var(--loss-red)':'var(--win-green)' }}>{eff>0?'+':''}{eff}</span>
-                                                    <button className="grudge-del" onClick={() => deleteGrudge(e.id)}>✕</button>
+                        {/* ── Outcome Flow ── */}
+                        {myOwnerId && otherOwnerId && (() => {
+                            // Counter-offer live verdict
+                            const cTotA = tradeSideValue(counterIds.A);
+                            const cTotB = tradeSideValue(counterIds.B);
+                            const cDiff = cTotA - cTotB;
+                            const cMargin = Math.round(Math.max(cTotA, cTotB) * 0.04);
+                            const cVerdict = Math.abs(cDiff) <= cMargin ? 'FAIR'
+                                : cDiff > cMargin ? 'LOWBALL' : 'OVERPAY';
+                            const cColor = cVerdict==='FAIR' ? 'var(--win-green)'
+                                : cVerdict==='LOWBALL' ? 'var(--loss-red)' : '#5DADE2';
+
+                            return (
+                                <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+                                    <div className="log-section-hdr">LOG OUTCOME</div>
+
+                                    {/* ── Step 0: Three primary outcome buttons ── */}
+                                    {outcomeStep === null && (
+                                        <div className="outcome-row">
+                                            <button className="outcome-btn primary" onClick={() => setOutcomeStep('accepted')}>✓ Accepted</button>
+                                            <button className="outcome-btn danger"  onClick={() => { logGrudge('REJECTED'); }}>✗ Rejected</button>
+                                            <button className="outcome-btn neutral" onClick={() => {
+                                                setCounterIds({ A:[...tradeIds.A], B:[...tradeIds.B] });
+                                                setCounterSearch({ A:'', B:'' });
+                                                setOutcomeStep('counter');
+                                            }}>↔ Counter-Offer</button>
+                                        </div>
+                                    )}
+
+                                    {/* ── Step 1a: Accepted — follow-up ── */}
+                                    {outcomeStep === 'accepted' && (
+                                        <div style={{ display:'flex', flexDirection:'column', gap:'0.4rem' }}>
+                                            <div className="outcome-question">How did the trade go for you?</div>
+                                            <div className="outcome-row">
+                                                <button className="outcome-btn primary" onClick={() => { logGrudge('ACCEPTED_FAIR'); setOutcomeStep(null); }}>✓ Fair Trade</button>
+                                                <button className="outcome-btn amber"   onClick={() => { logGrudge('ACCEPTED_WON');  setOutcomeStep(null); }}>⬆ Fleeced Them</button>
+                                                <button className="outcome-btn purple"  onClick={() => { logGrudge('ACCEPTED_LOST'); setOutcomeStep(null); }}>⬇ Got Fleeced</button>
+                                            </div>
+                                            <button className="back-link" onClick={() => setOutcomeStep(null)}>← Back</button>
+                                        </div>
+                                    )}
+
+                                    {/* ── Step 1b: Counter-offer builder ── */}
+                                    {outcomeStep === 'counter' && (
+                                        <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+                                            <div className="outcome-question">Build their counter-offer — modify either side, then log the verdict:</div>
+                                            <div className="ta-layout">
+                                                {['A','B'].map(side => {
+                                                    const sideColor = side==='A' ? '#5DADE2' : '#E74C3C';
+                                                    const cIds = counterIds[side];
+                                                    const roster = allRosters.find(r => r.owner_id === tradeOwner[side]);
+                                                    const q = counterSearch[side].toLowerCase().trim();
+                                                    const rp = roster ? [
+                                                        ...(roster.players||[]),...(roster.reserve||[]),...(roster.taxi||[])
+                                                    ].filter(id => {
+                                                        const p = playersData[id];
+                                                        if (!p || !normPos(p.position)) return false;
+                                                        if (q) { const f=`${p.first_name||''} ${p.last_name||''}`.toLowerCase(); return f.includes(q); }
+                                                        return true;
+                                                    }).map(id => {
+                                                        const p = playersData[id];
+                                                        const v = getPlayerValue(id, valueIndex);
+                                                        return { id, name:`${p.first_name||''} ${p.last_name||''}`.trim(), pos:normPos(p.position), team:p.team||'FA', value:v.value };
+                                                    }).sort((a,b)=>b.value-a.value) : null;
+
+                                                    return (
+                                                        <div key={side} className={`ta-side side-${side.toLowerCase()}`} style={{ gap:'0.3rem' }}>
+                                                            <div style={{ fontSize:'0.7rem', fontWeight:700, color:sideColor }}>
+                                                                {side==='A' ? 'SIDE A — YOUR GIVE' : 'SIDE B — THEIR OFFER'}
+                                                            </div>
+                                                            {cIds.map(pid => {
+                                                                const p = playersData[pid]; if (!p) return null;
+                                                                const v = getPlayerValue(pid, valueIndex);
+                                                                return (
+                                                                    <div key={pid} className="ta-player-row">
+                                                                        <button className="ta-remove" onClick={() => setCounterIds(prev=>({...prev,[side]:prev[side].filter(x=>x!==pid)}))}>✕</button>
+                                                                        <span className="ta-pos-dot" style={{ background:posColor(normPos(p.position)) }} />
+                                                                        <span style={{ flex:1, fontSize:'0.7rem', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.first_name} {p.last_name}</span>
+                                                                        <span style={{ fontSize:'0.6rem', fontWeight:700, color:sideColor }}>{v.value>0?v.value.toLocaleString():'—'}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                            {rp !== null ? (
+                                                                <div>
+                                                                    <input className="ta-roster-filter" placeholder="Filter roster…"
+                                                                        value={counterSearch[side]}
+                                                                        onChange={e => setCounterSearch(prev=>({...prev,[side]:e.target.value}))} />
+                                                                    <div className="ta-roster-list" style={{ maxHeight:120 }}>
+                                                                        {rp.slice(0,20).map(r => {
+                                                                            const added = cIds.includes(r.id);
+                                                                            return (
+                                                                                <div key={r.id} className={`ta-roster-item${added?' added':''}`}
+                                                                                    onClick={() => !added && setCounterIds(prev=>({...prev,[side]:[...prev[side],r.id]}))}>
+                                                                                    <span className="ta-pos-dot" style={{ background:posColor(r.pos) }} />
+                                                                                    <span style={{ flex:1, fontSize:'0.68rem', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.name}</span>
+                                                                                    <span className="ta-player-meta">{r.pos}·{r.team}</span>
+                                                                                    <span className="ta-player-val">{r.value>0?r.value.toLocaleString():'—'}</span>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.35 }}>Select an owner above to filter by roster</div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Live counter verdict */}
+                                            {(cTotA > 0 || cTotB > 0) && (
+                                                <div className="counter-verdict-row" style={{ background:`${cColor}10`, border:`1px solid ${cColor}30` }}>
+                                                    <span style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1.3rem', color:cColor }}>{cVerdict}</span>
+                                                    <div style={{ fontSize:'0.62rem', color:'var(--silver)', opacity:0.7 }}>
+                                                        <div>{cTotA.toLocaleString()} vs {cTotB.toLocaleString()}</div>
+                                                        <div>diff {cDiff>0?'+':''}{cDiff.toLocaleString()} · fair band ±{cMargin.toLocaleString()}</div>
+                                                    </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                                            )}
+
+                                            {/* Counter log + bring to analyzer */}
+                                            <div className="outcome-row">
+                                                <button className="outcome-btn primary" onClick={() => { logGrudge('COUNTER_FAIR');    setOutcomeStep(null); }}>✓ Log Fair Counter</button>
+                                                <button className="outcome-btn danger"  onClick={() => { logGrudge('COUNTER_LOWBALL'); setOutcomeStep(null); }}>↓ Log Lowball Counter</button>
+                                                <button className="outcome-btn gold"    onClick={() => { setTradeIds({ A:[...counterIds.A], B:[...counterIds.B] }); setOutcomeStep(null); }}>⬆ Load into Analyzer</button>
+                                            </div>
+                                            <button className="back-link" onClick={() => setOutcomeStep(null)}>← Back</button>
+                                        </div>
+                                    )}
+
+                                    {/* History entries (shown on step 0 only) */}
+                                    {outcomeStep === null && grudgeTax.entries.length > 0 && (
+                                        <div className="grudge-log">
+                                            {grudgeTax.entries.slice(0,5).map(e => {
+                                                const gt = GRUDGE_TYPES[e.type];
+                                                const ageDays = Math.round((Date.now()-new Date(e.date).getTime())/86400000);
+                                                const dnaMult = {FLEECER:0.7,DOMINATOR:1.6,STALWART:1.2,ACCEPTOR:0.8,DESPERATE:0.5,NONE:1.0}[otherDnaKey]||1.0;
+                                                const eff = Math.round((gt?.impact||0)*grudgeDecay(ageDays)*dnaMult);
+                                                return (
+                                                    <div key={e.id} className="grudge-entry">
+                                                        <span className="grudge-icon" style={{ color:gt?.color }}>{gt?.icon}</span>
+                                                        <span className="grudge-label" style={{ color:gt?.color }}>{gt?.label}</span>
+                                                        <span className="grudge-date">{e.date} · {ageDays}d</span>
+                                                        <span className="grudge-impact" style={{ color:eff<0?'var(--loss-red)':'var(--win-green)' }}>{eff>0?'+':''}{eff}</span>
+                                                        <button className="grudge-del" onClick={() => deleteGrudge(e.id)}>✕</button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
             </div>
