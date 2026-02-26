@@ -1402,10 +1402,15 @@ function TradeCalculator() {
         function rosterPlayersFor(side) {
             const ownerId = tradeOwner[side];
             if (!ownerId) return null; // null = use global search
-            const assessment = assessments.find(a => a.ownerId === ownerId);
-            if (!assessment) return null;
+            const roster = allRosters.find(r => r.owner_id === ownerId);
+            if (!roster) return null;
+            const playerIds = [
+                ...(roster.players || []),
+                ...(roster.reserve || []),
+                ...(roster.taxi    || []),
+            ];
             const q = searchText[side].toLowerCase().trim();
-            return assessment.allPlayerIds
+            return playerIds
                 .filter(id => {
                     const p = playersData[id];
                     if (!p || !normPos(p.position)) return false;
