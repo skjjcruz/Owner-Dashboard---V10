@@ -276,10 +276,28 @@
             padding: 0.3rem 0.5rem; border-radius: 4px; cursor: pointer; width: 100%;
         }
         .ta-owner-select:focus { outline: none; border-color: var(--gold); }
-        .source-badge { font-size: 0.55rem; padding: 0.08rem 0.3rem; border-radius: 2px; border: 1px solid rgba(212,175,55,0.25); color: var(--gold); background: rgba(212,175,55,0.06); vertical-align: middle; margin-left: 0.3rem; }
-        .side-hdr { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.1rem; }
-        .side-a-color { color: #5DADE2; }
-        .side-b-color { color: #E74C3C; }
+        .ta-roster-filter {
+            width: 100%; background: var(--charcoal);
+            border: 1px solid rgba(212,175,55,0.25); border-bottom: 1px solid rgba(255,255,255,0.07);
+            color: var(--white); font-family: 'Oswald', sans-serif; font-size: 0.75rem;
+            padding: 0.38rem 0.6rem; border-radius: 4px 4px 0 0;
+        }
+        .ta-roster-filter:focus { outline: none; border-color: var(--gold); }
+        .ta-roster-filter::placeholder { color: rgba(255,255,255,0.2); }
+        .ta-roster-list {
+            max-height: 210px; overflow-y: auto;
+            background: var(--charcoal); border: 1px solid rgba(212,175,55,0.2);
+            border-top: none; border-radius: 0 0 5px 5px;
+        }
+        .ta-roster-item {
+            padding: 0.35rem 0.6rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
+            font-size: 0.72rem; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.1s;
+        }
+        .ta-roster-item:hover:not(.added) { background: rgba(212,175,55,0.08); }
+        .ta-roster-item.added { opacity: 0.3; cursor: default; pointer-events: none; }
+        .ta-roster-empty { padding: 0.6rem; font-size: 0.65rem; color: var(--silver); opacity: 0.4; text-align: center; }
+        .ta-mode-toggle { font-size: 0.58rem; color: rgba(212,175,55,0.55); cursor: pointer; text-align: right; padding: 0.1rem 0; text-decoration: underline; }
+        .ta-mode-toggle:hover { color: var(--gold); }
     </style>
 </head>
 <body>
@@ -1380,7 +1398,32 @@ function TradeCalculator() {
         const verdictText     = diff > fairMargin ? 'YOU WIN' : diff < -fairMargin ? 'YOU LOSE' : 'EVEN TRADE';
         const diffDisplay     = diff > 0 ? `+${absDiff.toLocaleString()}` : diff < 0 ? `-${absDiff.toLocaleString()}` : '±0';
 
-        // Player search results (computed per side)
+        // Roster-specific player list (when owner is selected on a side)
+        function rosterPlayersFor(side) {
+            const ownerId = tradeOwner[side];
+            if (!ownerId) return null; // null = use global search
+            const assessment = assessments.find(a => a.ownerId === ownerId);
+            if (!assessment) return null;
+            const q = searchText[side].toLowerCase().trim();
+            return assessment.allPlayerIds
+                .filter(id => {
+                    const p = playersData[id];
+                    if (!p || !normPos(p.position)) return false;
+                    if (q.length >= 1) {
+                        const full = `${p.first_name||''} ${p.last_name||''}`.toLowerCase();
+                        return full.includes(q);
+                    }
+                    return true;
+                })
+                .map(id => {
+                    const p = playersData[id];
+                    const v = getPlayerValue(id, valueIndex);
+                    return { id, name:`${p.first_name||''} ${p.last_name||''}`.trim(), pos:normPos(p.position), team:p.team||'FA', value:v.value, source:v.source };
+                })
+                .sort((a,b) => b.value - a.value);
+        }
+
+        // Global search fallback (computed per side)
         const resultsA = playerSearchResults(searchText.A);
         const resultsB = playerSearchResults(searchText.B);
 
@@ -1400,11 +1443,13 @@ function TradeCalculator() {
         ];
 
         function TradeSide({ side, color, label }) {
-            const ids  = tradeIds[side];
-            const tot  = tradeSideValue(ids);
-            const srch = searchText[side];
-            const show = showSearch[side];
-            const results = side === 'A' ? resultsA : resultsB;
+            const ids          = tradeIds[side];
+            const tot          = tradeSideValue(ids);
+            const srch         = searchText[side];
+            const show         = showSearch[side];
+            const rosterPlayers= rosterPlayersFor(side);  // null = no owner selected
+            const globalResults= side === 'A' ? resultsA : resultsB;
+            const ownerSelected= !!tradeOwner[side];
 
             return (
                 <div className={`ta-side side-${side.toLowerCase()}`}>
@@ -1418,12 +1463,15 @@ function TradeCalculator() {
                     <select
                         className="ta-owner-select"
                         value={tradeOwner[side] || ''}
-                        onChange={e => setTradeOwner(prev => ({ ...prev, [side]: e.target.value || null }))}
+                        onChange={e => {
+                            setTradeOwner(prev => ({ ...prev, [side]: e.target.value || null }));
+                            setSearchText(prev => ({ ...prev, [side]: '' }));
+                        }}
                     >
                         {ownerOptions.map(o => <option key={o.id||'none'} value={o.id||''}>{o.label}</option>)}
                     </select>
 
-                    {/* Player list */}
+                    {/* Added players */}
                     {ids.map(pid => {
                         const p   = playersData[pid];
                         const v   = getPlayerValue(pid, valueIndex);
@@ -1449,29 +1497,59 @@ function TradeCalculator() {
                         );
                     })}
 
-                    {/* Add player search */}
-                    <div className="ta-search-wrap">
-                        <input
-                            className="ta-search"
-                            placeholder="Search player to add…"
-                            value={srch}
-                            onChange={e => { setSearchText(prev=>({...prev,[side]:e.target.value})); setShowSearch(prev=>({...prev,[side]:true})); }}
-                            onFocus={() => setShowSearch(prev => ({...prev,[side]:true}))}
-                            onBlur={() => setTimeout(() => setShowSearch(prev=>({...prev,[side]:false})), 200)}
-                        />
-                        {show && results.length > 0 && (
-                            <div className="ta-dropdown">
-                                {results.map(r => (
-                                    <div key={r.id} className="ta-dropdown-item" onMouseDown={() => addPlayer(side, r.id)}>
-                                        <span className="ta-pos-dot" style={{ background: posColor(r.pos) }} />
-                                        <span className="ta-player-name">{r.name}</span>
-                                        <span className="ta-player-meta">{r.pos} · {r.team}</span>
-                                        <span className="ta-player-val">{r.value > 0 ? r.value.toLocaleString() : '—'}</span>
-                                    </div>
-                                ))}
+                    {/* ── ROSTER PICKER (owner selected) ── */}
+                    {ownerSelected && rosterPlayers !== null ? (
+                        <div>
+                            <input
+                                className="ta-roster-filter"
+                                placeholder={`Filter ${rosterPlayers.length} roster players…`}
+                                value={srch}
+                                onChange={e => setSearchText(prev => ({ ...prev, [side]: e.target.value }))}
+                            />
+                            <div className="ta-roster-list">
+                                {rosterPlayers.length === 0 ? (
+                                    <div className="ta-roster-empty">No players match</div>
+                                ) : rosterPlayers.map(r => {
+                                    const added = ids.includes(r.id);
+                                    return (
+                                        <div key={r.id} className={`ta-roster-item${added?' added':''}`} onClick={() => !added && addPlayer(side, r.id)}>
+                                            <span className="ta-pos-dot" style={{ background: posColor(r.pos) }} />
+                                            <span style={{ flex:1, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.name}</span>
+                                            <span className="ta-player-meta">{r.pos} · {r.team}</span>
+                                            <span className="ta-player-val">
+                                                {r.value > 0 ? r.value.toLocaleString() : '—'}
+                                                {r.source === 'internal' && <span className="source-badge">INT</span>}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        /* ── GLOBAL SEARCH (no owner selected) ── */
+                        <div className="ta-search-wrap">
+                            <input
+                                className="ta-search"
+                                placeholder="Search any player to add…"
+                                value={srch}
+                                onChange={e => { setSearchText(prev=>({...prev,[side]:e.target.value})); setShowSearch(prev=>({...prev,[side]:true})); }}
+                                onFocus={() => setShowSearch(prev => ({...prev,[side]:true}))}
+                                onBlur={() => setTimeout(() => setShowSearch(prev=>({...prev,[side]:false})), 200)}
+                            />
+                            {show && globalResults.length > 0 && (
+                                <div className="ta-dropdown">
+                                    {globalResults.map(r => (
+                                        <div key={r.id} className="ta-dropdown-item" onMouseDown={() => addPlayer(side, r.id)}>
+                                            <span className="ta-pos-dot" style={{ background: posColor(r.pos) }} />
+                                            <span className="ta-player-name">{r.name}</span>
+                                            <span className="ta-player-meta">{r.pos} · {r.team}</span>
+                                            <span className="ta-player-val">{r.value > 0 ? r.value.toLocaleString() : '—'}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Total */}
                     <div className="ta-total-row" style={{ background: `${color}12`, border: `1px solid ${color}30` }}>
