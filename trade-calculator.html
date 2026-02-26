@@ -204,6 +204,82 @@
         .health-score { font-family: 'Bebas Neue', cursive; font-size: 1.6rem; line-height: 1; }
 
         .no-data-msg { text-align: center; color: var(--silver); opacity: 0.4; padding: 2rem 1rem; font-size: 0.78rem; }
+
+        /* ── Trade Analyzer ─────────────────────────────────────────────────── */
+        .ta-layout { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        @media(min-width:700px){ .ta-layout { grid-template-columns: 1fr 1fr; } }
+
+        .ta-side { background: var(--off-black); border: 1px solid rgba(212,175,55,0.2); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .ta-side.side-a { border-color: rgba(93,173,226,0.35); }
+        .ta-side.side-b { border-color: rgba(231,76,60,0.35); }
+
+        .ta-search-wrap { position: relative; }
+        .ta-search {
+            width: 100%; background: var(--charcoal); border: 1px solid rgba(212,175,55,0.25);
+            color: var(--white); font-family: 'Oswald', sans-serif; font-size: 0.78rem;
+            padding: 0.4rem 0.6rem; border-radius: 4px;
+        }
+        .ta-search:focus { outline: none; border-color: var(--gold); }
+        .ta-search::placeholder { color: rgba(255,255,255,0.25); }
+        .ta-dropdown {
+            position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+            background: var(--charcoal); border: 1px solid rgba(212,175,55,0.3);
+            border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto;
+        }
+        .ta-dropdown-item {
+            padding: 0.4rem 0.6rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
+            font-size: 0.72rem; border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.12s;
+        }
+        .ta-dropdown-item:hover { background: rgba(212,175,55,0.1); }
+        .ta-pos-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .ta-player-name { flex: 1; font-weight: 600; }
+        .ta-player-meta { font-size: 0.6rem; color: var(--silver); opacity: 0.6; }
+        .ta-player-val { font-size: 0.65rem; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+
+        .ta-player-row {
+            background: var(--charcoal); border-radius: 5px; padding: 0.4rem 0.55rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .ta-remove { background: transparent; border: none; color: rgba(231,76,60,0.6); cursor: pointer; font-size: 0.75rem; flex-shrink: 0; padding: 0; }
+        .ta-remove:hover { color: var(--loss-red); }
+        .ta-val-bar-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden; }
+        .ta-val-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+
+        .ta-total-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.45rem 0.55rem; border-radius: 5px; margin-top: 0.25rem;
+        }
+        .ta-total-label { font-size: 0.65rem; color: var(--silver); opacity: 0.7; text-transform: uppercase; letter-spacing: 0.06em; }
+        .ta-total-val { font-family: 'Bebas Neue', cursive; font-size: 1.3rem; }
+        .ta-add-btn {
+            background: transparent; border: 1px dashed rgba(212,175,55,0.3); color: rgba(212,175,55,0.5);
+            font-family: 'Oswald', sans-serif; font-size: 0.7rem; padding: 0.3rem 0.6rem;
+            border-radius: 4px; cursor: pointer; width: 100%; text-align: center; transition: all 0.15s;
+        }
+        .ta-add-btn:hover { border-color: var(--gold); color: var(--gold); background: rgba(212,175,55,0.06); }
+
+        .ta-verdict {
+            background: var(--off-black); border: 1px solid rgba(212,175,55,0.2); border-radius: 8px;
+            padding: 0.75rem; display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.5rem;
+        }
+        .verdict-diff { font-family: 'Bebas Neue', cursive; font-size: 2rem; line-height: 1; }
+        .verdict-label { font-size: 0.62rem; color: var(--silver); opacity: 0.6; margin-top: -0.1rem; text-transform: uppercase; letter-spacing: 0.06em; }
+        .likelihood-bar-wrap { height: 10px; background: rgba(255,255,255,0.07); border-radius: 5px; overflow: hidden; }
+        .likelihood-bar-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
+        .dna-tax-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.65rem; padding: 0.2rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .dna-tax-label { color: var(--silver); opacity: 0.7; }
+        .dna-tax-val { font-weight: 700; }
+        .ta-owner-select {
+            background: var(--charcoal); border: 1px solid rgba(212,175,55,0.25);
+            color: var(--white); font-family: 'Oswald', sans-serif; font-size: 0.72rem;
+            padding: 0.3rem 0.5rem; border-radius: 4px; cursor: pointer; width: 100%;
+        }
+        .ta-owner-select:focus { outline: none; border-color: var(--gold); }
+        .source-badge { font-size: 0.55rem; padding: 0.08rem 0.3rem; border-radius: 2px; border: 1px solid rgba(212,175,55,0.25); color: var(--gold); background: rgba(212,175,55,0.06); vertical-align: middle; margin-left: 0.3rem; }
+        .side-hdr { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.1rem; }
+        .side-a-color { color: #5DADE2; }
+        .side-b-color { color: #E74C3C; }
     </style>
 </head>
 <body>
@@ -329,6 +405,74 @@ function loadDNA(lid) {
 function saveDNA(lid, data) {
     localStorage.setItem(DNA_KEY(lid), JSON.stringify(data));
 }
+
+// ─── FANTASYCALC MARKET VALUE ENGINE ─────────────────────────────────────────
+// FantasyCalc public API — dynasty, 2QB/SuperFlex, full PPR
+const FC_URL = 'https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=2&ppr=1&superflex=true';
+let _fcCache = null;
+
+async function fetchFantasyCalcValues() {
+    if (_fcCache) return _fcCache;
+    try {
+        const r = await fetch(FC_URL);
+        if (!r.ok) throw new Error(`FC HTTP ${r.status}`);
+        const data = await r.json();
+        // Index by sleeperId for O(1) lookup
+        const idx = {};
+        for (const entry of data) {
+            const sid = entry.player?.sleeperId || entry.player?.maybeSleeperID;
+            if (sid) idx[String(sid)] = { value: entry.value || 0, trend: entry.trend30Day || 0, rank: entry.overallRank || 999, posRank: entry.positionRank || 999, source: 'fc' };
+        }
+        _fcCache = idx;
+        return idx;
+    } catch(e) {
+        console.warn('FantasyCalc fetch failed:', e.message);
+        _fcCache = {};
+        return {};
+    }
+}
+
+// Compute an internal value from stats percentile (0–9999 scale) as fallback for IDP/kickers
+function buildInternalValues(playersData, statsData, scoring) {
+    const byPos = {};
+    for (const [id, p] of Object.entries(playersData)) {
+        const np = normPos(p.position);
+        if (!np) continue;
+        const ppg = calcPPG(id, statsData, scoring);
+        if (ppg <= 0) continue;
+        if (!byPos[np]) byPos[np] = [];
+        byPos[np].push({ id, ppg });
+    }
+    const idx = {};
+    // Map PPG rank within position to a 0–8000 value scale
+    for (const [, players] of Object.entries(byPos)) {
+        const sorted = players.sort((a,b) => b.ppg - a.ppg);
+        const total  = sorted.length;
+        sorted.forEach(({ id, ppg }, rank) => {
+            // Linear scale: rank 0 = 8000, rank=total-1 = 200
+            const pct = total > 1 ? (1 - rank / (total - 1)) : 1;
+            idx[id] = { value: Math.round(200 + pct * 7800), trend: 0, rank: rank + 1, posRank: rank + 1, source: 'internal' };
+        });
+    }
+    return idx;
+}
+
+// Merge FC values (preferred) with internal fallback
+function mergeValues(fcValues, internalValues) {
+    const merged = { ...internalValues };
+    for (const [sid, v] of Object.entries(fcValues)) {
+        merged[sid] = v; // FC wins
+    }
+    return merged;
+}
+
+// Get player value from the merged index; returns { value, source }
+function getPlayerValue(pid, valueIndex) {
+    return valueIndex[String(pid)] || { value: 0, source: 'none' };
+}
+
+// Max value for bar scale (top player ~9500 in FC)
+const MAX_VALUE = 10000;
 
 // ─── UTILITIES ───────────────────────────────────────────────────────────────
 function normPos(pos) {
@@ -677,6 +821,14 @@ function TradeCalculator() {
     const [sortMode,     setSortMode]     = useState('health'); // health | panic | record
     const [tierFilter,   setTierFilter]   = useState('ALL');
 
+    // Phase 2 — Trade Analyzer
+    const [fcValues,      setFcValues]      = useState({});   // FantasyCalc market values
+    const [internalVals,  setInternalVals]  = useState({});   // Stats-based fallback values
+    const [tradeIds,      setTradeIds]      = useState({ A:[], B:[] });
+    const [tradeOwner,    setTradeOwner]    = useState({ A:null, B:null }); // ownerId strings
+    const [searchText,    setSearchText]    = useState({ A:'', B:'' });
+    const [showSearch,    setShowSearch]    = useState({ A:false, B:false });
+
     // Bootstrap
     useEffect(() => { boot(); }, []);
 
@@ -704,19 +856,26 @@ function TradeCalculator() {
     async function loadLeague() {
         setLoading(true);
         setAllRosters([]); setLeagueUsers([]); setPlayersData({}); setStatsData({});
+        setTradeIds({ A:[], B:[] }); setSearchText({ A:'', B:'' }); setShowSearch({ A:false, B:false });
         try {
-            const [rosters, info, users, players, stats] = await Promise.all([
+            const [rosters, info, users, players, stats, fc] = await Promise.all([
                 fetchRosters(leagueId),
                 fetchLeagueInfo(leagueId),
                 fetchLeagueUsers(leagueId),
                 fetchPlayers(),
                 fetchSeasonStats(STATS_YEAR),
+                fetchFantasyCalcValues(),
             ]);
+            const resolvedPlayers = players || {};
+            const resolvedStats   = stats   || {};
+            const scoring = info?.scoring_settings;
             setAllRosters(rosters || []);
             setLeagueInfo(info);
             setLeagueUsers(users || []);
-            setPlayersData(players || {});
-            setStatsData(stats || {});
+            setPlayersData(resolvedPlayers);
+            setStatsData(resolvedStats);
+            setFcValues(fc);
+            setInternalVals(buildInternalValues(resolvedPlayers, resolvedStats, scoring));
 
             // Find my roster
             const mine = (rosters || []).find(r => r.owner_id === userId);
@@ -741,6 +900,33 @@ function TradeCalculator() {
         assessments.find(a => a.rosterId === myRosterId) || null,
         [assessments, myRosterId]
     );
+
+    // Merged market value index (FC preferred, internal fallback)
+    const valueIndex = useMemo(() => mergeValues(fcValues, internalVals), [fcValues, internalVals]);
+
+    // Player search across all loaded players, sorted by value desc
+    const playerSearchResults = useCallback((query) => {
+        if (!query || query.length < 2) return [];
+        const q = query.toLowerCase();
+        return Object.entries(playersData)
+            .filter(([, p]) => {
+                if (!normPos(p.position)) return false;
+                const full = `${p.first_name||''} ${p.last_name||''}`.toLowerCase();
+                return full.includes(q) || (p.last_name||'').toLowerCase().startsWith(q);
+            })
+            .map(([id, p]) => {
+                const v = getPlayerValue(id, valueIndex);
+                return { id, name: `${p.first_name||''} ${p.last_name||''}`.trim(), pos: normPos(p.position), team: p.team||'FA', value: v.value, source: v.source };
+            })
+            .filter(p => p.value > 0 || query.length >= 3)
+            .sort((a,b) => b.value - a.value)
+            .slice(0, 15);
+    }, [playersData, valueIndex]);
+
+    // Total trade value for a side
+    const tradeSideValue = useCallback((ids) => {
+        return ids.reduce((sum, id) => sum + (getPlayerValue(id, valueIndex).value || 0), 0);
+    }, [valueIndex]);
 
     // Sorted + filtered assessments for audit tab
     const sortedAssessments = useMemo(() => {
@@ -1120,6 +1306,256 @@ function TradeCalculator() {
         );
     }
 
+    // ── TRADE ANALYZER TAB ────────────────────────────────────────────────────
+    function renderTradeAnalyzer() {
+        if (loading) return <div className="center-screen"><div className="load-title">LOADING</div></div>;
+        if (!Object.keys(playersData).length) return <div className="no-data-msg">No player data. Select a league above.</div>;
+
+        const fcReady   = Object.keys(fcValues).length > 0;
+        const totalA    = tradeSideValue(tradeIds.A);
+        const totalB    = tradeSideValue(tradeIds.B);
+        const diff      = totalA - totalB; // positive = Side A wins
+        const absDiff   = Math.abs(diff);
+        const hasTrade  = tradeIds.A.length > 0 || tradeIds.B.length > 0;
+
+        // DNA for the other owner
+        const otherOwnerId  = tradeOwner.B;
+        const otherDnaKey   = otherOwnerId ? (ownerDna[otherOwnerId] || 'NONE') : 'NONE';
+        const otherDna      = DNA_TYPES[otherDnaKey] || DNA_TYPES.NONE;
+
+        // Side A owner (default = me)
+        const myOwnerId    = tradeOwner.A || (myAssessment?.ownerId || null);
+
+        // Behavioral tax calculation
+        // DNA multiplier: how much more the other owner demands as "their margin"
+        const dnaMultiplier     = otherDna.multiplier != null ? otherDna.multiplier : 1.0;
+        // Side B needs to perceive they "win" — what's the threshold they'd accept?
+        // If diff > 0 (A wins), the other owner (B) is giving away value.
+        // They accept only if diff ≤ acceptanceThreshold
+        const fairMargin        = Math.round(Math.max(totalA, totalB) * 0.04); // 4% = industry standard "even" band
+        const taxAdjusted       = Math.round(Math.max(totalA, totalB) * Math.abs(1 - dnaMultiplier));
+        // Acceptance threshold: how much can Side A "win" before B refuses?
+        const acceptThresh = otherDnaKey === 'NONE' ? fairMargin : taxAdjusted;
+
+        // Likelihood computation
+        let likelihood = 50; // baseline
+        if (hasTrade && (totalA > 0 || totalB > 0)) {
+            const maxSide = Math.max(totalA, totalB, 1);
+            // Positive diff = A (you) wins; B is less likely to accept as diff grows
+            const normalizedDiff = diff / maxSide; // -1 to +1 relative
+
+            if (otherDnaKey === 'FLEECER') {
+                // Only accepts if THEY win meaningfully
+                likelihood = normalizedDiff < -0.05 ? 75 + Math.round(Math.abs(normalizedDiff) * 40) : Math.max(15, 50 - Math.round(normalizedDiff * 150));
+            } else if (otherDnaKey === 'DOMINATOR') {
+                // Needs +30% advantage; very low if you win
+                likelihood = normalizedDiff < -0.10 ? 70 : normalizedDiff < 0 ? 55 : Math.max(10, 40 - Math.round(normalizedDiff * 200));
+            } else if (otherDnaKey === 'STALWART') {
+                // Near-fair deals: high acceptance; imbalanced: drops fast
+                const balance = 1 - Math.abs(normalizedDiff) * 3;
+                likelihood = Math.min(85, Math.max(20, Math.round(balance * 80)));
+            } else if (otherDnaKey === 'ACCEPTOR') {
+                // Loves future assets; roughly fair is fine; they discount their side's worth
+                likelihood = Math.min(90, Math.max(30, 60 + Math.round(normalizedDiff * 100)));
+            } else if (otherDnaKey === 'DESPERATE') {
+                // High urgency; will accept even if they're slightly losing — need filler
+                const theirNeeds = otherOwnerId ? (assessments.find(a => a.ownerId === otherOwnerId)?.needs || []) : [];
+                const myStrengths= myAssessment?.strengths || [];
+                const fitsNeed   = theirNeeds.some(n => myStrengths.includes(n.pos));
+                likelihood = fitsNeed ? Math.min(92, 65 + Math.round(Math.abs(normalizedDiff) * 20) + 20) : Math.min(75, 55 + Math.round(Math.abs(normalizedDiff) * 30));
+            } else {
+                // No DNA — baseline: 50 ± how imbalanced it is
+                likelihood = Math.min(85, Math.max(15, 50 - Math.round(normalizedDiff * 120)));
+            }
+
+            // Contextual boosts
+            const otherAssess  = assessments.find(a => a.ownerId === otherOwnerId);
+            if (otherAssess?.panic >= 3) likelihood = Math.min(95, likelihood + 15);
+            if (otherAssess?.window === 'REBUILDING' && diff > 0) likelihood = Math.min(95, likelihood + 10);
+        }
+        likelihood = Math.round(Math.max(5, Math.min(97, likelihood)));
+
+        const likelihoodColor = likelihood >= 70 ? 'var(--win-green)' : likelihood >= 45 ? 'var(--amber)' : 'var(--loss-red)';
+        const verdictColor    = diff > fairMargin ? '#5DADE2' : diff < -fairMargin ? '#E74C3C' : 'var(--win-green)';
+        const verdictText     = diff > fairMargin ? 'YOU WIN' : diff < -fairMargin ? 'YOU LOSE' : 'EVEN TRADE';
+        const diffDisplay     = diff > 0 ? `+${absDiff.toLocaleString()}` : diff < 0 ? `-${absDiff.toLocaleString()}` : '±0';
+
+        // Player search results (computed per side)
+        const resultsA = playerSearchResults(searchText.A);
+        const resultsB = playerSearchResults(searchText.B);
+
+        function addPlayer(side, pid) {
+            if (tradeIds[side].includes(pid)) return;
+            setTradeIds(prev => ({ ...prev, [side]: [...prev[side], pid] }));
+            setSearchText(prev => ({ ...prev, [side]: '' }));
+            setShowSearch(prev => ({ ...prev, [side]: false }));
+        }
+        function removePlayer(side, pid) {
+            setTradeIds(prev => ({ ...prev, [side]: prev[side].filter(id => id !== pid) }));
+        }
+
+        const ownerOptions = [
+            { id: null,   label: '— None —' },
+            ...assessments.map(a => ({ id: a.ownerId, label: `${a.ownerName} (${a.teamName})` })),
+        ];
+
+        function TradeSide({ side, color, label }) {
+            const ids  = tradeIds[side];
+            const tot  = tradeSideValue(ids);
+            const srch = searchText[side];
+            const show = showSearch[side];
+            const results = side === 'A' ? resultsA : resultsB;
+
+            return (
+                <div className={`ta-side side-${side.toLowerCase()}`}>
+                    <div className="side-hdr">
+                        <span style={{ fontFamily:'Bebas Neue,cursive', fontSize:'0.9rem', color, letterSpacing:'0.08em' }}>{label}</span>
+                        {side === 'A' && <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.5 }}>Your offer</span>}
+                        {side === 'B' && <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.5 }}>You receive</span>}
+                    </div>
+
+                    {/* Owner selector */}
+                    <select
+                        className="ta-owner-select"
+                        value={tradeOwner[side] || ''}
+                        onChange={e => setTradeOwner(prev => ({ ...prev, [side]: e.target.value || null }))}
+                    >
+                        {ownerOptions.map(o => <option key={o.id||'none'} value={o.id||''}>{o.label}</option>)}
+                    </select>
+
+                    {/* Player list */}
+                    {ids.map(pid => {
+                        const p   = playersData[pid];
+                        const v   = getPlayerValue(pid, valueIndex);
+                        const pct = Math.round((v.value / MAX_VALUE) * 100);
+                        if (!p) return null;
+                        return (
+                            <div key={pid} className="ta-player-row">
+                                <button className="ta-remove" onClick={() => removePlayer(side, pid)}>✕</button>
+                                <span className="ta-pos-dot" style={{ background: posColor(normPos(p.position)) }} />
+                                <span style={{ flex:1, fontSize:'0.72rem', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                    {p.first_name} {p.last_name}
+                                </span>
+                                <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:2, width:70 }}>
+                                    <div className="ta-val-bar-wrap">
+                                        <div className="ta-val-bar-fill" style={{ width:`${pct}%`, background: color }} />
+                                    </div>
+                                    <span style={{ fontSize:'0.6rem', fontWeight:700, color }}>
+                                        {v.value > 0 ? v.value.toLocaleString() : '—'}
+                                        {v.source === 'internal' && <span className="source-badge" title="Stats-based internal estimate">INT</span>}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {/* Add player search */}
+                    <div className="ta-search-wrap">
+                        <input
+                            className="ta-search"
+                            placeholder="Search player to add…"
+                            value={srch}
+                            onChange={e => { setSearchText(prev=>({...prev,[side]:e.target.value})); setShowSearch(prev=>({...prev,[side]:true})); }}
+                            onFocus={() => setShowSearch(prev => ({...prev,[side]:true}))}
+                            onBlur={() => setTimeout(() => setShowSearch(prev=>({...prev,[side]:false})), 200)}
+                        />
+                        {show && results.length > 0 && (
+                            <div className="ta-dropdown">
+                                {results.map(r => (
+                                    <div key={r.id} className="ta-dropdown-item" onMouseDown={() => addPlayer(side, r.id)}>
+                                        <span className="ta-pos-dot" style={{ background: posColor(r.pos) }} />
+                                        <span className="ta-player-name">{r.name}</span>
+                                        <span className="ta-player-meta">{r.pos} · {r.team}</span>
+                                        <span className="ta-player-val">{r.value > 0 ? r.value.toLocaleString() : '—'}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Total */}
+                    <div className="ta-total-row" style={{ background: `${color}12`, border: `1px solid ${color}30` }}>
+                        <span className="ta-total-label">Total Value</span>
+                        <span className="ta-total-val" style={{ color }}>
+                            {tot > 0 ? tot.toLocaleString() : '—'}
+                        </span>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div>
+                {/* Source indicator */}
+                <div style={{ fontSize:'0.62rem', color:'var(--silver)', opacity:0.45, marginBottom:'0.75rem', lineHeight:1.5 }}>
+                    {fcReady
+                        ? <>Values sourced from <strong style={{ color:'var(--gold)' }}>FantasyCalc</strong> (dynasty 2QB/SF, full PPR). IDP &amp; kickers use internal stats-based ranking <span className="source-badge">INT</span>.</>
+                        : <>FantasyCalc unavailable — showing internal stats-based values only <span className="source-badge">INT</span>. Values reflect 2025 PPG percentile rank.</>
+                    }
+                </div>
+
+                {/* Trade sides */}
+                <div className="ta-layout">
+                    <TradeSide side="A" color="#5DADE2" label="SIDE A — YOUR GIVE" />
+                    <TradeSide side="B" color="#E74C3C" label="SIDE B — YOU RECEIVE" />
+                </div>
+
+                {/* Verdict panel */}
+                {hasTrade && (
+                    <div className="ta-verdict">
+                        <div className="section-hdr">TRADE ANALYSIS</div>
+
+                        {/* Raw differential */}
+                        <div style={{ display:'flex', alignItems:'baseline', gap:'0.6rem', flexWrap:'wrap' }}>
+                            <span className="verdict-diff" style={{ color: verdictColor }}>{diffDisplay}</span>
+                            <span style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1.1rem', color: verdictColor }}>{verdictText}</span>
+                            <span style={{ fontSize:'0.62rem', color:'var(--silver)', opacity:0.55 }}>
+                                ({totalA.toLocaleString()} vs {totalB.toLocaleString()})
+                            </span>
+                        </div>
+
+                        {/* DNA behavioral breakdown */}
+                        {otherDnaKey !== 'NONE' && (
+                            <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:6, padding:'0.5rem 0.6rem' }}>
+                                <div style={{ fontSize:'0.65rem', fontWeight:700, color: otherDna.color, marginBottom:'0.4rem' }}>
+                                    Behavioral Profile: {otherDna.label}
+                                </div>
+                                <div className="dna-tax-row">
+                                    <span className="dna-tax-label">Raw differential</span>
+                                    <span className="dna-tax-val" style={{ color: verdictColor }}>{diffDisplay} pts</span>
+                                </div>
+                                <div className="dna-tax-row">
+                                    <span className="dna-tax-label">DNA acceptance multiplier</span>
+                                    <span className="dna-tax-val" style={{ color: otherDna.color }}>
+                                        {dnaMultiplier < 1 ? `+${Math.round((1-dnaMultiplier)*100)}% margin required` : dnaMultiplier > 1 ? `Easier to deal (×${dnaMultiplier})` : 'Fair dealer'}
+                                    </span>
+                                </div>
+                                <div className="dna-tax-row" style={{ border:'none' }}>
+                                    <span className="dna-tax-label">Strategy tip</span>
+                                    <span style={{ fontSize:'0.62rem', color: otherDna.color, maxWidth:260, textAlign:'right', fontStyle:'italic' }}>{otherDna.strategy}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Likelihood of acceptance */}
+                        <div>
+                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.3rem' }}>
+                                <span style={{ fontSize:'0.65rem', color:'var(--silver)', opacity:0.7, textTransform:'uppercase', letterSpacing:'0.06em' }}>Likelihood of Acceptance</span>
+                                <span style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1.4rem', color: likelihoodColor }}>{likelihood}%</span>
+                            </div>
+                            <div className="likelihood-bar-wrap">
+                                <div className="likelihood-bar-fill" style={{ width:`${likelihood}%`, background: likelihoodColor }} />
+                            </div>
+                            <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.45, marginTop:'0.3rem' }}>
+                                Factors: value differential · owner DNA · panic level · trade window alignment
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     // ── FULL RENDER ───────────────────────────────────────────────────────────
     return (
         <div style={{ display:'flex', flexDirection:'column', minHeight:'100vh' }}>
@@ -1141,9 +1577,10 @@ function TradeCalculator() {
             {/* Tab Bar */}
             <div className="tab-bar">
                 {[
-                    { key:'audit',  label:'Roster Audit'    },
-                    { key:'finder', label:'Trade Finder'    },
-                    { key:'dna',    label:'Owner DNA'       },
+                    { key:'audit',    label:'Roster Audit'    },
+                    { key:'finder',  label:'Trade Finder'   },
+                    { key:'analyzer',label:'Trade Analyzer' },
+                    { key:'dna',     label:'Owner DNA'      },
                 ].map(t => (
                     <button
                         key={t.key}
@@ -1157,9 +1594,10 @@ function TradeCalculator() {
 
             {/* Tab Content */}
             <div className="tab-content" style={{ flex:1, paddingBottom:'2rem' }}>
-                {activeTab === 'audit'  && renderAudit()}
-                {activeTab === 'finder' && renderTradeFinder()}
-                {activeTab === 'dna'    && renderOwnerDna()}
+                {activeTab === 'audit'    && renderAudit()}
+                {activeTab === 'finder'   && renderTradeFinder()}
+                {activeTab === 'analyzer' && renderTradeAnalyzer()}
+                {activeTab === 'dna'      && renderOwnerDna()}
             </div>
         </div>
     );
