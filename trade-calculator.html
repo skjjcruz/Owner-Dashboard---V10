@@ -1496,8 +1496,8 @@ function TradeCalculator() {
 
                 {/* Trade sides */}
                 <div className="ta-layout">
-                    <TradeSide side="A" color="#5DADE2" label="SIDE A — YOUR GIVE" />
-                    <TradeSide side="B" color="#E74C3C" label="SIDE B — YOU RECEIVE" />
+                    {TradeSide({ side:'A', color:'#5DADE2', label:'SIDE A — YOUR GIVE' })}
+                    {TradeSide({ side:'B', color:'#E74C3C', label:'SIDE B — YOU RECEIVE' })}
                 </div>
 
                 {/* Verdict panel */}
