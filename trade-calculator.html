@@ -298,6 +298,38 @@
         .ta-roster-empty { padding: 0.6rem; font-size: 0.65rem; color: var(--silver); opacity: 0.4; text-align: center; }
         .ta-mode-toggle { font-size: 0.58rem; color: rgba(212,175,55,0.55); cursor: pointer; text-align: right; padding: 0.1rem 0; text-decoration: underline; }
         .ta-mode-toggle:hover { color: var(--gold); }
+
+        /* Posture badge */
+        .posture-badge { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.07em; padding: 0.18rem 0.45rem; border-radius: 3px; border: 1px solid; text-transform: uppercase; }
+
+        /* Psych tax table */
+        .tax-table { display: flex; flex-direction: column; gap: 0; border: 1px solid rgba(255,255,255,0.07); border-radius: 6px; overflow: hidden; }
+        .tax-table-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.32rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.65rem; }
+        .tax-table-row:last-child { border-bottom: none; }
+        .tax-table-row.bonus { background: rgba(46,204,113,0.05); }
+        .tax-table-row.tax   { background: rgba(231,76,60,0.05); }
+        .tax-table-row.total { background: rgba(212,175,55,0.06); border-top: 1px solid rgba(212,175,55,0.2); font-weight: 700; }
+        .tax-name  { flex: 1; font-weight: 600; }
+        .tax-desc  { font-size: 0.58rem; color: var(--silver); opacity: 0.55; flex: 2; }
+        .tax-val   { font-weight: 700; font-size: 0.7rem; width: 40px; text-align: right; flex-shrink: 0; }
+
+        /* Grudge log */
+        .grudge-log { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.1rem; }
+        .grudge-entry { display: flex; align-items: center; gap: 0.4rem; background: var(--charcoal); border-radius: 4px; padding: 0.3rem 0.5rem; font-size: 0.65rem; }
+        .grudge-icon { font-size: 0.75rem; flex-shrink: 0; }
+        .grudge-label { flex: 1; font-weight: 600; }
+        .grudge-date  { font-size: 0.58rem; color: var(--silver); opacity: 0.5; }
+        .grudge-impact{ font-weight: 700; font-size: 0.65rem; width: 32px; text-align: right; }
+        .grudge-del   { background: transparent; border: none; color: rgba(231,76,60,0.4); cursor: pointer; font-size: 0.7rem; padding: 0 0.1rem; flex-shrink: 0; }
+        .grudge-del:hover { color: var(--loss-red); }
+        .grudge-add-row { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; margin-top: 0.25rem; }
+        .grudge-type-btn {
+            font-size: 0.6rem; font-weight: 700; padding: 0.22rem 0.5rem; border-radius: 3px;
+            border: 1px solid rgba(255,255,255,0.15); background: transparent; color: var(--silver);
+            cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.15s;
+        }
+        .grudge-type-btn:hover { border-color: var(--gold); color: var(--gold); }
+        .log-section-hdr { font-size: 0.6rem; color: var(--silver); opacity: 0.5; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.2rem; }
     </style>
 </head>
 <body>
@@ -413,6 +445,106 @@ const DNA_TYPES = {
         multiplier: 1.3,
     },
 };
+
+// ─── GRUDGE TAX ───────────────────────────────────────────────────────────────
+const GRUDGE_TYPES = {
+    REJECTED: { label:'They Rejected Offer', impact:-15, color:'#E74C3C', icon:'✗' },
+    LOWBALL:  { label:'Sent Lowball',         impact:-8,  color:'#E67E22', icon:'↓' },
+    FLEECED:  { label:'Fleeced Them',         impact:-20, color:'#C0392B', icon:'⚠' },
+    FAIR:     { label:'Fair Deal Done',        impact:+6,  color:'#2ECC71', icon:'✓' },
+    GOODWILL: { label:'Built Goodwill',        impact:+12, color:'#D4AF37', icon:'★' },
+};
+const grudgeDecay = d => d < 30 ? 1.0 : d < 60 ? 0.6 : d < 90 ? 0.3 : 0.1;
+
+const GRUDGE_KEY = lid => `od_grudges_v1_${lid}`;
+function loadGrudges(lid) { try { return JSON.parse(localStorage.getItem(GRUDGE_KEY(lid)) || '[]'); } catch(e) { return []; } }
+function saveGrudges(lid, data) { localStorage.setItem(GRUDGE_KEY(lid), JSON.stringify(data)); }
+
+function calcGrudgeTax(myOwnerId, theirOwnerId, grudges, theirDnaKey) {
+    if (!myOwnerId || !theirOwnerId) return { total:0, entries:[] };
+    const relevant = grudges.filter(g => g.myOwnerId === myOwnerId && g.theirOwnerId === theirOwnerId);
+    const dnaMult  = { FLEECER:0.7, DOMINATOR:1.6, STALWART:1.2, ACCEPTOR:0.8, DESPERATE:0.5, NONE:1.0 }[theirDnaKey] || 1.0;
+    const now = Date.now();
+    let total = 0;
+    for (const g of relevant) {
+        const ageDays = (now - new Date(g.date).getTime()) / 86400000;
+        total += (GRUDGE_TYPES[g.type]?.impact || 0) * grudgeDecay(ageDays) * dnaMult;
+    }
+    return { total:Math.round(total), entries:relevant.sort((a,b) => new Date(b.date)-new Date(a.date)) };
+}
+
+// ─── OWNER POSTURE ────────────────────────────────────────────────────────────
+const POSTURES = {
+    DESPERATE: { label:'Desperate',    color:'#BB8FCE', desc:'Panic-mode — will overpay for immediate help. Strike now.' },
+    BUYER:     { label:'Active Buyer', color:'#F0A500', desc:'Contender upgrading — open to deals, fair value required.' },
+    NEUTRAL:   { label:'Neutral',      color:'#95A5A6', desc:'No strong directional push. Fair offers only.' },
+    SELLER:    { label:'Active Seller',color:'#5DADE2', desc:'Moving assets for futures. Buy at a discount.' },
+    LOCKED:    { label:'Locked In',    color:'#7F8C8D', desc:'Satisfied roster, high attachment. Very hard to move.' },
+};
+function calcOwnerPosture(assessment, dnaKey) {
+    if (!assessment) return POSTURES.NEUTRAL;
+    const { tier, panic } = assessment;
+    if (panic >= 4)                                     return POSTURES.DESPERATE;
+    if (tier === 'REBUILDER' || dnaKey === 'ACCEPTOR')  return POSTURES.SELLER;
+    if (tier === 'ELITE'     && panic <= 1)              return POSTURES.LOCKED;
+    if (tier === 'CONTENDER' && panic >= 2)              return POSTURES.BUYER;
+    return POSTURES.NEUTRAL;
+}
+
+// ─── PSYCHOLOGICAL TAX ENGINE ─────────────────────────────────────────────────
+function calcPsychTaxes(myAssessment, theirAssessment, theirDnaKey, theirPosture) {
+    const taxes = [];
+    // 1 — Endowment Effect: they overvalue what they own
+    const ePct = { FLEECER:10, DOMINATOR:28, STALWART:20, ACCEPTOR:5, DESPERATE:15, NONE:12 }[theirDnaKey] || 12;
+    taxes.push({ name:'Endowment Effect', impact:-Math.round(ePct/2), type:'TAX',
+        desc:`~${ePct}% mental inflation on their own players. Their side feels worth more than market.` });
+    // 2 — Panic Premium
+    if (theirAssessment?.panic >= 3) {
+        taxes.push({ name:'Panic Premium', impact:8+(theirAssessment.panic-2)*6, type:'BONUS',
+            desc:`Panic ${theirAssessment.panic}/5 — urgency overrides normal caution.` });
+    }
+    // 3 — Status Tax (Dominator)
+    if (theirDnaKey === 'DOMINATOR') {
+        taxes.push({ name:'Status Tax', impact:-18, type:'TAX',
+            desc:'Must visibly win the trade for ego/status. Frame it so they feel like the winner.' });
+    }
+    // 4 — Loss Aversion (Stalwart, Dominator)
+    if (['STALWART','DOMINATOR'].includes(theirDnaKey)) {
+        taxes.push({ name:'Loss Aversion', impact:-8, type:'TAX',
+            desc:'Losing a familiar player hurts more than gaining a new one. Expect resistance.' });
+    }
+    // 5 — Rebuilding Discount (Acceptor)
+    if (theirDnaKey === 'ACCEPTOR') {
+        taxes.push({ name:'Rebuilding Discount', impact:+10, type:'BONUS',
+            desc:'They mentally discount current starters. Buy at a discount in their mind.' });
+    }
+    // 6 — Need Fulfillment
+    const myStrengths   = myAssessment?.strengths || [];
+    const theirNeedPos  = theirAssessment?.needs?.slice(0,3).map(n=>n.pos) || [];
+    if (theirNeedPos.some(p => myStrengths.includes(p))) {
+        taxes.push({ name:'Need Fulfillment', impact:+12, type:'BONUS',
+            desc:'Your surplus fills their critical positional gap — strong deal motivation.' });
+    }
+    // 7 — Trade Window
+    if (myAssessment && theirAssessment) {
+        if (myAssessment.window !== theirAssessment.window) {
+            taxes.push({ name:'Window Alignment', impact:+8, type:'BONUS',
+                desc:'Opposite windows (contender vs rebuilder) = natural asset exchange.' });
+        } else {
+            taxes.push({ name:'Window Friction', impact:-5, type:'TAX',
+                desc:'Same trade window reduces natural motivation to exchange assets.' });
+        }
+    }
+    // 8 — Posture
+    if (theirPosture?.key === 'LOCKED') {
+        taxes.push({ name:'Locked Roster Tax', impact:-12, type:'TAX',
+            desc:'High satisfaction + attachment. Roster moves feel threatening to them.' });
+    } else if (theirPosture?.key === 'SELLER') {
+        taxes.push({ name:'Seller Momentum', impact:+10, type:'BONUS',
+            desc:'Actively shopping. Trade conversations are welcomed.' });
+    }
+    return taxes;
+}
 
 // ─── STORAGE ─────────────────────────────────────────────────────────────────
 const DNA_KEY = id => `od_owner_dna_v1_${id}`;
@@ -840,12 +972,15 @@ function TradeCalculator() {
     const [tierFilter,   setTierFilter]   = useState('ALL');
 
     // Phase 2 — Trade Analyzer
-    const [fcValues,      setFcValues]      = useState({});   // FantasyCalc market values
-    const [internalVals,  setInternalVals]  = useState({});   // Stats-based fallback values
+    const [fcValues,      setFcValues]      = useState({});
+    const [internalVals,  setInternalVals]  = useState({});
     const [tradeIds,      setTradeIds]      = useState({ A:[], B:[] });
-    const [tradeOwner,    setTradeOwner]    = useState({ A:null, B:null }); // ownerId strings
+    const [tradeOwner,    setTradeOwner]    = useState({ A:null, B:null });
     const [searchText,    setSearchText]    = useState({ A:'', B:'' });
     const [showSearch,    setShowSearch]    = useState({ A:false, B:false });
+
+    // Phase 3 — Grudge Tax
+    const [grudges,       setGrudges]       = useState([]);
 
     // Bootstrap
     useEffect(() => { boot(); }, []);
@@ -899,8 +1034,9 @@ function TradeCalculator() {
             const mine = (rosters || []).find(r => r.owner_id === userId);
             if (mine) setMyRosterId(mine.roster_id);
 
-            // Load saved DNA profiles
+            // Load saved DNA profiles + grudge log
             setOwnerDna(loadDNA(leagueId));
+            setGrudges(loadGrudges(leagueId));
         } catch(e) {
             console.error(e);
         } finally {
@@ -1267,6 +1403,18 @@ function TradeCalculator() {
                                     <span className="tier-badge" style={{ marginLeft:'auto', flexShrink:0, color:a.tierColor, borderColor:a.tierColor, background:a.tierBg }}>{a.tier}</span>
                                 </div>
 
+                                {/* Posture */}
+                                {(() => {
+                                    const posture = calcOwnerPosture(a, dnaKey);
+                                    return (
+                                        <div style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+                                            <span className="log-section-hdr" style={{ margin:0 }}>Posture:</span>
+                                            <span className="posture-badge" style={{ color:posture.color, borderColor:posture.color, background:`${posture.color}18` }}>{posture.label}</span>
+                                            <span style={{ fontSize:'0.58rem', color:'var(--silver)', opacity:0.45, fontStyle:'italic' }}>{posture.desc}</span>
+                                        </div>
+                                    );
+                                })()}
+
                                 {/* DNA Selector */}
                                 <div>
                                     <div style={{ fontSize:'0.58rem', color:'var(--silver)', opacity:0.5, marginBottom:'0.2rem', textTransform:'uppercase', letterSpacing:'0.06em' }}>Owner DNA</div>
@@ -1316,6 +1464,60 @@ function TradeCalculator() {
                                         <div style={{ fontSize:'0.52rem', color:'var(--silver)', opacity:0.5 }}>WK/PTS</div>
                                     </div>
                                 </div>
+
+                                {/* Grudge log — only show for other owners */}
+                                {!isMyTeam && myAssessment && (() => {
+                                    const myId    = myAssessment.ownerId;
+                                    const theirId = a.ownerId;
+                                    const relevant= grudges.filter(g => g.myOwnerId===myId && g.theirOwnerId===theirId);
+                                    const gt      = calcGrudgeTax(myId, theirId, grudges, dnaKey);
+                                    function addEntry(type) {
+                                        const entry = { id:Date.now(), date:new Date().toISOString().slice(0,10), myOwnerId:myId, theirOwnerId:theirId, type };
+                                        const updated = [...grudges, entry];
+                                        setGrudges(updated); saveGrudges(leagueId, updated);
+                                    }
+                                    function delEntry(id) {
+                                        const updated = grudges.filter(g => g.id !== id);
+                                        setGrudges(updated); saveGrudges(leagueId, updated);
+                                    }
+                                    return (
+                                        <div style={{ borderTop:'1px solid rgba(255,255,255,0.07)', paddingTop:'0.5rem', marginTop:'0.1rem' }}>
+                                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.3rem' }}>
+                                                <span className="log-section-hdr" style={{ margin:0 }}>Grudge Log</span>
+                                                {gt.total !== 0 && (
+                                                    <span style={{ fontSize:'0.62rem', fontWeight:700, color: gt.total<0?'var(--loss-red)':'var(--win-green)' }}>
+                                                        Net: {gt.total>0?'+':''}{gt.total}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {relevant.length > 0 && (
+                                                <div className="grudge-log" style={{ marginBottom:'0.35rem' }}>
+                                                    {relevant.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(e => {
+                                                        const g2 = GRUDGE_TYPES[e.type];
+                                                        const ageDays = Math.round((Date.now()-new Date(e.date).getTime())/86400000);
+                                                        return (
+                                                            <div key={e.id} className="grudge-entry">
+                                                                <span className="grudge-icon" style={{ color:g2?.color }}>{g2?.icon}</span>
+                                                                <span className="grudge-label" style={{ color:g2?.color }}>{g2?.label}</span>
+                                                                <span className="grudge-date">{e.date} · {ageDays}d</span>
+                                                                <button className="grudge-del" onClick={() => delEntry(e.id)}>✕</button>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                            <div className="grudge-add-row">
+                                                {Object.entries(GRUDGE_TYPES).map(([key, g2]) => (
+                                                    <button key={key} className="grudge-type-btn"
+                                                        style={{ borderColor:`${g2.color}55`, color:g2.color }}
+                                                        onClick={() => addEntry(key)}>
+                                                        {g2.icon} {g2.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         );
                     })}
@@ -1344,54 +1546,47 @@ function TradeCalculator() {
         // Side A owner (default = me)
         const myOwnerId    = tradeOwner.A || (myAssessment?.ownerId || null);
 
-        // Behavioral tax calculation
-        // DNA multiplier: how much more the other owner demands as "their margin"
-        const dnaMultiplier     = otherDna.multiplier != null ? otherDna.multiplier : 1.0;
-        // Side B needs to perceive they "win" — what's the threshold they'd accept?
-        // If diff > 0 (A wins), the other owner (B) is giving away value.
-        // They accept only if diff ≤ acceptanceThreshold
-        const fairMargin        = Math.round(Math.max(totalA, totalB) * 0.04); // 4% = industry standard "even" band
-        const taxAdjusted       = Math.round(Math.max(totalA, totalB) * Math.abs(1 - dnaMultiplier));
-        // Acceptance threshold: how much can Side A "win" before B refuses?
-        const acceptThresh = otherDnaKey === 'NONE' ? fairMargin : taxAdjusted;
+        // ── Phase 3: Posture + Psych Taxes + Grudge Tax ──────────────────────────
+        const theirAssessment = assessments.find(a => a.ownerId === otherOwnerId) || null;
+        const theirPosture    = calcOwnerPosture(theirAssessment, otherDnaKey);
+        const psychTaxes      = calcPsychTaxes(myAssessment, theirAssessment, otherDnaKey, theirPosture);
+        const grudgeTax       = calcGrudgeTax(myOwnerId, otherOwnerId, grudges, otherDnaKey);
+        const netTaxTotal     = psychTaxes.reduce((s,t) => s + t.impact, 0) + grudgeTax.total;
+        const fairMargin      = Math.round(Math.max(totalA, totalB) * 0.04);
 
-        // Likelihood computation
-        let likelihood = 50; // baseline
+        // DNA-based acceptance curve
+        let likelihood = 50;
         if (hasTrade && (totalA > 0 || totalB > 0)) {
-            const maxSide = Math.max(totalA, totalB, 1);
-            // Positive diff = A (you) wins; B is less likely to accept as diff grows
-            const normalizedDiff = diff / maxSide; // -1 to +1 relative
-
+            const maxSide        = Math.max(totalA, totalB, 1);
+            const normalizedDiff = diff / maxSide;
             if (otherDnaKey === 'FLEECER') {
-                // Only accepts if THEY win meaningfully
-                likelihood = normalizedDiff < -0.05 ? 75 + Math.round(Math.abs(normalizedDiff) * 40) : Math.max(15, 50 - Math.round(normalizedDiff * 150));
+                likelihood = normalizedDiff < -0.05 ? 75 + Math.round(Math.abs(normalizedDiff)*40) : Math.max(15, 50 - Math.round(normalizedDiff*150));
             } else if (otherDnaKey === 'DOMINATOR') {
-                // Needs +30% advantage; very low if you win
-                likelihood = normalizedDiff < -0.10 ? 70 : normalizedDiff < 0 ? 55 : Math.max(10, 40 - Math.round(normalizedDiff * 200));
+                likelihood = normalizedDiff < -0.10 ? 70 : normalizedDiff < 0 ? 55 : Math.max(10, 40 - Math.round(normalizedDiff*200));
             } else if (otherDnaKey === 'STALWART') {
-                // Near-fair deals: high acceptance; imbalanced: drops fast
-                const balance = 1 - Math.abs(normalizedDiff) * 3;
-                likelihood = Math.min(85, Math.max(20, Math.round(balance * 80)));
+                likelihood = Math.min(85, Math.max(20, Math.round((1 - Math.abs(normalizedDiff)*3)*80)));
             } else if (otherDnaKey === 'ACCEPTOR') {
-                // Loves future assets; roughly fair is fine; they discount their side's worth
-                likelihood = Math.min(90, Math.max(30, 60 + Math.round(normalizedDiff * 100)));
+                likelihood = Math.min(90, Math.max(30, 60 + Math.round(normalizedDiff*100)));
             } else if (otherDnaKey === 'DESPERATE') {
-                // High urgency; will accept even if they're slightly losing — need filler
-                const theirNeeds = otherOwnerId ? (assessments.find(a => a.ownerId === otherOwnerId)?.needs || []) : [];
-                const myStrengths= myAssessment?.strengths || [];
-                const fitsNeed   = theirNeeds.some(n => myStrengths.includes(n.pos));
-                likelihood = fitsNeed ? Math.min(92, 65 + Math.round(Math.abs(normalizedDiff) * 20) + 20) : Math.min(75, 55 + Math.round(Math.abs(normalizedDiff) * 30));
+                const fitsNeed = theirAssessment?.needs?.some(n => (myAssessment?.strengths||[]).includes(n.pos));
+                likelihood = fitsNeed ? Math.min(92, 65 + Math.round(Math.abs(normalizedDiff)*20) + 20) : Math.min(75, 55 + Math.round(Math.abs(normalizedDiff)*30));
             } else {
-                // No DNA — baseline: 50 ± how imbalanced it is
-                likelihood = Math.min(85, Math.max(15, 50 - Math.round(normalizedDiff * 120)));
+                likelihood = Math.min(85, Math.max(15, 50 - Math.round(normalizedDiff*120)));
             }
-
-            // Contextual boosts
-            const otherAssess  = assessments.find(a => a.ownerId === otherOwnerId);
-            if (otherAssess?.panic >= 3) likelihood = Math.min(95, likelihood + 15);
-            if (otherAssess?.window === 'REBUILDING' && diff > 0) likelihood = Math.min(95, likelihood + 10);
+            likelihood += netTaxTotal;
         }
         likelihood = Math.round(Math.max(5, Math.min(97, likelihood)));
+
+        function logGrudge(type) {
+            if (!myOwnerId || !otherOwnerId) return;
+            const entry = { id:Date.now(), date:new Date().toISOString().slice(0,10), myOwnerId, theirOwnerId:otherOwnerId, type };
+            const updated = [...grudges, entry];
+            setGrudges(updated); saveGrudges(leagueId, updated);
+        }
+        function deleteGrudge(id) {
+            const updated = grudges.filter(g => g.id !== id);
+            setGrudges(updated); saveGrudges(leagueId, updated);
+        }
 
         const likelihoodColor = likelihood >= 70 ? 'var(--win-green)' : likelihood >= 45 ? 'var(--amber)' : 'var(--loss-red)';
         const verdictColor    = diff > fairMargin ? '#5DADE2' : diff < -fairMargin ? '#E74C3C' : 'var(--win-green)';
@@ -1588,35 +1783,59 @@ function TradeCalculator() {
                     <div className="ta-verdict">
                         <div className="section-hdr">TRADE ANALYSIS</div>
 
-                        {/* Raw differential */}
+                        {/* Value differential */}
                         <div style={{ display:'flex', alignItems:'baseline', gap:'0.6rem', flexWrap:'wrap' }}>
                             <span className="verdict-diff" style={{ color: verdictColor }}>{diffDisplay}</span>
                             <span style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1.1rem', color: verdictColor }}>{verdictText}</span>
-                            <span style={{ fontSize:'0.62rem', color:'var(--silver)', opacity:0.55 }}>
-                                ({totalA.toLocaleString()} vs {totalB.toLocaleString()})
-                            </span>
+                            <span style={{ fontSize:'0.62rem', color:'var(--silver)', opacity:0.55 }}>({totalA.toLocaleString()} vs {totalB.toLocaleString()})</span>
                         </div>
 
-                        {/* DNA behavioral breakdown */}
-                        {otherDnaKey !== 'NONE' && (
-                            <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:6, padding:'0.5rem 0.6rem' }}>
-                                <div style={{ fontSize:'0.65rem', fontWeight:700, color: otherDna.color, marginBottom:'0.4rem' }}>
-                                    Behavioral Profile: {otherDna.label}
-                                </div>
-                                <div className="dna-tax-row">
-                                    <span className="dna-tax-label">Raw differential</span>
-                                    <span className="dna-tax-val" style={{ color: verdictColor }}>{diffDisplay} pts</span>
-                                </div>
-                                <div className="dna-tax-row">
-                                    <span className="dna-tax-label">DNA acceptance multiplier</span>
-                                    <span className="dna-tax-val" style={{ color: otherDna.color }}>
-                                        {dnaMultiplier < 1 ? `+${Math.round((1-dnaMultiplier)*100)}% margin required` : dnaMultiplier > 1 ? `Easier to deal (×${dnaMultiplier})` : 'Fair dealer'}
+                        {/* Owner posture + DNA */}
+                        {otherOwnerId && (
+                            <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexWrap:'wrap' }}>
+                                <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.5 }}>Their posture:</span>
+                                <span className="posture-badge" style={{ color:theirPosture.color, borderColor:theirPosture.color, background:`${theirPosture.color}18` }}>{theirPosture.label}</span>
+                                {otherDnaKey !== 'NONE' && <span className="chip chip-dna">{otherDna.label}</span>}
+                                <span style={{ fontSize:'0.58rem', color:'var(--silver)', opacity:0.45, fontStyle:'italic' }}>{theirPosture.desc}</span>
+                            </div>
+                        )}
+
+                        {/* Psychological Tax Breakdown */}
+                        <div>
+                            <div className="log-section-hdr" style={{ marginBottom:'0.35rem' }}>Psychological Tax Breakdown</div>
+                            <div className="tax-table">
+                                {psychTaxes.map((t,i) => (
+                                    <div key={i} className={`tax-table-row ${t.type === 'BONUS' ? 'bonus' : 'tax'}`}>
+                                        <span className="tax-name">{t.name}</span>
+                                        <span className="tax-desc">{t.desc}</span>
+                                        <span className="tax-val" style={{ color: t.impact > 0 ? 'var(--win-green)' : 'var(--loss-red)' }}>
+                                            {t.impact > 0 ? '+' : ''}{t.impact}
+                                        </span>
+                                    </div>
+                                ))}
+                                {grudgeTax.total !== 0 && (
+                                    <div className={`tax-table-row ${grudgeTax.total < 0 ? 'tax' : 'bonus'}`}>
+                                        <span className="tax-name">Grudge Tax</span>
+                                        <span className="tax-desc">{grudgeTax.entries.length} logged interaction{grudgeTax.entries.length!==1?'s':''}, decay-weighted</span>
+                                        <span className="tax-val" style={{ color: grudgeTax.total < 0 ? 'var(--loss-red)' : 'var(--win-green)' }}>
+                                            {grudgeTax.total > 0 ? '+' : ''}{grudgeTax.total}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="tax-table-row total">
+                                    <span className="tax-name">NET MODIFIER</span>
+                                    <span className="tax-desc">Applied to base likelihood</span>
+                                    <span className="tax-val" style={{ color: netTaxTotal > 0 ? 'var(--win-green)' : netTaxTotal < 0 ? 'var(--loss-red)' : 'var(--silver)' }}>
+                                        {netTaxTotal > 0 ? '+' : ''}{netTaxTotal}
                                     </span>
                                 </div>
-                                <div className="dna-tax-row" style={{ border:'none' }}>
-                                    <span className="dna-tax-label">Strategy tip</span>
-                                    <span style={{ fontSize:'0.62rem', color: otherDna.color, maxWidth:260, textAlign:'right', fontStyle:'italic' }}>{otherDna.strategy}</span>
-                                </div>
+                            </div>
+                        </div>
+
+                        {/* Strategy tip */}
+                        {otherDnaKey !== 'NONE' && otherDna.strategy && (
+                            <div style={{ fontSize:'0.65rem', color:otherDna.color, fontStyle:'italic', background:`${otherDna.color}0d`, border:`1px solid ${otherDna.color}25`, borderRadius:5, padding:'0.4rem 0.6rem' }}>
+                                Approach: {otherDna.strategy}
                             </div>
                         )}
 
@@ -1629,10 +1848,42 @@ function TradeCalculator() {
                             <div className="likelihood-bar-wrap">
                                 <div className="likelihood-bar-fill" style={{ width:`${likelihood}%`, background: likelihoodColor }} />
                             </div>
-                            <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.45, marginTop:'0.3rem' }}>
-                                Factors: value differential · owner DNA · panic level · trade window alignment
-                            </div>
                         </div>
+
+                        {/* Log Outcome + Grudge History */}
+                        {myOwnerId && otherOwnerId && (
+                            <div>
+                                <div className="log-section-hdr">Log Outcome</div>
+                                <div className="grudge-add-row">
+                                    {Object.entries(GRUDGE_TYPES).map(([key, g]) => (
+                                        <button key={key} className="grudge-type-btn"
+                                            style={{ borderColor:`${g.color}55`, color:g.color }}
+                                            onClick={() => logGrudge(key)}>
+                                            {g.icon} {g.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                {grudgeTax.entries.length > 0 && (
+                                    <div className="grudge-log" style={{ marginTop:'0.4rem' }}>
+                                        {grudgeTax.entries.slice(0,5).map(e => {
+                                            const gt = GRUDGE_TYPES[e.type];
+                                            const ageDays = Math.round((Date.now()-new Date(e.date).getTime())/86400000);
+                                            const dnaMult = { FLEECER:0.7,DOMINATOR:1.6,STALWART:1.2,ACCEPTOR:0.8,DESPERATE:0.5,NONE:1.0 }[otherDnaKey]||1.0;
+                                            const eff = Math.round((gt?.impact||0)*grudgeDecay(ageDays)*dnaMult);
+                                            return (
+                                                <div key={e.id} className="grudge-entry">
+                                                    <span className="grudge-icon" style={{ color:gt?.color }}>{gt?.icon}</span>
+                                                    <span className="grudge-label" style={{ color:gt?.color }}>{gt?.label}</span>
+                                                    <span className="grudge-date">{e.date} · {ageDays}d ago</span>
+                                                    <span className="grudge-impact" style={{ color: eff<0?'var(--loss-red)':'var(--win-green)' }}>{eff>0?'+':''}{eff}</span>
+                                                    <button className="grudge-del" onClick={() => deleteGrudge(e.id)}>✕</button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
