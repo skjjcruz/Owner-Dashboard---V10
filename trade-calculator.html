@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Behavioral Trade Calculator - Owner Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #D4AF37; --dark-gold: #B8941E; --black: #0A0A0A;
+            --off-black: #1A1A1A; --charcoal: #2A2A2A; --silver: #C0C0C0;
+            --white: #FFFFFF; --win-green: #2ECC71; --loss-red: #E74C3C;
+            --amber: #F0A500; --blue: #5DADE2;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Oswald', sans-serif; background: var(--black); color: var(--white); min-height: 100vh; overflow-x: hidden; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(212,175,55,0.05); }
+        ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }
+
+        .page-header {
+            background: linear-gradient(135deg, var(--off-black) 0%, var(--charcoal) 100%);
+            border-bottom: 2px solid var(--gold);
+            padding: 0.55rem 1rem;
+            display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; flex-shrink: 0;
+        }
+        .page-title {
+            font-family: 'Bebas Neue', cursive; font-size: 1.2rem;
+            color: var(--gold); letter-spacing: 0.12em; flex: 1; white-space: nowrap;
+        }
+        .back-btn {
+            background: transparent; border: 1.5px solid var(--gold); color: var(--gold);
+            font-family: 'Oswald', sans-serif; font-size: 0.7rem; font-weight: 600;
+            padding: 0.32rem 0.65rem; border-radius: 4px; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0;
+        }
+        .back-btn:hover { background: rgba(212,175,55,0.1); }
+        .league-select {
+            background: var(--charcoal); border: 1.5px solid rgba(212,175,55,0.4);
+            color: var(--white); font-family: 'Oswald', sans-serif; font-size: 0.76rem;
+            padding: 0.32rem 0.55rem; border-radius: 4px; cursor: pointer; max-width: 220px;
+        }
+        .league-select:focus { outline: none; border-color: var(--gold); }
+
+        .tab-bar {
+            display: flex; background: var(--off-black);
+            border-bottom: 2px solid rgba(212,175,55,0.2); overflow-x: auto;
+        }
+        .tab-btn {
+            flex: 1; min-width: 100px; padding: 0.6rem 0.5rem; border: none; background: transparent;
+            color: rgba(255,255,255,0.4); font-family: 'Oswald', sans-serif; font-size: 0.72rem;
+            font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+            border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; white-space: nowrap;
+        }
+        .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+        .tab-btn:hover:not(.active) { color: rgba(212,175,55,0.7); }
+
+        .tab-content { padding: 0.75rem; max-width: 1400px; margin: 0 auto; }
+
+        /* Team Grid */
+        .team-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+        @media(min-width:600px){ .team-grid { grid-template-columns: 1fr 1fr; } }
+        @media(min-width:900px){ .team-grid { grid-template-columns: repeat(3,1fr); } }
+        @media(min-width:1200px){ .team-grid { grid-template-columns: repeat(4,1fr); } }
+
+        /* Team Card */
+        .team-card {
+            background: var(--off-black); border: 1px solid rgba(212,175,55,0.2);
+            border-radius: 8px; overflow: hidden; transition: border-color 0.2s;
+        }
+        .team-card:hover { border-color: rgba(212,175,55,0.5); }
+        .team-card.my-team { border-color: var(--gold); box-shadow: 0 0 12px rgba(212,175,55,0.15); }
+        .card-header {
+            background: var(--charcoal); padding: 0.55rem 0.7rem;
+            display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+        }
+        .card-owner { font-size: 0.85rem; font-weight: 700; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-teamname { font-size: 0.62rem; color: var(--silver); opacity: 0.7; margin-top: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tier-badge {
+            font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em;
+            padding: 0.15rem 0.4rem; border-radius: 3px; flex-shrink: 0;
+            border: 1px solid; text-transform: uppercase;
+        }
+        .card-body { padding: 0.6rem 0.7rem; display: flex; flex-direction: column; gap: 0.5rem; }
+
+        .score-row { display: flex; align-items: center; gap: 0.5rem; }
+        .score-label { font-size: 0.62rem; color: var(--silver); opacity: 0.7; width: 60px; flex-shrink: 0; }
+        .score-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+        .score-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+        .score-val { font-size: 0.65rem; font-weight: 700; width: 32px; text-align: right; flex-shrink: 0; }
+
+        /* Position rows */
+        .pos-grid { display: flex; flex-direction: column; gap: 0.22rem; }
+        .pos-row { display: flex; align-items: center; gap: 0.4rem; }
+        .pos-label { font-size: 0.6rem; font-weight: 700; width: 20px; flex-shrink: 0; }
+        .pos-dots { display: flex; gap: 2px; flex: 1; flex-wrap: wrap; }
+        .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .dot-filled { background: var(--win-green); }
+        .dot-empty  { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); }
+        .dot-surplus{ background: var(--gold); }
+        .pos-count { font-size: 0.58rem; width: 28px; text-align: right; flex-shrink: 0; }
+        .pos-status-icon { font-size: 0.65rem; width: 14px; flex-shrink: 0; }
+
+        /* Panic meter */
+        .panic-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem; }
+        .panic-label { font-size: 0.6rem; color: var(--silver); opacity: 0.6; width: 40px; }
+        .panic-dots { display: flex; gap: 3px; }
+        .panic-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); }
+        .panic-dot.lit { background: var(--loss-red); border-color: var(--loss-red); box-shadow: 0 0 4px rgba(231,76,60,0.6); }
+        .panic-num { font-size: 0.62rem; color: var(--silver); opacity: 0.7; }
+
+        /* Chips */
+        .chip-row { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+        .chip { font-size: 0.55rem; font-weight: 700; letter-spacing: 0.05em; padding: 0.1rem 0.35rem; border-radius: 3px; text-transform: uppercase; }
+        .chip-strength { background: rgba(46,204,113,0.15); border: 1px solid rgba(46,204,113,0.4); color: #2ECC71; }
+        .chip-need { background: rgba(231,76,60,0.15); border: 1px solid rgba(231,76,60,0.4); color: #E74C3C; }
+        .chip-thin { background: rgba(240,165,0,0.15); border: 1px solid rgba(240,165,0,0.4); color: #F0A500; }
+        .chip-window { background: rgba(93,173,226,0.12); border: 1px solid rgba(93,173,226,0.3); color: #5DADE2; }
+        .chip-dna { background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.3); color: var(--gold); }
+
+        .record-row { display: flex; align-items: center; justify-content: space-between; }
+        .record-text { font-size: 0.65rem; color: var(--silver); opacity: 0.8; }
+        .pts-text { font-size: 0.6rem; color: var(--silver); opacity: 0.5; }
+
+        /* Section header */
+        .section-hdr {
+            font-family: 'Bebas Neue', cursive; font-size: 0.9rem; color: var(--gold);
+            letter-spacing: 0.12em; border-bottom: 1px solid rgba(212,175,55,0.2);
+            padding-bottom: 0.3rem; margin-bottom: 0.6rem;
+        }
+
+        /* Filter bar */
+        .filter-bar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+        .filter-select {
+            background: var(--charcoal); border: 1px solid rgba(212,175,55,0.3);
+            color: var(--white); font-family: 'Oswald', sans-serif; font-size: 0.72rem;
+            padding: 0.28rem 0.5rem; border-radius: 4px; cursor: pointer;
+        }
+        .filter-select:focus { outline: none; border-color: var(--gold); }
+
+        /* Trade finder */
+        .tf-layout { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        @media(min-width:768px){ .tf-layout { grid-template-columns: 280px 1fr; } }
+        .tf-my-panel { background: var(--off-black); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; padding: 0.75rem; }
+        .partner-list { display: flex; flex-direction: column; gap: 0.6rem; }
+        .partner-card {
+            background: var(--off-black); border: 1px solid rgba(212,175,55,0.15); border-radius: 8px;
+            padding: 0.6rem 0.75rem; display: flex; flex-direction: column; gap: 0.4rem;
+        }
+        .partner-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+        .compat-bar-wrap { height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+        .compat-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--gold), var(--win-green)); }
+        .tf-exchange { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.15rem; }
+        .tf-side { flex: 1; min-width: 120px; }
+        .tf-side-label { font-size: 0.55rem; color: var(--silver); opacity: 0.5; margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.06em; }
+        .tax-warning { font-size: 0.6rem; color: var(--amber); margin-top: 0.25rem; opacity: 0.9; }
+
+        /* DNA Cards */
+        .dna-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+        @media(min-width:600px){ .dna-grid { grid-template-columns: 1fr 1fr; } }
+        @media(min-width:900px){ .dna-grid { grid-template-columns: repeat(3,1fr); } }
+        .dna-card {
+            background: var(--off-black); border: 1px solid rgba(212,175,55,0.15);
+            border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;
+        }
+        .dna-card.dna-set { border-color: rgba(212,175,55,0.4); }
+        .dna-owner-row { display: flex; align-items: center; gap: 0.5rem; }
+        .dna-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--charcoal); overflow: hidden; flex-shrink: 0; border: 1.5px solid rgba(212,175,55,0.3); }
+        .dna-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .dna-select {
+            width: 100%; background: var(--charcoal); border: 1px solid rgba(212,175,55,0.3);
+            color: var(--white); font-family: 'Oswald', sans-serif; font-size: 0.72rem;
+            padding: 0.28rem 0.45rem; border-radius: 4px; cursor: pointer;
+        }
+        .dna-select:focus { outline: none; border-color: var(--gold); }
+        .dna-profile { background: rgba(212,175,55,0.06); border: 1px solid rgba(212,175,55,0.12); border-radius: 6px; padding: 0.5rem 0.6rem; }
+        .dna-profile-title { font-size: 0.72rem; font-weight: 700; color: var(--gold); margin-bottom: 0.25rem; }
+        .dna-profile-desc { font-size: 0.65rem; color: var(--silver); opacity: 0.85; line-height: 1.45; }
+        .dna-taxes { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.15rem; }
+        .tax-chip { font-size: 0.55rem; padding: 0.1rem 0.35rem; border-radius: 3px; border: 1px solid rgba(212,175,55,0.3); color: var(--amber); background: rgba(240,165,0,0.08); }
+
+        /* Loading / error */
+        .center-screen { min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; }
+        .load-title { font-family: 'Bebas Neue', cursive; font-size: 1.4rem; color: var(--gold); letter-spacing: 0.12em; }
+        .load-sub { font-size: 0.75rem; color: var(--silver); opacity: 0.5; }
+
+        /* Summary bar */
+        .summary-bar { display: flex; gap: 1rem; padding: 0.5rem 0.75rem; background: rgba(212,175,55,0.05); border: 1px solid rgba(212,175,55,0.1); border-radius: 6px; margin-bottom: 0.75rem; flex-wrap: wrap; }
+        .summary-stat { display: flex; flex-direction: column; align-items: center; }
+        .summary-val { font-family: 'Bebas Neue', cursive; font-size: 1.1rem; color: var(--gold); }
+        .summary-lbl { font-size: 0.55rem; color: var(--silver); opacity: 0.6; letter-spacing: 0.06em; text-transform: uppercase; }
+
+        .my-team-badge { font-size: 0.55rem; background: var(--gold); color: var(--black); padding: 0.08rem 0.3rem; border-radius: 2px; font-weight: 700; letter-spacing: 0.04em; flex-shrink: 0; }
+
+        .divider { height: 1px; background: rgba(212,175,55,0.1); margin: 0.25rem 0; }
+
+        .proj-target { font-size: 0.62rem; margin-top: 0.1rem; }
+        .proj-above { color: var(--win-green); }
+        .proj-below { color: var(--loss-red); }
+        .proj-close  { color: var(--amber); }
+
+        .health-score { font-family: 'Bebas Neue', cursive; font-size: 1.6rem; line-height: 1; }
+
+        .no-data-msg { text-align: center; color: var(--silver); opacity: 0.4; padding: 2rem 1rem; font-size: 0.78rem; }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useCallback } = React;
+
+// ─── AUTH ───────────────────────────────────────────────────────────────────
+const AUTH_KEY = 'od_auth_v1';
+const authRaw = localStorage.getItem(AUTH_KEY);
+if (!authRaw) window.location.href = 'login.html';
+let sleeperUsername = '';
+try {
+    sleeperUsername = JSON.parse(authRaw).username || '';
+} catch(e) {
+    localStorage.removeItem(AUTH_KEY);
+    window.location.href = 'login.html';
+}
+
+// ─── SLEEPER API ─────────────────────────────────────────────────────────────
+const SLEEPER_BASE = 'https://api.sleeper.app/v1';
+async function apiFetch(url) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+}
+const fetchUser       = u      => apiFetch(`${SLEEPER_BASE}/user/${encodeURIComponent(u)}`);
+const fetchLeagues    = (uid,y) => apiFetch(`${SLEEPER_BASE}/user/${uid}/leagues/nfl/${y}`);
+const fetchRosters    = id     => apiFetch(`${SLEEPER_BASE}/league/${id}/rosters`);
+const fetchLeagueInfo = id     => apiFetch(`${SLEEPER_BASE}/league/${id}`);
+const fetchLeagueUsers= id     => apiFetch(`${SLEEPER_BASE}/league/${id}/users`);
+
+let _playersCache = null;
+async function fetchPlayers() {
+    if (_playersCache) return _playersCache;
+    _playersCache = await apiFetch(`${SLEEPER_BASE}/players/nfl`);
+    return _playersCache;
+}
+let _statsCache = {};
+async function fetchSeasonStats(year) {
+    if (_statsCache[year]) return _statsCache[year];
+    try {
+        _statsCache[year] = await apiFetch(`${SLEEPER_BASE}/stats/nfl/regular/${year}`);
+    } catch(e) {
+        console.warn('Stats fetch failed:', e);
+        _statsCache[year] = {};
+    }
+    return _statsCache[year];
+}
+
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+const SEASON     = '2026';
+const STATS_YEAR = '2025';
+
+// Psycho League baseline (user-defined)
+const WEEKLY_TARGET = 243;
+const ANNUAL_TARGET = 3402;
+
+// Ideal dynasty roster depth per position
+const IDEAL_ROSTER = { QB:3, RB:7, WR:7, TE:4, K:2, DL:7, LB:6, DB:6 };
+
+// Position importance weights (must sum to ~100 for coverage calc)
+const POS_WEIGHTS = { QB:14, RB:14, WR:14, TE:8, K:3, DL:13, LB:10, DB:12 };
+const TOTAL_WEIGHT = Object.values(POS_WEIGHTS).reduce((a,b)=>a+b,0);
+
+const POS_ORDER = { QB:0, RB:1, WR:2, TE:3, K:4, DL:5, LB:6, DB:7 };
+
+const DNA_TYPES = {
+    NONE: { label: '— Not Set —', color: 'var(--silver)', desc: '', taxes: [] },
+    FLEECER: {
+        label: 'The Fleecer',
+        color: '#E74C3C',
+        desc: 'High activity, always hunting asymmetric value. Sends lowball offers constantly. Sharp but impatient — will counter-offer if you decline.',
+        strategy: 'Counter with slightly above-fair value. They respect boldness. Never show urgency.',
+        taxes: ['Endowment Effect +15%', 'Expects to "win" the trade'],
+        multiplier: 0.85,
+    },
+    DOMINATOR: {
+        label: 'The Dominator',
+        color: '#E67E22',
+        desc: 'High ego, requires a perceived +30% margin to pull the trigger. Motivated by status and bragging rights above all else.',
+        strategy: 'Frame your offer as giving them the "better" side. Let them feel like they won.',
+        taxes: ['Ego Premium +30%', 'Needs to feel superior', 'Grudge Tax if rejected'],
+        multiplier: 0.75,
+    },
+    STALWART: {
+        label: 'The Stalwart',
+        color: '#5DADE2',
+        desc: 'High stability, prefers 1-for-1 lateral moves. Emotionally attached to their roster. Slow to move but reliable when they engage.',
+        strategy: 'Lead with fair value. Never low-ball. Highlight how the trade improves both sides equally.',
+        taxes: ['Desire Tax on fan favorites', 'Prefers even-up deals'],
+        multiplier: 1.0,
+    },
+    ACCEPTOR: {
+        label: 'The Acceptor',
+        color: '#2ECC71',
+        desc: 'Low attachment, willing to sell current assets for future picks and young players. Rebuilding or just indifferent.',
+        strategy: 'Offer future assets (picks, young upside). They discount current stars — exploit it.',
+        taxes: ['Future Asset Bonus +20%', 'Discounts veterans -15%'],
+        multiplier: 1.15,
+    },
+    DESPERATE: {
+        label: 'The Desperate',
+        color: '#BB8FCE',
+        desc: 'High urgency triggered by injuries, bye-weeks, or playoff push. Will massively overpay for an immediate starter.',
+        strategy: 'Identify their empty slot or injury. Strike fast — desperation fades after their bye.',
+        taxes: ['Panic Multiplier up to +40%', 'Time-sensitive window'],
+        multiplier: 1.3,
+    },
+};
+
+// ─── STORAGE ─────────────────────────────────────────────────────────────────
+const DNA_KEY = id => `od_owner_dna_v1_${id}`;
+function loadDNA(lid) {
+    try { return JSON.parse(localStorage.getItem(DNA_KEY(lid)) || '{}'); }
+    catch(e) { return {}; }
+}
+function saveDNA(lid, data) {
+    localStorage.setItem(DNA_KEY(lid), JSON.stringify(data));
+}
+
+// ─── UTILITIES ───────────────────────────────────────────────────────────────
+function normPos(pos) {
+    if (!pos) return null;
+    if (['DB','CB','S','SS','FS'].includes(pos))                      return 'DB';
+    if (['DL','DE','DT','NT','IDL','EDGE'].includes(pos))             return 'DL';
+    if (['LB','OLB','ILB','MLB','EDGE'].includes(pos) && pos!=='EDGE')return 'LB';
+    if (pos === 'EDGE') return 'DL'; // edge rushers slot as DL
+    return pos; // QB, RB, WR, TE, K
+}
+
+function posColor(pos) {
+    const c = { QB:'#FF6B6B', RB:'#4ECDC4', WR:'#45B7D1', TE:'#F7DC6F', K:'#BB8FCE', DL:'#E67E22', LB:'#F0A500', DB:'#5DADE2' };
+    return c[pos] || 'var(--silver)';
+}
+
+function calcRawPts(stats, scoring) {
+    if (!stats) return null;
+    if (scoring) {
+        let t = 0;
+        for (const [f, w] of Object.entries(scoring)) {
+            if (typeof w !== 'number') continue;
+            if (stats[f] != null) t += Number(stats[f]) * w;
+        }
+        return t;
+    }
+    const p = stats.pts_half_ppr ?? stats.pts_ppr ?? stats.pts_std ?? null;
+    return p !== null ? Number(p) : null;
+}
+
+function calcPPG(pid, statsData, scoring) {
+    const s = statsData[pid];
+    if (!s) return 0;
+    const total = calcRawPts(s, scoring);
+    const gp = s.gp || 0;
+    if (total === null || gp === 0) return 0;
+    return Math.max(0, total / gp);
+}
+
+function parseStarterSlots(rosterPositions) {
+    const slots = {};
+    for (const s of (rosterPositions || [])) {
+        if (s === 'BN' || s === 'TAXI') continue;
+        slots[s] = (slots[s] || 0) + 1;
+    }
+    return slots;
+}
+
+const FLEX_ALLOWED = {
+    REC_FLEX:   ['WR','TE'],
+    FLEX:       ['RB','WR','TE'],
+    WRTQ:       ['QB','RB','WR','TE'],
+    SUPER_FLEX: ['QB','RB','WR','TE'],
+    IDP_FLEX:   ['DL','LB','DB'],
+    WILDCARD:   ['QB','RB','WR','TE','K','DL','LB','DB'],
+};
+
+function calcOptimalLineup(playerIds, reserve, taxi, playersData, statsData, scoring, rosterPositions) {
+    const resSet  = new Set(reserve || []);
+    const taxiSet = new Set(taxi    || []);
+    const active  = playerIds
+        .filter(id => !resSet.has(id) && !taxiSet.has(id))
+        .map(id => {
+            const p = playersData[id];
+            if (!p) return null;
+            return { id, np: normPos(p.position), ppg: calcPPG(id, statsData, scoring) };
+        })
+        .filter(Boolean)
+        .sort((a,b) => b.ppg - a.ppg);
+
+    const slots = parseStarterSlots(rosterPositions);
+    let total = 0;
+    const used = new Set();
+
+    // Specific position slots first
+    for (const slot of ['QB','RB','WR','TE','K','DL','LB','DB','DEF']) {
+        const count = slots[slot] || 0;
+        let filled = 0;
+        for (const p of active) {
+            if (filled >= count) break;
+            if (!used.has(p.id) && p.np === slot) { total += p.ppg; used.add(p.id); filled++; }
+        }
+    }
+
+    // Flex slots — most restrictive first
+    for (const [slot, allowed] of Object.entries(FLEX_ALLOWED)) {
+        const count = slots[slot] || 0;
+        for (let i = 0; i < count; i++) {
+            for (const p of active) {
+                if (!used.has(p.id) && allowed.includes(p.np)) {
+                    total += p.ppg; used.add(p.id); break;
+                }
+            }
+        }
+    }
+    return Math.round(total * 10) / 10;
+}
+
+function assessTeam(roster, playersData, statsData, leagueInfo, users) {
+    const scoring   = leagueInfo?.scoring_settings;
+    const rosterPos = leagueInfo?.roster_positions || [];
+    const user      = users.find(u => u.user_id === roster.owner_id);
+    const teamName  = user?.metadata?.team_name || `Team ${roster.roster_id}`;
+    const ownerName = user?.display_name        || `Owner ${roster.roster_id}`;
+    const avatar    = user?.avatar              || null;
+
+    const wins   = roster.settings?.wins   || 0;
+    const losses = roster.settings?.losses || 0;
+    const ties   = roster.settings?.ties   || 0;
+    const pf     = Number(roster.settings?.fpts || 0) + Number(roster.settings?.fpts_decimal || 0) / 100;
+
+    // Group all players by normalized position (depth assessment)
+    const posGroups = {};
+    for (const id of (roster.players || [])) {
+        const np = normPos(playersData[id]?.position);
+        if (!np) continue;
+        if (!posGroups[np]) posGroups[np] = [];
+        posGroups[np].push(id);
+    }
+
+    // Assess each position vs ideal
+    const posAssessment = {};
+    for (const [pos, ideal] of Object.entries(IDEAL_ROSTER)) {
+        const actual = (posGroups[pos] || []).length;
+        const diff   = actual - ideal;
+        let status;
+        if      (diff >= 2)  status = 'surplus';
+        else if (diff >= 0)  status = 'ok';
+        else if (diff === -1) status = 'thin';
+        else                  status = 'deficit';
+        posAssessment[pos] = { actual, ideal, diff, status };
+    }
+
+    // Optimal weekly scoring
+    const weeklyPts = calcOptimalLineup(
+        roster.players || [], roster.reserve || [], roster.taxi || [],
+        playersData, statsData, scoring, rosterPos
+    );
+
+    // Health score: 60% scoring + 40% coverage
+    const scoringScore  = Math.min(60, (weeklyPts / WEEKLY_TARGET) * 60);
+    let coverageScore   = 0;
+    for (const [pos, { actual, ideal }] of Object.entries(posAssessment)) {
+        coverageScore += Math.min(1, actual / ideal) * ((POS_WEIGHTS[pos]||0) / TOTAL_WEIGHT) * 40;
+    }
+    const healthScore = Math.round(scoringScore + coverageScore);
+
+    // Tier
+    let tier, tierColor, tierBg;
+    if      (healthScore >= 85) { tier='ELITE';     tierColor='#D4AF37'; tierBg='rgba(212,175,55,0.15)'; }
+    else if (healthScore >= 70) { tier='CONTENDER'; tierColor='#2ECC71'; tierBg='rgba(46,204,113,0.12)'; }
+    else if (healthScore >= 55) { tier='MIDDLE';    tierColor='#F0A500'; tierBg='rgba(240,165,0,0.12)';  }
+    else                        { tier='REBUILDER'; tierColor='#E74C3C'; tierBg='rgba(231,76,60,0.12)';  }
+
+    // Panic meter (0–5)
+    let panic = 0;
+    if      (weeklyPts < 195)          panic += 2;
+    else if (weeklyPts < WEEKLY_TARGET) panic += 1;
+    const criticals = Object.values(posAssessment).filter(p => p.status === 'deficit').length;
+    if      (criticals >= 3) panic += 2;
+    else if (criticals >= 1) panic += 1;
+    const played = wins + losses + ties;
+    if (played > 0 && losses / played > 0.6) panic += 1;
+    panic = Math.min(5, panic);
+
+    // Trade window
+    let window;
+    if      (tier === 'ELITE' || (tier === 'CONTENDER' && panic <= 1)) window = 'CONTENDING';
+    else if (tier === 'REBUILDER')                                      window = 'REBUILDING';
+    else                                                                window = 'TRANSITIONING';
+
+    const needs     = Object.entries(posAssessment)
+        .filter(([,v]) => v.status === 'deficit' || v.status === 'thin')
+        .sort((a,b) => a[1].diff - b[1].diff)
+        .map(([pos,v]) => ({ pos, urgency: v.status }));
+    const strengths = Object.entries(posAssessment)
+        .filter(([,v]) => v.status === 'surplus')
+        .map(([pos]) => pos);
+
+    return { rosterId:roster.roster_id, ownerId:roster.owner_id, teamName, ownerName, avatar, wins, losses, ties, pf,
+             posGroups, posAssessment, weeklyPts, healthScore, tier, tierColor, tierBg, panic, window, needs, strengths };
+}
+
+function calcComplementarity(mine, theirs) {
+    if (!mine || !theirs) return 0;
+    let score = 0;
+    for (const n of mine.needs) {
+        const t = theirs.posAssessment[n.pos];
+        if (t?.status === 'surplus') score += n.urgency === 'deficit' ? 25 : 12;
+        else if (t?.status === 'ok' && n.urgency === 'deficit') score += 6;
+    }
+    for (const n of theirs.needs) {
+        const m = mine.posAssessment[n.pos];
+        if (m?.status === 'surplus') score += n.urgency === 'deficit' ? 25 : 12;
+        else if (m?.status === 'ok' && n.urgency === 'deficit') score += 6;
+    }
+    if (mine.window !== theirs.window) score += 15;
+    return Math.min(100, score);
+}
+
+function avatarUrl(id) {
+    return id ? `https://sleepercdn.com/avatars/thumbs/${id}` : null;
+}
+
+// ─── SUB-COMPONENTS ──────────────────────────────────────────────────────────
+function PosRow({ pos, assessment }) {
+    const { actual, ideal, status } = assessment;
+    const statusIcon = { surplus:'↑', ok:'✓', thin:'~', deficit:'✗' }[status];
+    const statusColor = { surplus:'var(--gold)', ok:'var(--win-green)', thin:'var(--amber)', deficit:'var(--loss-red)' }[status];
+    const dots = [];
+    const maxDots = Math.max(ideal, actual);
+    for (let i = 0; i < maxDots; i++) {
+        if (i >= ideal) {
+            dots.push(<span key={i} className="dot dot-surplus" title="Surplus player" />);
+        } else if (i < actual) {
+            dots.push(<span key={i} className="dot dot-filled" />);
+        } else {
+            dots.push(<span key={i} className="dot dot-empty" />);
+        }
+    }
+    return (
+        <div className="pos-row">
+            <span className="pos-label" style={{ color: posColor(pos) }}>{pos}</span>
+            <span className="pos-dots">{dots}</span>
+            <span className="pos-count" style={{ color: statusColor }}>{actual}/{ideal}</span>
+            <span className="pos-status-icon" style={{ color: statusColor }}>{statusIcon}</span>
+        </div>
+    );
+}
+
+function PanicMeter({ level }) {
+    return (
+        <div className="panic-row">
+            <span className="panic-label">PANIC</span>
+            <span className="panic-dots">
+                {[1,2,3,4,5].map(i => <span key={i} className={`panic-dot${i<=level?' lit':''}`} />)}
+            </span>
+            <span className="panic-num">{level}/5</span>
+        </div>
+    );
+}
+
+function TeamCard({ assessment, isMyTeam, ownerDna }) {
+    const { teamName, ownerName, wins, losses, ties, pf, weeklyPts, healthScore, tier, tierColor, tierBg,
+            posAssessment, panic, window: tradeWindow, needs, strengths } = assessment;
+
+    const dna   = DNA_TYPES[ownerDna] || DNA_TYPES.NONE;
+    const pct   = Math.round((weeklyPts / WEEKLY_TARGET) * 100);
+    const scoreBarColor = healthScore >= 85 ? '#D4AF37' : healthScore >= 70 ? '#2ECC71' : healthScore >= 55 ? '#F0A500' : '#E74C3C';
+    const projClass = weeklyPts >= WEEKLY_TARGET ? 'proj-above' : weeklyPts >= WEEKLY_TARGET * 0.9 ? 'proj-close' : 'proj-below';
+
+    return (
+        <div className={`team-card${isMyTeam?' my-team':''}`}>
+            <div className="card-header">
+                <div style={{ overflow:'hidden' }}>
+                    <div className="card-owner">{ownerName}</div>
+                    <div className="card-teamname">{teamName}</div>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'0.2rem', flexShrink:0 }}>
+                    {isMyTeam && <span className="my-team-badge">MY TEAM</span>}
+                    <span className="tier-badge" style={{ color:tierColor, borderColor:tierColor, background:tierBg }}>{tier}</span>
+                </div>
+            </div>
+            <div className="card-body">
+                {/* Health score + record */}
+                <div className="record-row">
+                    <span style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1.5rem', color:scoreBarColor, lineHeight:1 }}>{healthScore}</span>
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end' }}>
+                        <span className="record-text">{wins}-{losses}{ties>0?`-${ties}`:''}</span>
+                        <span className="pts-text">{pf > 0 ? `${pf.toFixed(0)} PF` : ''}</span>
+                    </div>
+                </div>
+
+                {/* Weekly scoring potential bar */}
+                <div className="score-row">
+                    <span className="score-label">WEEKLY</span>
+                    <div className="score-bar-wrap">
+                        <div className="score-bar-fill" style={{ width:`${Math.min(100,pct)}%`, background:scoreBarColor }} />
+                    </div>
+                    <span className={`score-val ${projClass}`}>{weeklyPts > 0 ? weeklyPts : '—'}</span>
+                </div>
+                {weeklyPts > 0 && (
+                    <div className={`proj-target ${projClass}`} style={{ fontSize:'0.58rem', marginTop:'-0.3rem' }}>
+                        {weeklyPts >= WEEKLY_TARGET ? `+${(weeklyPts-WEEKLY_TARGET).toFixed(1)} vs ${WEEKLY_TARGET} target` : `-${(WEEKLY_TARGET-weeklyPts).toFixed(1)} below ${WEEKLY_TARGET} target`}
+                    </div>
+                )}
+                {weeklyPts === 0 && <div style={{ fontSize:'0.58rem', color:'var(--silver)', opacity:0.4 }}>No stats available yet</div>}
+
+                <div className="divider" />
+
+                {/* Position health */}
+                <div className="pos-grid">
+                    {Object.entries(posAssessment)
+                        .sort((a,b) => (POS_ORDER[a[0]]||9) - (POS_ORDER[b[0]]||9))
+                        .map(([pos, data]) => <PosRow key={pos} pos={pos} assessment={data} />)
+                    }
+                </div>
+
+                <div className="divider" />
+
+                {/* Panic + window */}
+                <PanicMeter level={panic} />
+                <div className="chip-row">
+                    <span className="chip chip-window">{tradeWindow}</span>
+                    {ownerDna && ownerDna !== 'NONE' && <span className="chip chip-dna">{dna.label}</span>}
+                </div>
+
+                {/* Strengths / needs chips */}
+                {strengths.length > 0 && (
+                    <div className="chip-row">
+                        {strengths.map(s => <span key={s} className="chip chip-strength">+{s}</span>)}
+                    </div>
+                )}
+                {needs.length > 0 && (
+                    <div className="chip-row">
+                        {needs.map(n => (
+                            <span key={n.pos} className={`chip ${n.urgency==='deficit'?'chip-need':'chip-thin'}`}>
+                                {n.urgency==='deficit'?'⚠ ':''}{n.pos}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
+function TradeCalculator() {
+    const [phase, setPhase]   = useState('boot');
+    const [errMsg, setErrMsg] = useState('');
+    const [userId,  setUserId]  = useState('');
+    const [leagues, setLeagues] = useState([]);
+    const [leagueId, setLeagueId] = useState('');
+
+    const [leagueInfo,  setLeagueInfo]  = useState(null);
+    const [allRosters,  setAllRosters]  = useState([]);
+    const [leagueUsers, setLeagueUsers] = useState([]);
+    const [playersData, setPlayersData] = useState({});
+    const [statsData,   setStatsData]   = useState({});
+    const [loading,     setLoading]     = useState(false);
+
+    const [activeTab,    setActiveTab]    = useState('audit');
+    const [myRosterId,   setMyRosterId]   = useState(null);
+    const [ownerDna,     setOwnerDna]     = useState({});   // { ownerId: DNA_TYPE_KEY }
+    const [sortMode,     setSortMode]     = useState('health'); // health | panic | record
+    const [tierFilter,   setTierFilter]   = useState('ALL');
+
+    // Bootstrap
+    useEffect(() => { boot(); }, []);
+
+    async function boot() {
+        try {
+            const user = await fetchUser(sleeperUsername);
+            setUserId(user.user_id);
+            const lgs = await fetchLeagues(user.user_id, SEASON);
+            setLeagues(lgs || []);
+            if (lgs?.length) {
+                setLeagueId(lgs[0].league_id);
+            }
+            setPhase('ready');
+        } catch(e) {
+            setErrMsg('Failed to connect to Sleeper. Check your network and try again.');
+            setPhase('error');
+        }
+    }
+
+    useEffect(() => {
+        if (!leagueId || !userId || phase !== 'ready') return;
+        loadLeague();
+    }, [leagueId, userId, phase]);
+
+    async function loadLeague() {
+        setLoading(true);
+        setAllRosters([]); setLeagueUsers([]); setPlayersData({}); setStatsData({});
+        try {
+            const [rosters, info, users, players, stats] = await Promise.all([
+                fetchRosters(leagueId),
+                fetchLeagueInfo(leagueId),
+                fetchLeagueUsers(leagueId),
+                fetchPlayers(),
+                fetchSeasonStats(STATS_YEAR),
+            ]);
+            setAllRosters(rosters || []);
+            setLeagueInfo(info);
+            setLeagueUsers(users || []);
+            setPlayersData(players || {});
+            setStatsData(stats || {});
+
+            // Find my roster
+            const mine = (rosters || []).find(r => r.owner_id === userId);
+            if (mine) setMyRosterId(mine.roster_id);
+
+            // Load saved DNA profiles
+            setOwnerDna(loadDNA(leagueId));
+        } catch(e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // Compute all team assessments
+    const assessments = useMemo(() => {
+        if (!allRosters.length || !leagueInfo) return [];
+        return allRosters.map(r => assessTeam(r, playersData, statsData, leagueInfo, leagueUsers));
+    }, [allRosters, playersData, statsData, leagueInfo, leagueUsers]);
+
+    const myAssessment = useMemo(() =>
+        assessments.find(a => a.rosterId === myRosterId) || null,
+        [assessments, myRosterId]
+    );
+
+    // Sorted + filtered assessments for audit tab
+    const sortedAssessments = useMemo(() => {
+        let list = [...assessments];
+        if (tierFilter !== 'ALL') list = list.filter(a => a.tier === tierFilter);
+        if (sortMode === 'health') list.sort((a,b) => b.healthScore - a.healthScore);
+        else if (sortMode === 'panic') list.sort((a,b) => b.panic - a.panic);
+        else if (sortMode === 'record') list.sort((a,b) => b.wins - a.wins || b.pf - a.pf);
+        return list;
+    }, [assessments, sortMode, tierFilter]);
+
+    // Trade partners ranked by complementarity
+    const tradePartners = useMemo(() => {
+        if (!myAssessment) return [];
+        return assessments
+            .filter(a => a.rosterId !== myRosterId)
+            .map(a => ({ ...a, compat: calcComplementarity(myAssessment, a) }))
+            .sort((a,b) => b.compat - a.compat);
+    }, [assessments, myAssessment, myRosterId]);
+
+    function updateDna(ownerId, dnaKey) {
+        const updated = { ...ownerDna, [ownerId]: dnaKey };
+        setOwnerDna(updated);
+        saveDNA(leagueId, updated);
+    }
+
+    // Summary stats
+    const avgHealth = assessments.length
+        ? Math.round(assessments.reduce((s,a) => s + a.healthScore, 0) / assessments.length)
+        : 0;
+    const eliteCount = assessments.filter(a => a.tier === 'ELITE').length;
+    const highPanic  = assessments.filter(a => a.panic >= 3).length;
+
+    // ── RENDER ────────────────────────────────────────────────────────────────
+
+    if (phase === 'boot') return (
+        <div className="center-screen">
+            <div className="load-title">BEHAVIORAL TRADE CALCULATOR</div>
+            <div className="load-sub">Connecting to Sleeper API…</div>
+        </div>
+    );
+
+    if (phase === 'error') return (
+        <div className="center-screen">
+            <div style={{ color:'var(--loss-red)', fontSize:'0.9rem', textAlign:'center', padding:'0 1rem' }}>{errMsg}</div>
+            <button className="back-btn" onClick={() => window.location.href='index.html'}>← Back to Dashboard</button>
+        </div>
+    );
+
+    // ── ROSTER AUDIT TAB ──────────────────────────────────────────────────────
+    function renderAudit() {
+        if (loading) return <div className="center-screen"><div className="load-title">LOADING ROSTERS</div><div className="load-sub">Crunching {STATS_YEAR} stats…</div></div>;
+        if (!assessments.length) return <div className="no-data-msg">No rosters found. Select a league above.</div>;
+
+        return (
+            <div>
+                {/* Summary bar */}
+                <div className="summary-bar">
+                    <div className="summary-stat">
+                        <span className="summary-val">{assessments.length}</span>
+                        <span className="summary-lbl">Teams</span>
+                    </div>
+                    <div className="summary-stat">
+                        <span className="summary-val">{avgHealth}</span>
+                        <span className="summary-lbl">Avg Health</span>
+                    </div>
+                    <div className="summary-stat">
+                        <span className="summary-val">{eliteCount}</span>
+                        <span className="summary-lbl">Elite</span>
+                    </div>
+                    <div className="summary-stat">
+                        <span className="summary-val" style={{ color:'var(--loss-red)' }}>{highPanic}</span>
+                        <span className="summary-lbl">High Panic</span>
+                    </div>
+                    <div className="summary-stat">
+                        <span className="summary-val">{WEEKLY_TARGET}</span>
+                        <span className="summary-lbl">Wk Target</span>
+                    </div>
+                    <div className="summary-stat">
+                        <span className="summary-val">{ANNUAL_TARGET}</span>
+                        <span className="summary-lbl">Annual Target</span>
+                    </div>
+                </div>
+
+                {/* Filters */}
+                <div className="filter-bar">
+                    <span style={{ fontSize:'0.68rem', color:'var(--silver)', opacity:0.6 }}>SORT</span>
+                    <select className="filter-select" value={sortMode} onChange={e => setSortMode(e.target.value)}>
+                        <option value="health">Health Score</option>
+                        <option value="panic">Panic Level</option>
+                        <option value="record">W-L Record</option>
+                    </select>
+                    <span style={{ fontSize:'0.68rem', color:'var(--silver)', opacity:0.6, marginLeft:'0.5rem' }}>TIER</span>
+                    <select className="filter-select" value={tierFilter} onChange={e => setTierFilter(e.target.value)}>
+                        <option value="ALL">All Tiers</option>
+                        <option value="ELITE">Elite</option>
+                        <option value="CONTENDER">Contender</option>
+                        <option value="MIDDLE">Middle</option>
+                        <option value="REBUILDER">Rebuilder</option>
+                    </select>
+                </div>
+
+                {/* Methodology note */}
+                <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.45, marginBottom:'0.75rem', lineHeight:1.4 }}>
+                    Health score = scoring potential (60%) + roster depth coverage (40%) · Weekly target: {WEEKLY_TARGET} pts/wk · Stats: {STATS_YEAR} season · Ideal depth: QB×3 RB×7 WR×7 TE×4 K×2 DL×7 LB×6 DB×6
+                </div>
+
+                <div className="team-grid">
+                    {sortedAssessments.map(a => (
+                        <TeamCard
+                            key={a.rosterId}
+                            assessment={a}
+                            isMyTeam={a.rosterId === myRosterId}
+                            ownerDna={ownerDna[a.ownerId] || 'NONE'}
+                        />
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    // ── TRADE FINDER TAB ──────────────────────────────────────────────────────
+    function renderTradeFinder() {
+        if (loading) return <div className="center-screen"><div className="load-title">LOADING</div></div>;
+        if (!assessments.length) return <div className="no-data-msg">No roster data. Select a league above.</div>;
+
+        // Roster selector
+        const rosterOptions = assessments.map(a => ({ id: a.rosterId, label: `${a.ownerName} — ${a.teamName}` }));
+
+        return (
+            <div>
+                <div className="filter-bar" style={{ marginBottom:'1rem' }}>
+                    <span style={{ fontSize:'0.68rem', color:'var(--silver)', opacity:0.6 }}>MY TEAM</span>
+                    <select className="filter-select" value={myRosterId || ''} onChange={e => setMyRosterId(Number(e.target.value))}>
+                        {rosterOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                    </select>
+                </div>
+
+                {myAssessment ? (
+                    <div className="tf-layout">
+                        {/* My Panel */}
+                        <div className="tf-my-panel">
+                            <div className="section-hdr">MY ROSTER</div>
+                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.5rem' }}>
+                                <div>
+                                    <div style={{ fontWeight:700, fontSize:'0.9rem' }}>{myAssessment.ownerName}</div>
+                                    <div style={{ fontSize:'0.65rem', color:'var(--silver)', opacity:0.7 }}>{myAssessment.teamName}</div>
+                                </div>
+                                <span className="tier-badge" style={{ color:myAssessment.tierColor, borderColor:myAssessment.tierColor, background:myAssessment.tierBg }}>{myAssessment.tier}</span>
+                            </div>
+
+                            <div style={{ marginBottom:'0.5rem' }}>
+                                <div style={{ fontSize:'0.62rem', color:'var(--silver)', opacity:0.6, marginBottom:'0.25rem' }}>WEEKLY PROJECTION</div>
+                                <div style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1.6rem', color: myAssessment.weeklyPts >= WEEKLY_TARGET ? 'var(--win-green)' : 'var(--loss-red)' }}>
+                                    {myAssessment.weeklyPts > 0 ? myAssessment.weeklyPts : '—'}
+                                    <span style={{ fontSize:'0.75rem', color:'var(--silver)', marginLeft:'0.3rem', opacity:0.6 }}>/ {WEEKLY_TARGET}</span>
+                                </div>
+                            </div>
+
+                            <div className="section-hdr" style={{ fontSize:'0.72rem', marginTop:'0.5rem' }}>MY BIGGEST NEEDS</div>
+                            {myAssessment.needs.length === 0
+                                ? <div style={{ fontSize:'0.68rem', color:'var(--win-green)', opacity:0.8 }}>No major gaps — roster looks balanced</div>
+                                : myAssessment.needs.slice(0,5).map(n => (
+                                    <div key={n.pos} style={{ display:'flex', alignItems:'center', gap:'0.4rem', marginBottom:'0.3rem' }}>
+                                        <span style={{ width:28, height:28, borderRadius:'50%', background:posColor(n.pos), display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.6rem', fontWeight:700, color:'var(--black)', flexShrink:0 }}>{n.pos}</span>
+                                        <div>
+                                            <div style={{ fontSize:'0.68rem', fontWeight:700 }}>
+                                                {n.urgency==='deficit' ? 'CRITICAL SHORTAGE' : 'RUNNING THIN'}
+                                            </div>
+                                            <div style={{ fontSize:'0.58rem', color:'var(--silver)', opacity:0.7 }}>
+                                                {myAssessment.posAssessment[n.pos].actual}/{myAssessment.posAssessment[n.pos].ideal} ideal depth
+                                            </div>
+                                        </div>
+                                        <span className={`chip ${n.urgency==='deficit'?'chip-need':'chip-thin'}`} style={{ marginLeft:'auto' }}>
+                                            {n.urgency==='deficit'?'CRITICAL':'THIN'}
+                                        </span>
+                                    </div>
+                                ))
+                            }
+
+                            {myAssessment.strengths.length > 0 && (
+                                <>
+                                    <div className="section-hdr" style={{ fontSize:'0.72rem', marginTop:'0.75rem' }}>MY TRADE CURRENCY</div>
+                                    <div className="chip-row">
+                                        {myAssessment.strengths.map(s => <span key={s} className="chip chip-strength">+{s} SURPLUS</span>)}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Trade Partner List */}
+                        <div>
+                            <div className="section-hdr">RECOMMENDED TRADE PARTNERS</div>
+                            <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.45, marginBottom:'0.75rem' }}>
+                                Ranked by roster complementarity — how well each team fills your gaps while you fill theirs.
+                            </div>
+                            <div className="partner-list">
+                                {tradePartners.length === 0
+                                    ? <div className="no-data-msg">No potential partners found.</div>
+                                    : tradePartners.map(partner => {
+                                        const dnaKey = ownerDna[partner.ownerId] || 'NONE';
+                                        const dna    = DNA_TYPES[dnaKey] || DNA_TYPES.NONE;
+                                        const theyHelp = myAssessment.needs
+                                            .filter(n => partner.posAssessment[n.pos]?.status === 'surplus' || partner.posAssessment[n.pos]?.status === 'ok')
+                                            .map(n => n.pos);
+                                        const iHelp = partner.needs
+                                            .filter(n => myAssessment.posAssessment[n.pos]?.status === 'surplus' || myAssessment.posAssessment[n.pos]?.status === 'ok')
+                                            .map(n => n.pos);
+                                        const compatColor = partner.compat >= 70 ? 'var(--win-green)' : partner.compat >= 40 ? 'var(--amber)' : 'var(--loss-red)';
+
+                                        return (
+                                            <div key={partner.rosterId} className="partner-card">
+                                                <div className="partner-header">
+                                                    <div>
+                                                        <div style={{ fontWeight:700, fontSize:'0.85rem' }}>{partner.ownerName}</div>
+                                                        <div style={{ fontSize:'0.62rem', color:'var(--silver)', opacity:0.6 }}>{partner.teamName}</div>
+                                                    </div>
+                                                    <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'0.2rem' }}>
+                                                        <span className="tier-badge" style={{ color:partner.tierColor, borderColor:partner.tierColor, background:partner.tierBg }}>{partner.tier}</span>
+                                                        {dnaKey !== 'NONE' && <span className="chip chip-dna">{dna.label}</span>}
+                                                    </div>
+                                                </div>
+
+                                                {/* Compat score */}
+                                                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                                                    <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.6, width:80, flexShrink:0 }}>COMPAT</span>
+                                                    <div className="compat-bar-wrap" style={{ flex:1 }}>
+                                                        <div className="compat-bar-fill" style={{ width:`${partner.compat}%` }} />
+                                                    </div>
+                                                    <span style={{ fontSize:'0.7rem', fontWeight:700, color:compatColor, width:32, textAlign:'right' }}>{partner.compat}%</span>
+                                                </div>
+
+                                                {/* Exchange analysis */}
+                                                <div className="tf-exchange">
+                                                    <div className="tf-side">
+                                                        <div className="tf-side-label">They can provide</div>
+                                                        <div className="chip-row">
+                                                            {theyHelp.length > 0
+                                                                ? theyHelp.map(p => <span key={p} className="chip chip-strength">{p}</span>)
+                                                                : <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.4 }}>No overlap</span>}
+                                                        </div>
+                                                    </div>
+                                                    <div className="tf-side">
+                                                        <div className="tf-side-label">You can provide</div>
+                                                        <div className="chip-row">
+                                                            {iHelp.length > 0
+                                                                ? iHelp.map(p => <span key={p} className="chip chip-strength">{p}</span>)
+                                                                : <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.4 }}>No overlap</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Panic + window */}
+                                                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexWrap:'wrap' }}>
+                                                    <span className="chip chip-window">{partner.window}</span>
+                                                    <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.5 }}>Panic: {partner.panic}/5</span>
+                                                    {partner.panic >= 3 && <span className="chip chip-need">HIGH URGENCY</span>}
+                                                </div>
+
+                                                {/* DNA strategy tip */}
+                                                {dnaKey !== 'NONE' && dna.strategy && (
+                                                    <div className="tax-warning">
+                                                        Approach: {dna.strategy}
+                                                    </div>
+                                                )}
+                                                {dnaKey !== 'NONE' && dna.taxes?.length > 0 && (
+                                                    <div className="dna-taxes">
+                                                        {dna.taxes.map((t,i) => <span key={i} className="tax-chip">{t}</span>)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                }
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="no-data-msg">Select your team above to find trade partners.</div>
+                )}
+            </div>
+        );
+    }
+
+    // ── OWNER DNA TAB ─────────────────────────────────────────────────────────
+    function renderOwnerDna() {
+        if (loading) return <div className="center-screen"><div className="load-title">LOADING</div></div>;
+        if (!assessments.length) return <div className="no-data-msg">No roster data. Select a league above.</div>;
+
+        return (
+            <div>
+                <div style={{ fontSize:'0.65rem', color:'var(--silver)', opacity:0.55, marginBottom:'0.75rem', lineHeight:1.5 }}>
+                    Profile each owner's behavioral DNA. This unlocks psychological tax calculations in the Trade Finder — telling you <em>how</em> to approach each deal, not just whether to make it. Profiles are saved locally.
+                </div>
+                <div className="dna-grid">
+                    {assessments.map(a => {
+                        const dnaKey     = ownerDna[a.ownerId] || 'NONE';
+                        const dna        = DNA_TYPES[dnaKey];
+                        const isMyTeam   = a.rosterId === myRosterId;
+                        const avatarSrc  = avatarUrl(a.avatar);
+                        return (
+                            <div key={a.rosterId} className={`dna-card${dnaKey && dnaKey!=='NONE'?' dna-set':''}`}>
+                                {/* Owner header */}
+                                <div className="dna-owner-row">
+                                    <div className="dna-avatar">
+                                        {avatarSrc
+                                            ? <img src={avatarSrc} alt={a.ownerName} onError={e => e.target.style.display='none'} />
+                                            : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.75rem', color:'var(--gold)', fontWeight:700 }}>
+                                                {a.ownerName.charAt(0).toUpperCase()}
+                                              </div>
+                                        }
+                                    </div>
+                                    <div style={{ overflow:'hidden' }}>
+                                        <div style={{ fontWeight:700, fontSize:'0.82rem', display:'flex', alignItems:'center', gap:'0.35rem' }}>
+                                            {a.ownerName}
+                                            {isMyTeam && <span className="my-team-badge">ME</span>}
+                                        </div>
+                                        <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.6, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.teamName}</div>
+                                    </div>
+                                    <span className="tier-badge" style={{ marginLeft:'auto', flexShrink:0, color:a.tierColor, borderColor:a.tierColor, background:a.tierBg }}>{a.tier}</span>
+                                </div>
+
+                                {/* DNA Selector */}
+                                <div>
+                                    <div style={{ fontSize:'0.58rem', color:'var(--silver)', opacity:0.5, marginBottom:'0.2rem', textTransform:'uppercase', letterSpacing:'0.06em' }}>Owner DNA</div>
+                                    <select
+                                        className="dna-select"
+                                        value={dnaKey}
+                                        onChange={e => updateDna(a.ownerId, e.target.value)}
+                                    >
+                                        {Object.entries(DNA_TYPES).map(([k, v]) => (
+                                            <option key={k} value={k}>{v.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* DNA Profile */}
+                                {dnaKey && dnaKey !== 'NONE' && dna.desc && (
+                                    <div className="dna-profile">
+                                        <div className="dna-profile-title" style={{ color: dna.color }}>{dna.label}</div>
+                                        <div className="dna-profile-desc">{dna.desc}</div>
+                                        {dna.strategy && (
+                                            <div style={{ marginTop:'0.35rem', fontSize:'0.62rem', color: dna.color, opacity:0.9, fontStyle:'italic' }}>
+                                                Strategy: {dna.strategy}
+                                            </div>
+                                        )}
+                                        <div className="dna-taxes" style={{ marginTop:'0.4rem' }}>
+                                            {dna.taxes?.map((t,i) => <span key={i} className="tax-chip">{t}</span>)}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Roster quick-stats */}
+                                <div style={{ display:'flex', gap:'0.75rem', paddingTop:'0.25rem' }}>
+                                    <div style={{ textAlign:'center' }}>
+                                        <div style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1rem', color:a.tierColor }}>{a.healthScore}</div>
+                                        <div style={{ fontSize:'0.52rem', color:'var(--silver)', opacity:0.5 }}>HEALTH</div>
+                                    </div>
+                                    <div style={{ textAlign:'center' }}>
+                                        <div style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1rem', color: a.panic>=3?'var(--loss-red)':'var(--silver)' }}>{a.panic}/5</div>
+                                        <div style={{ fontSize:'0.52rem', color:'var(--silver)', opacity:0.5 }}>PANIC</div>
+                                    </div>
+                                    <div style={{ textAlign:'center' }}>
+                                        <div style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1rem', color:'var(--silver)' }}>{a.wins}-{a.losses}</div>
+                                        <div style={{ fontSize:'0.52rem', color:'var(--silver)', opacity:0.5 }}>RECORD</div>
+                                    </div>
+                                    <div style={{ textAlign:'center' }}>
+                                        <div style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1rem', color:'var(--silver)' }}>{a.weeklyPts > 0 ? a.weeklyPts : '—'}</div>
+                                        <div style={{ fontSize:'0.52rem', color:'var(--silver)', opacity:0.5 }}>WK/PTS</div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
+
+    // ── FULL RENDER ───────────────────────────────────────────────────────────
+    return (
+        <div style={{ display:'flex', flexDirection:'column', minHeight:'100vh' }}>
+            {/* Header */}
+            <div className="page-header">
+                <button className="back-btn" onClick={() => window.location.href='index.html'}>← Main</button>
+                <div className="page-title">Behavioral Trade Calculator</div>
+                <select
+                    className="league-select"
+                    value={leagueId}
+                    onChange={e => setLeagueId(e.target.value)}
+                >
+                    {leagues.map(l => (
+                        <option key={l.league_id} value={l.league_id}>{l.name}</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Tab Bar */}
+            <div className="tab-bar">
+                {[
+                    { key:'audit',  label:'Roster Audit'    },
+                    { key:'finder', label:'Trade Finder'    },
+                    { key:'dna',    label:'Owner DNA'       },
+                ].map(t => (
+                    <button
+                        key={t.key}
+                        className={`tab-btn${activeTab===t.key?' active':''}`}
+                        onClick={() => setActiveTab(t.key)}
+                    >
+                        {t.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="tab-content" style={{ flex:1, paddingBottom:'2rem' }}>
+                {activeTab === 'audit'  && renderAudit()}
+                {activeTab === 'finder' && renderTradeFinder()}
+                {activeTab === 'dna'    && renderOwnerDna()}
+            </div>
+        </div>
+    );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(TradeCalculator));
+</script>
+</body>
+</html>
