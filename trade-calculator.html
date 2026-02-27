@@ -599,10 +599,10 @@ const POSTURES = {
 function calcOwnerPosture(assessment, dnaKey) {
     if (!assessment) return POSTURES.NEUTRAL;
     const { tier, panic } = assessment;
-    if (panic >= 4)                                     return POSTURES.DESPERATE;
-    if (tier === 'REBUILDER' || dnaKey === 'ACCEPTOR')  return POSTURES.SELLER;
-    if (tier === 'ELITE'     && panic <= 1)              return POSTURES.LOCKED;
-    if (tier === 'CONTENDER' && panic >= 2)              return POSTURES.BUYER;
+    if (panic >= 4)                                                   return POSTURES.DESPERATE;
+    if (tier === 'REBUILDER' || dnaKey === 'ACCEPTOR')                return POSTURES.SELLER;
+    if (tier === 'ELITE'     && panic <= 1)                           return POSTURES.LOCKED;
+    if ((tier === 'CONTENDER' || tier === 'STAGNANT') && panic >= 2)  return POSTURES.BUYER;
     return POSTURES.NEUTRAL;
 }
 
@@ -896,7 +896,7 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users) {
         playersData, statsData, scoring, rosterPos
     );
 
-    // Health score: 60% scoring + 40% coverage
+    // Health score: 60% scoring + 40% coverage  (kept as a diagnostic 0-100 number)
     const scoringScore  = Math.min(60, (weeklyPts / WEEKLY_TARGET) * 60);
     let coverageScore   = 0;
     for (const [pos, { actual, ideal }] of Object.entries(posAssessment)) {
@@ -904,17 +904,34 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users) {
     }
     const healthScore = Math.round(scoringScore + coverageScore);
 
-    // Tier
+    // ── Tier classification ─────────────────────────────────────────────────
+    // Driven PURELY by weekly scoring vs the 243 target so that deep dynasty
+    // rosters don't inflate everyone into "Elite". Depth lives in healthScore
+    // only as a diagnostic number.
+    //
+    // ELITE    ≥ 272  pts/wk  (≥12% above target)   ~top 2-4 teams
+    // CONTENDER ≥ 243  pts/wk  (at/above target)      ~next 4-6 teams
+    // STAGNANT  ≥ 207  pts/wk  (within 15% below)     ~next 4-6 teams
+    // REBUILDER < 207  pts/wk  (>15% below target)    ~bottom 2-3 teams
+    //
+    // When scoring data is unavailable (weeklyPts=0), fall back to depth score.
     let tier, tierColor, tierBg;
-    if      (healthScore >= 85) { tier='ELITE';     tierColor='#D4AF37'; tierBg='rgba(212,175,55,0.15)'; }
-    else if (healthScore >= 70) { tier='CONTENDER'; tierColor='#2ECC71'; tierBg='rgba(46,204,113,0.12)'; }
-    else if (healthScore >= 55) { tier='CHALLENGER'; tierColor='#F0A500'; tierBg='rgba(240,165,0,0.12)'; }
-    else                        { tier='REBUILDER'; tierColor='#E74C3C'; tierBg='rgba(231,76,60,0.12)';  }
+    if (weeklyPts > 0) {
+        if      (weeklyPts >= WEEKLY_TARGET * 1.12) { tier='ELITE';     tierColor='#D4AF37'; tierBg='rgba(212,175,55,0.15)'; }
+        else if (weeklyPts >= WEEKLY_TARGET * 1.00) { tier='CONTENDER'; tierColor='#2ECC71'; tierBg='rgba(46,204,113,0.12)'; }
+        else if (weeklyPts >= WEEKLY_TARGET * 0.85) { tier='STAGNANT';  tierColor='#F0A500'; tierBg='rgba(240,165,0,0.12)';  }
+        else                                         { tier='REBUILDER'; tierColor='#E74C3C'; tierBg='rgba(231,76,60,0.12)';  }
+    } else {
+        // No scoring data yet — use depth coverage as proxy
+        if      (coverageScore >= 36) { tier='CONTENDER'; tierColor='#2ECC71'; tierBg='rgba(46,204,113,0.12)'; }
+        else if (coverageScore >= 26) { tier='STAGNANT';  tierColor='#F0A500'; tierBg='rgba(240,165,0,0.12)';  }
+        else                           { tier='REBUILDER'; tierColor='#E74C3C'; tierBg='rgba(231,76,60,0.12)';  }
+    }
 
-    // Panic meter (0–5)
+    // Panic meter (0–5) — thresholds align with scoring tiers
     let panic = 0;
-    if      (weeklyPts < 195)          panic += 2;
-    else if (weeklyPts < WEEKLY_TARGET) panic += 1;
+    if      (weeklyPts > 0 && weeklyPts < WEEKLY_TARGET * 0.85) panic += 2; // REBUILDER zone
+    else if (weeklyPts > 0 && weeklyPts < WEEKLY_TARGET)        panic += 1; // STAGNANT zone
     const criticals = Object.values(posAssessment).filter(p => p.status === 'deficit').length;
     if      (criticals >= 3) panic += 2;
     else if (criticals >= 1) panic += 1;
@@ -924,9 +941,9 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users) {
 
     // Trade window
     let window;
-    if      (tier === 'ELITE' || (tier === 'CONTENDER' && panic <= 1)) window = 'CONTENDING';
-    else if (tier === 'REBUILDER')                                      window = 'REBUILDING';
-    else                                                                window = 'TRANSITIONING';
+    if      (tier === 'ELITE' || (tier === 'CONTENDER' && panic <= 1))  window = 'CONTENDING';
+    else if (tier === 'REBUILDER')                                       window = 'REBUILDING';
+    else                                                                 window = 'TRANSITIONING';
 
     const needs     = Object.entries(posAssessment)
         .filter(([,v]) => v.status === 'deficit' || v.status === 'thin')
@@ -1002,10 +1019,10 @@ function teamCommentary(assessment, eliteSet) {
 
     // Tier identity
     const identities = {
-        ELITE:      'Championship-caliber operation — trading from a position of strength.',
-        CONTENDER:  'Legitimate playoff threat — solid across the board with room to push higher.',
-        CHALLENGER: 'Fighting for a spot at the table — clear gaps to address, but competitive.',
-        REBUILDER:  'Building for the future — position yourself as a willing seller for premium return.',
+        ELITE:     'Championship-caliber operation — trading from a position of strength.',
+        CONTENDER: 'Legitimate playoff threat — at or above the scoring target, solid across the board.',
+        STAGNANT:  'Stuck in the middle — below the scoring target with clear gaps to address before you fall further behind.',
+        REBUILDER: 'Building for the future — position yourself as a willing seller for premium return.',
     };
 
     return { scoring, elite, strengthText, needsText, identity: identities[tier] || '', eliteCount };
@@ -1490,10 +1507,10 @@ function TradeCalculator() {
                         <div className="divider" />
                         <div style={{ marginTop:'0.4rem' }}>
                             {[
-                                { tier:'ELITE',      color:'#D4AF37', score:'85+',   desc:'Championship-caliber. Trade from strength.' },
-                                { tier:'CONTENDER',  color:'#2ECC71', score:'70–84', desc:'Playoff-caliber. Solid across the board.' },
-                                { tier:'CHALLENGER', color:'#F0A500', score:'55–69', desc:'In the mix with clear gaps to address.' },
-                                { tier:'REBUILDER',  color:'#E74C3C', score:'<55',   desc:'Building for the future. Willing sellers.' },
+                                { tier:'ELITE',     color:'#D4AF37', score:`${Math.round(WEEKLY_TARGET*1.12)}+ pts/wk`, desc:`≥12% above ${WEEKLY_TARGET} target. Trade from strength.` },
+                                { tier:'CONTENDER', color:'#2ECC71', score:`${WEEKLY_TARGET}+ pts/wk`,                  desc:`At/above target. Playoff-caliber, on track.` },
+                                { tier:'STAGNANT',  color:'#F0A500', score:`${Math.round(WEEKLY_TARGET*0.85)}+ pts/wk`, desc:`Below target. In the mix but falling behind.` },
+                                { tier:'REBUILDER', color:'#E74C3C', score:`<${Math.round(WEEKLY_TARGET*0.85)} pts/wk`, desc:`>15% below target. Build mode, willing sellers.` },
                             ].map(t => (
                                 <div key={t.tier} className="guide-tier-row">
                                     <span className="guide-color-dot" style={{ background:t.color }} />
@@ -1725,12 +1742,13 @@ function TradeCalculator() {
                         <option value="ALL">All Tiers</option>
                         <option value="ELITE">Elite</option>
                         <option value="CONTENDER">Contender</option>
-                        <option value="CHALLENGER">Challenger</option>
+                        <option value="STAGNANT">Stagnant</option>
                         <option value="REBUILDER">Rebuilder</option>
                     </select>
                 </div>
                 <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.4, marginBottom:'0.75rem', lineHeight:1.4 }}>
-                    Health = scoring (60%) + depth (40%) · Target {WEEKLY_TARGET} pts/wk · Ideal depth QB×3 RB×7 WR×7 TE×4 K×2 DL×7 LB×6 DB×6 · ★ = top-5 at position
+                    <strong style={{ color:'rgba(212,175,55,0.5)' }}>Tier = scoring vs {WEEKLY_TARGET} target:</strong> Elite ≥{Math.round(WEEKLY_TARGET*1.12)} · Contender ≥{WEEKLY_TARGET} · Stagnant ≥{Math.round(WEEKLY_TARGET*0.85)} · Rebuilder &lt;{Math.round(WEEKLY_TARGET*0.85)} pts/wk
+                    &nbsp;·&nbsp; Health score = scoring (60%) + depth (40%) · ★ = top-5 at position league-wide
                 </div>
 
                 <div className="team-grid">
