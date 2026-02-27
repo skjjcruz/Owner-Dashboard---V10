@@ -357,6 +357,84 @@
         .back-link:hover { color:var(--silver); }
         .counter-verdict-row { display:flex; align-items:center; gap:0.5rem; padding:0.4rem 0.6rem; border-radius:5px; }
         .derived-dna-chip { font-size:0.55rem; font-weight:700; padding:0.1rem 0.35rem; border-radius:3px; letter-spacing:0.05em; text-transform:uppercase; border:1px solid; }
+
+        /* Source badge */
+        .source-badge { font-size:0.45rem; background:rgba(240,165,0,0.15); border:1px solid rgba(240,165,0,0.35); color:var(--amber); padding:0.05rem 0.25rem; border-radius:2px; margin-left:0.2rem; letter-spacing:0.05em; }
+
+        /* ── Guide Tab ─────────────────────────────────────────────────────── */
+        .guide-hero { background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(212,175,55,0.02)); border:1px solid rgba(212,175,55,0.2); border-radius:10px; padding:1.25rem 1.5rem; margin-bottom:1.25rem; }
+        .guide-hero-title { font-family:'Bebas Neue',cursive; font-size:1.6rem; color:var(--gold); letter-spacing:0.12em; margin-bottom:0.3rem; }
+        .guide-hero-sub { font-size:0.72rem; color:var(--silver); opacity:0.75; line-height:1.55; max-width:700px; }
+        .guide-grid { display:grid; grid-template-columns:1fr; gap:0.9rem; }
+        @media(min-width:650px){ .guide-grid { grid-template-columns:1fr 1fr; } }
+        @media(min-width:1050px){ .guide-grid { grid-template-columns:1fr 1fr 1fr; } }
+        .guide-card { background:var(--off-black); border:1px solid rgba(212,175,55,0.15); border-radius:8px; padding:0.9rem 1rem; display:flex; flex-direction:column; gap:0.5rem; }
+        .guide-card-title { font-family:'Bebas Neue',cursive; font-size:0.95rem; color:var(--gold); letter-spacing:0.1em; }
+        .guide-step { display:flex; gap:0.6rem; align-items:flex-start; }
+        .guide-step-num { font-family:'Bebas Neue',cursive; font-size:1.5rem; color:var(--gold); opacity:0.4; line-height:1; min-width:1.4rem; }
+        .guide-step-body { flex:1; }
+        .guide-step-title { font-size:0.75rem; font-weight:700; color:var(--white); margin-bottom:0.15rem; }
+        .guide-step-desc { font-size:0.65rem; color:var(--silver); opacity:0.72; line-height:1.5; }
+        .guide-metric-row { display:flex; gap:0.5rem; align-items:flex-start; margin-bottom:0.25rem; }
+        .guide-metric-label { font-size:0.62rem; font-weight:700; color:var(--gold); min-width:80px; flex-shrink:0; }
+        .guide-metric-val { font-size:0.62rem; color:var(--silver); opacity:0.75; line-height:1.45; flex:1; }
+        .guide-tier-row { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem; }
+        .guide-color-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .guide-dot-legend { display:flex; align-items:center; gap:0.4rem; margin-bottom:0.2rem; }
+
+        /* ── Featured / Expanded Team Card ─────────────────────────────────── */
+        .featured-wrap { display:grid; grid-template-columns:1fr; gap:1rem; background:var(--off-black); border:2px solid var(--gold); border-radius:10px; padding:1rem; margin-bottom:1.25rem; box-shadow:0 0 24px rgba(212,175,55,0.1); }
+        @media(min-width:750px){ .featured-wrap { grid-template-columns:minmax(280px,340px) 1fr; } }
+        .commentary-panel { display:flex; flex-direction:column; gap:0.6rem; }
+        .commentary-card { background:rgba(212,175,55,0.04); border:1px solid rgba(212,175,55,0.1); border-radius:6px; padding:0.65rem 0.8rem; }
+        .commentary-card-title { font-size:0.62rem; font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.3rem; }
+        .commentary-card-text { font-size:0.7rem; color:var(--silver); line-height:1.55; }
+        .elite-tag { font-size:0.5rem; font-weight:700; background:rgba(212,175,55,0.18); border:1px solid rgba(212,175,55,0.45); color:var(--gold); padding:0.05rem 0.28rem; border-radius:3px; letter-spacing:0.05em; margin-left:0.3rem; vertical-align:middle; }
+        .identity-badge { display:inline-block; font-family:'Bebas Neue',cursive; font-size:0.8rem; letter-spacing:0.1em; padding:0.2rem 0.6rem; border-radius:4px; border:1px solid; }
+
+        /* Team detail expanded panel (for non-my-team) */
+        .team-detail-panel { display:grid; grid-template-columns:1fr; gap:1rem; background:var(--off-black); border:1px solid rgba(212,175,55,0.35); border-radius:8px; padding:1rem; margin-bottom:1rem; }
+        @media(min-width:750px){ .team-detail-panel { grid-template-columns:minmax(260px,310px) 1fr; } }
+        .detail-close-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; }
+
+        /* Larger team cards in grid */
+        .team-card .card-owner { font-size:0.92rem; }
+        .team-card .pos-label { font-size:0.65rem; }
+        .team-card .pos-count { font-size:0.62rem; }
+        .team-card .dot { width:9px; height:9px; }
+        .team-card-link { background:transparent; border:1px solid rgba(212,175,55,0.25); color:rgba(212,175,55,0.6); font-family:'Oswald',sans-serif; font-size:0.62rem; font-weight:600; padding:0.22rem 0.55rem; border-radius:3px; cursor:pointer; text-transform:uppercase; letter-spacing:0.05em; transition:all 0.15s; width:100%; margin-top:0.1rem; }
+        .team-card-link:hover { border-color:var(--gold); color:var(--gold); background:rgba(212,175,55,0.06); }
+
+        /* ── Trade Finder — Partner Tiers ───────────────────────────────────── */
+        .partner-card.optimal { border-color:rgba(46,204,113,0.45); background:rgba(46,204,113,0.02); }
+        .optimal-badge { font-size:0.52rem; font-weight:700; background:rgba(46,204,113,0.15); border:1px solid rgba(46,204,113,0.45); color:#2ECC71; padding:0.08rem 0.32rem; border-radius:3px; letter-spacing:0.05em; text-transform:uppercase; }
+        .partner-tier-label { font-size:0.65rem; font-weight:700; color:var(--silver); opacity:0.45; text-transform:uppercase; letter-spacing:0.08em; padding:0.5rem 0 0.35rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem; }
+
+        /* ── Trade Analyzer — wider/larger ──────────────────────────────────── */
+        .ta-layout-wide { display:grid; grid-template-columns:1fr; gap:1.25rem; }
+        @media(min-width:700px){ .ta-layout-wide { grid-template-columns:1fr 1fr; } }
+        .ta-side-locked { background:rgba(93,173,226,0.04); }
+        .ta-roster-list-tall { max-height:300px; overflow-y:auto; background:var(--charcoal); border:1px solid rgba(212,175,55,0.2); border-top:none; border-radius:0 0 5px 5px; }
+        .ta-pos-group-hdr { font-size:0.55rem; font-weight:700; color:var(--silver); opacity:0.5; padding:0.2rem 0.6rem; background:rgba(255,255,255,0.03); letter-spacing:0.06em; text-transform:uppercase; }
+        .ta-analyzer-wrap { max-width:none; }
+
+        /* ── Trade Outcome / Trade Complete ──────────────────────────────────── */
+        .trade-complete { display:flex; flex-direction:column; align-items:center; gap:0.8rem; padding:1.5rem 1rem; background:rgba(46,204,113,0.05); border:1px solid rgba(46,204,113,0.3); border-radius:8px; text-align:center; margin-top:0.5rem; }
+        .trade-complete-icon { font-size:2.8rem; line-height:1; }
+        .trade-complete-title { font-family:'Bebas Neue',cursive; font-size:2.2rem; color:var(--win-green); letter-spacing:0.12em; line-height:1; }
+        .trade-complete-result { font-family:'Bebas Neue',cursive; font-size:1.1rem; letter-spacing:0.1em; padding:0.25rem 0.75rem; border-radius:4px; }
+        .trade-complete-sub { font-size:0.7rem; color:var(--silver); opacity:0.7; line-height:1.5; max-width:400px; }
+        .trade-players-wrap { display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; width:100%; }
+        .trade-players-col { flex:1; min-width:150px; max-width:220px; text-align:left; }
+        .trade-players-col-title { font-size:0.58rem; color:var(--silver); opacity:0.5; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.35rem; }
+        .trade-player-chip { font-size:0.65rem; background:var(--charcoal); border-radius:3px; padding:0.22rem 0.45rem; margin-bottom:0.2rem; display:flex; align-items:center; gap:0.35rem; }
+
+        /* ── Grudge Log explainer ─────────────────────────────────────────── */
+        .explainer-box { background:rgba(212,175,55,0.04); border:1px solid rgba(212,175,55,0.15); border-radius:6px; padding:0.75rem 0.9rem; margin-bottom:0.9rem; }
+        .explainer-title { font-size:0.72rem; font-weight:700; color:var(--gold); margin-bottom:0.35rem; }
+        .explainer-text { font-size:0.65rem; color:var(--silver); opacity:0.78; line-height:1.55; }
+        .explainer-row { display:flex; align-items:flex-start; gap:0.45rem; margin-bottom:0.3rem; }
+        .explainer-icon { flex-shrink:0; width:1.1rem; text-align:center; }
     </style>
 </head>
 <body>
@@ -830,7 +908,7 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users) {
     let tier, tierColor, tierBg;
     if      (healthScore >= 85) { tier='ELITE';     tierColor='#D4AF37'; tierBg='rgba(212,175,55,0.15)'; }
     else if (healthScore >= 70) { tier='CONTENDER'; tierColor='#2ECC71'; tierBg='rgba(46,204,113,0.12)'; }
-    else if (healthScore >= 55) { tier='MIDDLE';    tierColor='#F0A500'; tierBg='rgba(240,165,0,0.12)';  }
+    else if (healthScore >= 55) { tier='CHALLENGER'; tierColor='#F0A500'; tierBg='rgba(240,165,0,0.12)'; }
     else                        { tier='REBUILDER'; tierColor='#E74C3C'; tierBg='rgba(231,76,60,0.12)';  }
 
     // Panic meter (0–5)
@@ -860,6 +938,77 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users) {
 
     return { rosterId:roster.roster_id, ownerId:roster.owner_id, teamName, ownerName, avatar, wins, losses, ties, pf,
              posGroups, posAssessment, weeklyPts, healthScore, tier, tierColor, tierBg, panic, window, needs, strengths };
+}
+
+// Top 5 players per position across all rosters = "elite"
+function calcElitePlayers(assessments, valueIndex) {
+    const byPos = {};
+    for (const a of assessments) {
+        for (const [pos, ids] of Object.entries(a.posGroups || {})) {
+            if (!byPos[pos]) byPos[pos] = [];
+            for (const id of ids) {
+                const v = getPlayerValue(id, valueIndex);
+                byPos[pos].push({ id, value: v.value });
+            }
+        }
+    }
+    const eliteSet = new Set();
+    for (const players of Object.values(byPos)) {
+        players.sort((a,b) => b.value - a.value).slice(0,5).forEach(p => eliteSet.add(p.id));
+    }
+    return eliteSet;
+}
+
+function countElite(assessment, eliteSet) {
+    return Object.values(assessment.posGroups || {}).flat().filter(id => eliteSet.has(id)).length;
+}
+
+// Generate narrative commentary for a team
+function teamCommentary(assessment, eliteSet) {
+    const { weeklyPts, tier, needs, strengths, posAssessment, panic } = assessment;
+    const eliteCount = countElite(assessment, eliteSet);
+    const diff = weeklyPts - WEEKLY_TARGET;
+
+    // Scoring
+    let scoring;
+    if (weeklyPts === 0) scoring = 'Weekly scoring data not yet available.';
+    else if (diff >= 30) scoring = `Projecting ${weeklyPts} pts/week — ${diff.toFixed(0)} above the ${WEEKLY_TARGET} target. Elite-level output. Trade from a position of strength.`;
+    else if (diff >= 10) scoring = `At ${weeklyPts} pts/week, you're ${diff.toFixed(0)} above the ${WEEKLY_TARGET} target. Comfortable floor. Stay the course.`;
+    else if (diff >= -10) scoring = `Projecting ${weeklyPts} pts/week — right on the ${WEEKLY_TARGET} bubble. One key upgrade could push you into contention.`;
+    else scoring = `At ${weeklyPts} pts/week, you're ${Math.abs(diff).toFixed(0)} below the ${WEEKLY_TARGET} target. Upgrading scoring output is priority one.`;
+
+    // Elite players
+    let elite;
+    if (eliteCount >= 5) elite = `${eliteCount} elite players (top 5 at their position league-wide) anchor your lineup — an exceptional talent base.`;
+    else if (eliteCount === 4) elite = `${eliteCount} elite players on your roster. Strong foundation — protect these assets in every negotiation.`;
+    else if (eliteCount === 3) elite = `${eliteCount} elite-tier players give you real leverage. Identify the right trade to add a fourth.`;
+    else if (eliteCount === 2) elite = `${eliteCount} elite players provide a solid core. Adding a third elite anchor would cement your competitive window.`;
+    else if (eliteCount === 1) elite = `Only 1 elite player (top 5 at their position) currently on your squad. Acquiring a second cornerstone piece should be the primary target.`;
+    else elite = `No players rank top 5 at their position league-wide yet. Trade strategy should target acquiring at least one elite anchor.`;
+
+    // Strengths
+    let strengthText;
+    if (strengths.length === 0) strengthText = 'No positional surpluses — roster is relatively balanced without obvious trading chips.';
+    else if (strengths.length === 1) strengthText = `${strengths[0]} depth is your primary trade currency. Use that surplus to target your areas of need.`;
+    else strengthText = `Depth surplus at ${strengths.join(', ')} gives you multiple trading chips — you have leverage to be selective.`;
+
+    // Needs
+    const criticals = needs.filter(n => n.urgency === 'deficit');
+    const thins = needs.filter(n => n.urgency === 'thin');
+    let needsText;
+    if (needs.length === 0) needsText = 'No major positional gaps. Balanced across the board — focus on reinforcing strengths.';
+    else if (criticals.length > 0) needsText = `Critical shortage at ${criticals.map(n=>n.pos).join(', ')}${thins.length > 0 ? ` and running thin at ${thins.map(n=>n.pos).join(', ')}` : ''}. These are your priority targets.`;
+    else needsText = `Running thin at ${thins.map(n=>n.pos).join(', ')} — not critical yet, but worth addressing before these become liabilities.`;
+
+    // Tier identity
+    const identities = {
+        ELITE:      'Championship-caliber operation — trading from a position of strength.',
+        CONTENDER:  'Legitimate playoff threat — solid across the board with room to push higher.',
+        CHALLENGER: 'Fighting for a spot at the table — clear gaps to address, but competitive.',
+        REBUILDER:  'Building for the future — position yourself as a willing seller for premium return.',
+    };
+
+    return { scoring, elite, strengthText, needsText, identity: identities[tier] || '', eliteCount };
 }
 
 function calcComplementarity(mine, theirs) {
@@ -1021,7 +1170,7 @@ function TradeCalculator() {
     const [statsData,   setStatsData]   = useState({});
     const [loading,     setLoading]     = useState(false);
 
-    const [activeTab,    setActiveTab]    = useState('audit');
+    const [activeTab,    setActiveTab]    = useState('guide');
     const [myRosterId,   setMyRosterId]   = useState(null);
     const [ownerDna,     setOwnerDna]     = useState({});   // { ownerId: DNA_TYPE_KEY }
     const [sortMode,     setSortMode]     = useState('health'); // health | panic | record
@@ -1039,9 +1188,13 @@ function TradeCalculator() {
     const [grudges,       setGrudges]       = useState([]);
 
     // Phase 4 — Outcome Flow
-    const [outcomeStep,   setOutcomeStep]   = useState(null); // null | 'accepted' | 'counter'
+    const [outcomeStep,   setOutcomeStep]   = useState(null); // null | 'accepted' | 'counter' | 'done'
+    const [tradeResult,   setTradeResult]   = useState(null); // { type, label, color }
     const [counterIds,    setCounterIds]    = useState({ A:[], B:[] });
     const [counterSearch, setCounterSearch] = useState({ A:'', B:'' });
+
+    // Audit — expanded detail panel
+    const [selectedAuditTeam, setSelectedAuditTeam] = useState(null); // rosterId
 
     // Bootstrap
     useEffect(() => { boot(); }, []);
@@ -1116,8 +1269,21 @@ function TradeCalculator() {
         [assessments, myRosterId]
     );
 
+    // Auto-lock Side A to my team whenever my roster is identified
+    useEffect(() => {
+        if (myAssessment?.ownerId) {
+            setTradeOwner(prev => ({ ...prev, A: myAssessment.ownerId }));
+        }
+    }, [myRosterId, assessments.length]); // eslint-disable-line
+
     // Merged market value index (FC preferred, internal fallback)
     const valueIndex = useMemo(() => mergeValues(fcValues, internalVals), [fcValues, internalVals]);
+
+    // Elite player set — top 5 per position across all rosters
+    const elitePlayerSet = useMemo(() => {
+        if (!assessments.length || !Object.keys(valueIndex).length) return new Set();
+        return calcElitePlayers(assessments, valueIndex);
+    }, [assessments, valueIndex]);
 
     // Player search across all loaded players, sorted by value desc
     const playerSearchResults = useCallback((query) => {
@@ -1191,42 +1357,362 @@ function TradeCalculator() {
         </div>
     );
 
+    // ── HOW-TO GUIDE TAB ──────────────────────────────────────────────────────
+    function renderGuide() {
+        return (
+            <div>
+                <div className="guide-hero">
+                    <div className="guide-hero-title">Welcome to the Behavioral Trade Calculator</div>
+                    <div className="guide-hero-sub">
+                        This tool goes beyond raw player values — it analyzes your roster health, identifies ideal trading partners based on positional fit, profiles the psychology of each owner, and helps you understand not just <em>whether</em> to make a trade but <em>how</em> to win the negotiation. Here's how to use it.
+                    </div>
+                </div>
+
+                <div className="guide-grid">
+                    {/* Step 1 — League */}
+                    <div className="guide-card">
+                        <div className="guide-card-title">Step 1 — Select Your League</div>
+                        <div className="guide-step">
+                            <span className="guide-step-num">1</span>
+                            <div className="guide-step-body">
+                                <div className="guide-step-title">Choose a League</div>
+                                <div className="guide-step-desc">Use the league selector in the top header to pick which Sleeper league to analyze. All data — rosters, stats, player values — loads automatically from Sleeper and FantasyCalc.</div>
+                            </div>
+                        </div>
+                        <div className="guide-step">
+                            <span className="guide-step-num">2</span>
+                            <div className="guide-step-body">
+                                <div className="guide-step-title">Wait for Data to Load</div>
+                                <div className="guide-step-desc">First load takes a few seconds. Dynasty player values are pulled live from FantasyCalc (2QB/SF, full PPR). IDP and kickers fall back to an internal stats-based ranking.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Step 2 — Roster Audit */}
+                    <div className="guide-card">
+                        <div className="guide-card-title">Step 2 — Roster Audit</div>
+                        <div className="guide-step">
+                            <span className="guide-step-num">1</span>
+                            <div className="guide-step-body">
+                                <div className="guide-step-title">Your Team is Featured at the Top</div>
+                                <div className="guide-step-desc">Your roster card sits prominently at the top with a full breakdown and commentary on scoring, strengths, needs, and elite player count. This is your baseline for every trade decision.</div>
+                            </div>
+                        </div>
+                        <div className="guide-step">
+                            <span className="guide-step-num">2</span>
+                            <div className="guide-step-body">
+                                <div className="guide-step-title">Read the Position Depth Grid</div>
+                                <div className="guide-step-desc">Each position shows filled vs. target slots. Green = stocked. Gold = surplus (trade chip). Amber = thin. Red = critical shortage. A star icon marks elite players (top 5 at position league-wide).</div>
+                            </div>
+                        </div>
+                        <div className="guide-step">
+                            <span className="guide-step-num">3</span>
+                            <div className="guide-step-body">
+                                <div className="guide-step-title">View Any Team's Detail</div>
+                                <div className="guide-step-desc">Click "View Detail" on any team card below to see their full assessment with the same commentary breakdown — useful for scouting potential trading partners.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Step 3 — Trade Finder */}
+                    <div className="guide-card">
+                        <div className="guide-card-title">Step 3 — Trade Finder</div>
+                        <div className="guide-step">
+                            <span className="guide-step-num">1</span>
+                            <div className="guide-step-body">
+                                <div className="guide-step-title">Optimal Partners Come First</div>
+                                <div className="guide-step-desc">Partners are ranked by roster complementarity. "Optimal Partners" (≥50% compat) have genuine positional overlap — they need what you have and have what you need. These are your best deal targets.</div>
+                            </div>
+                        </div>
+                        <div className="guide-step">
+                            <span className="guide-step-num">2</span>
+                            <div className="guide-step-body">
+                                <div className="guide-step-title">Use the DNA Strategy Tips</div>
+                                <div className="guide-step-desc">If you've profiled an owner's DNA in the Owner DNA tab, the Trade Finder shows the exact approach to use with them — whether to lowball, frame a "win," or lead with future assets.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Step 4 — Owner DNA */}
+                    <div className="guide-card">
+                        <div className="guide-card-title">Step 4 — Owner DNA</div>
+                        <div className="guide-step">
+                            <span className="guide-step-num">1</span>
+                            <div className="guide-step-body">
+                                <div className="guide-step-title">Profile Each Owner</div>
+                                <div className="guide-step-desc">Select the DNA type that best fits how each owner behaves in trades. Five archetypes: Fleecer, Dominator, Stalwart, Acceptor, Desperate. These unlock psychological tax calculations throughout the app.</div>
+                            </div>
+                        </div>
+                        <div className="guide-step">
+                            <span className="guide-step-num">2</span>
+                            <div className="guide-step-body">
+                                <div className="guide-step-title">Log Every Interaction — the Grudge Log Learns</div>
+                                <div className="guide-step-desc">After each trade attempt, log the outcome. As history builds (3+ interactions), the app auto-suggests a DNA profile based on patterns. Recent interactions carry more weight than old ones — scores decay over time.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Step 5 — Trade Analyzer */}
+                    <div className="guide-card">
+                        <div className="guide-card-title">Step 5 — Trade Analyzer</div>
+                        <div className="guide-step">
+                            <span className="guide-step-num">1</span>
+                            <div className="guide-step-body">
+                                <div className="guide-step-title">Your Team is Pre-Loaded on the Left</div>
+                                <div className="guide-step-desc">Side A is always your roster. Select the other owner on Side B, then click players from each roster list to build the deal. Players are organized by position group for easy browsing.</div>
+                            </div>
+                        </div>
+                        <div className="guide-step">
+                            <span className="guide-step-num">2</span>
+                            <div className="guide-step-body">
+                                <div className="guide-step-title">Read the Full Analysis</div>
+                                <div className="guide-step-desc">The verdict panel shows: raw value differential, psychological tax breakdown (factors that affect real-world likelihood), acceptance probability, and a DNA-based approach strategy.</div>
+                            </div>
+                        </div>
+                        <div className="guide-step">
+                            <span className="guide-step-num">3</span>
+                            <div className="guide-step-body">
+                                <div className="guide-step-title">Log the Trade Outcome</div>
+                                <div className="guide-step-desc">Use "Trade Outcome" after proposing the deal. If accepted, rate it Fair / Fleeced Them / Got Fleeced — this feeds the Grudge Log and improves future predictions for that owner.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Key Metrics */}
+                    <div className="guide-card">
+                        <div className="guide-card-title">Key Metrics &amp; Tiers</div>
+                        <div style={{ marginBottom:'0.5rem' }}>
+                            <div className="guide-metric-row"><span className="guide-metric-label">Health Score</span><span className="guide-metric-val">0–100 rating: 60% weekly scoring potential + 40% roster depth coverage</span></div>
+                            <div className="guide-metric-row"><span className="guide-metric-label">Elite Players</span><span className="guide-metric-val">Top 5 players at each position across the entire league (marked ★)</span></div>
+                            <div className="guide-metric-row"><span className="guide-metric-label">Panic Meter</span><span className="guide-metric-val">0–5 scale of trade urgency. High panic = willing to overpay</span></div>
+                            <div className="guide-metric-row"><span className="guide-metric-label">Weekly Target</span><span className="guide-metric-val">{WEEKLY_TARGET} pts/week · {ANNUAL_TARGET} pts/season</span></div>
+                        </div>
+                        <div className="divider" />
+                        <div style={{ marginTop:'0.4rem' }}>
+                            {[
+                                { tier:'ELITE',      color:'#D4AF37', score:'85+',   desc:'Championship-caliber. Trade from strength.' },
+                                { tier:'CONTENDER',  color:'#2ECC71', score:'70–84', desc:'Playoff-caliber. Solid across the board.' },
+                                { tier:'CHALLENGER', color:'#F0A500', score:'55–69', desc:'In the mix with clear gaps to address.' },
+                                { tier:'REBUILDER',  color:'#E74C3C', score:'<55',   desc:'Building for the future. Willing sellers.' },
+                            ].map(t => (
+                                <div key={t.tier} className="guide-tier-row">
+                                    <span className="guide-color-dot" style={{ background:t.color }} />
+                                    <span style={{ fontSize:'0.65rem', fontWeight:700, color:t.color, minWidth:85 }}>{t.tier}</span>
+                                    <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.5, minWidth:40 }}>{t.score}</span>
+                                    <span style={{ fontSize:'0.62rem', color:'var(--silver)', opacity:0.7 }}>{t.desc}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ textAlign:'center', marginTop:'1.5rem' }}>
+                    <button className="outcome-btn primary" onClick={() => setActiveTab('audit')} style={{ fontSize:'0.8rem', padding:'0.5rem 1.5rem' }}>
+                        Start with Roster Audit →
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     // ── ROSTER AUDIT TAB ──────────────────────────────────────────────────────
     function renderAudit() {
         if (loading) return <div className="center-screen"><div className="load-title">LOADING ROSTERS</div><div className="load-sub">Crunching {STATS_YEAR} stats…</div></div>;
         if (!assessments.length) return <div className="no-data-msg">No rosters found. Select a league above.</div>;
 
+        // Helper: render commentary panel for any assessment
+        function CommentaryPanel({ assessment }) {
+            const commentary = teamCommentary(assessment, elitePlayerSet);
+            const dnaKey = ownerDna[assessment.ownerId] || 'NONE';
+            const dna    = DNA_TYPES[dnaKey] || DNA_TYPES.NONE;
+            return (
+                <div className="commentary-panel">
+                    <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexWrap:'wrap' }}>
+                        <span className="identity-badge" style={{ color:assessment.tierColor, borderColor:assessment.tierColor, background:assessment.tierBg }}>
+                            {assessment.tier}
+                        </span>
+                        <span style={{ fontSize:'0.68rem', color:'var(--silver)', opacity:0.7, fontStyle:'italic' }}>{commentary.identity}</span>
+                    </div>
+                    <div className="commentary-card">
+                        <div className="commentary-card-title">Weekly Scoring</div>
+                        <div className="commentary-card-text">{commentary.scoring}</div>
+                    </div>
+                    <div className="commentary-card">
+                        <div className="commentary-card-title">
+                            Elite Players
+                            <span className="elite-tag">★ {commentary.eliteCount} ELITE</span>
+                        </div>
+                        <div className="commentary-card-text">{commentary.elite}</div>
+                    </div>
+                    <div className="commentary-card">
+                        <div className="commentary-card-title">Trade Currency (Strengths)</div>
+                        <div className="commentary-card-text">{commentary.strengthText}</div>
+                    </div>
+                    <div className="commentary-card">
+                        <div className="commentary-card-title">Positional Needs</div>
+                        <div className="commentary-card-text">{commentary.needsText}</div>
+                    </div>
+                    {dnaKey !== 'NONE' && dna.desc && (
+                        <div className="commentary-card" style={{ borderColor:`${dna.color}30` }}>
+                            <div className="commentary-card-title" style={{ color:dna.color }}>Owner DNA — {dna.label}</div>
+                            <div className="commentary-card-text">{dna.strategy}</div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Enhanced TeamCard with elite markers in pos rows
+        function AuditPosRow({ pos, assessment }) {
+            const { actual, ideal, status } = assessment;
+            const statusIcon  = { surplus:'↑', ok:'✓', thin:'~', deficit:'✗' }[status];
+            const statusColor = { surplus:'var(--gold)', ok:'var(--win-green)', thin:'var(--amber)', deficit:'var(--loss-red)' }[status];
+            const dots = [];
+            const maxDots = Math.max(ideal, actual);
+            for (let i = 0; i < maxDots; i++) {
+                if (i >= ideal) dots.push(<span key={i} className="dot dot-surplus" title="Surplus" />);
+                else if (i < actual) dots.push(<span key={i} className="dot dot-filled" />);
+                else dots.push(<span key={i} className="dot dot-empty" />);
+            }
+            return (
+                <div className="pos-row">
+                    <span className="pos-label" style={{ color:posColor(pos) }}>{pos}</span>
+                    <span className="pos-dots">{dots}</span>
+                    <span className="pos-count" style={{ color:statusColor }}>{actual}/{ideal}</span>
+                    <span className="pos-status-icon" style={{ color:statusColor }}>{statusIcon}</span>
+                </div>
+            );
+        }
+
+        const selectedDetail = selectedAuditTeam ? assessments.find(a => a.rosterId === selectedAuditTeam) : null;
+
         return (
             <div>
                 {/* Summary bar */}
                 <div className="summary-bar">
-                    <div className="summary-stat">
-                        <span className="summary-val">{assessments.length}</span>
-                        <span className="summary-lbl">Teams</span>
-                    </div>
-                    <div className="summary-stat">
-                        <span className="summary-val">{avgHealth}</span>
-                        <span className="summary-lbl">Avg Health</span>
-                    </div>
-                    <div className="summary-stat">
-                        <span className="summary-val">{eliteCount}</span>
-                        <span className="summary-lbl">Elite</span>
-                    </div>
-                    <div className="summary-stat">
-                        <span className="summary-val" style={{ color:'var(--loss-red)' }}>{highPanic}</span>
-                        <span className="summary-lbl">High Panic</span>
-                    </div>
-                    <div className="summary-stat">
-                        <span className="summary-val">{WEEKLY_TARGET}</span>
-                        <span className="summary-lbl">Wk Target</span>
-                    </div>
-                    <div className="summary-stat">
-                        <span className="summary-val">{ANNUAL_TARGET}</span>
-                        <span className="summary-lbl">Annual Target</span>
-                    </div>
+                    <div className="summary-stat"><span className="summary-val">{assessments.length}</span><span className="summary-lbl">Teams</span></div>
+                    <div className="summary-stat"><span className="summary-val">{avgHealth}</span><span className="summary-lbl">Avg Health</span></div>
+                    <div className="summary-stat"><span className="summary-val">{eliteCount}</span><span className="summary-lbl">Elite Teams</span></div>
+                    <div className="summary-stat"><span className="summary-val" style={{ color:'var(--loss-red)' }}>{highPanic}</span><span className="summary-lbl">High Panic</span></div>
+                    <div className="summary-stat"><span className="summary-val">{WEEKLY_TARGET}</span><span className="summary-lbl">Wk Target</span></div>
+                    <div className="summary-stat"><span className="summary-val">{elitePlayerSet.size}</span><span className="summary-lbl">Elite Players</span></div>
                 </div>
 
-                {/* Filters */}
+                {/* ── MY TEAM — Featured ── */}
+                {myAssessment && (
+                    <div>
+                        <div className="section-hdr" style={{ marginBottom:'0.6rem' }}>
+                            MY TEAM
+                            <span className="my-team-badge" style={{ marginLeft:'0.5rem', fontSize:'0.6rem', verticalAlign:'middle' }}>
+                                {myAssessment.ownerName}
+                            </span>
+                        </div>
+                        <div className="featured-wrap">
+                            {/* Left: position depth card */}
+                            <div>
+                                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.5rem' }}>
+                                    <div>
+                                        <div style={{ fontWeight:700, fontSize:'1rem' }}>{myAssessment.teamName}</div>
+                                        <div style={{ fontSize:'0.65rem', color:'var(--silver)', opacity:0.6 }}>{myAssessment.wins}–{myAssessment.losses}{myAssessment.ties>0?`–${myAssessment.ties}`:''} · {myAssessment.pf > 0 ? `${myAssessment.pf.toFixed(0)} PF` : ''}</div>
+                                    </div>
+                                    <div style={{ textAlign:'right' }}>
+                                        <div style={{ fontFamily:'Bebas Neue,cursive', fontSize:'2.2rem', lineHeight:1, color: myAssessment.healthScore>=85?'#D4AF37':myAssessment.healthScore>=70?'#2ECC71':myAssessment.healthScore>=55?'#F0A500':'#E74C3C' }}>
+                                            {myAssessment.healthScore}
+                                        </div>
+                                        <div style={{ fontSize:'0.55rem', color:'var(--silver)', opacity:0.5 }}>HEALTH SCORE</div>
+                                    </div>
+                                </div>
+
+                                {/* Weekly scoring */}
+                                <div className="score-row" style={{ marginBottom:'0.25rem' }}>
+                                    <span className="score-label">WEEKLY</span>
+                                    <div className="score-bar-wrap">
+                                        <div className="score-bar-fill" style={{ width:`${Math.min(100,Math.round((myAssessment.weeklyPts/WEEKLY_TARGET)*100))}%`, background: myAssessment.weeklyPts>=WEEKLY_TARGET?'var(--win-green)':'var(--loss-red)' }} />
+                                    </div>
+                                    <span className="score-val" style={{ color: myAssessment.weeklyPts>=WEEKLY_TARGET?'var(--win-green)':'var(--loss-red)' }}>{myAssessment.weeklyPts||'—'}</span>
+                                </div>
+
+                                <div className="divider" style={{ marginBottom:'0.5rem' }} />
+
+                                {/* Position depth */}
+                                <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.45, marginBottom:'0.3rem' }}>
+                                    ● Green=OK · ↑ Gold=Surplus · ~ Amber=Thin · ✗ Red=Critical · ★=Elite Player
+                                </div>
+                                <div className="pos-grid">
+                                    {Object.entries(myAssessment.posAssessment)
+                                        .sort((a,b)=>(POS_ORDER[a[0]]||9)-(POS_ORDER[b[0]]||9))
+                                        .map(([pos, data]) => {
+                                            // Count elite players for this position on my team
+                                            const posIds = myAssessment.posGroups[pos] || [];
+                                            const eliteHere = posIds.filter(id => elitePlayerSet.has(id)).length;
+                                            return (
+                                                <div key={pos} style={{ display:'flex', alignItems:'center', gap:'0.3rem' }}>
+                                                    <div style={{ flex:1 }}><AuditPosRow pos={pos} assessment={data} /></div>
+                                                    {eliteHere > 0 && <span title={`${eliteHere} elite player(s)`} style={{ fontSize:'0.65rem', color:'var(--gold)' }}>{'★'.repeat(eliteHere)}</span>}
+                                                </div>
+                                            );
+                                        })
+                                    }
+                                </div>
+
+                                <div className="divider" style={{ margin:'0.5rem 0' }} />
+                                <PanicMeter level={myAssessment.panic} />
+                            </div>
+
+                            {/* Right: commentary */}
+                            <CommentaryPanel assessment={myAssessment} />
+                        </div>
+                    </div>
+                )}
+
+                {/* ── EXPANDED DETAIL (selected other team) ── */}
+                {selectedDetail && (
+                    <div className="team-detail-panel">
+                        <div style={{ gridColumn:'1/-1' }}>
+                            <div className="detail-close-row">
+                                <div style={{ fontWeight:700, fontSize:'0.9rem' }}>
+                                    {selectedDetail.ownerName}
+                                    <span style={{ fontSize:'0.65rem', color:'var(--silver)', opacity:0.6, marginLeft:'0.5rem' }}>{selectedDetail.teamName}</span>
+                                </div>
+                                <button className="back-btn" onClick={() => setSelectedAuditTeam(null)}>✕ Close</button>
+                            </div>
+                        </div>
+                        {/* Left: position depth */}
+                        <div>
+                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.5rem' }}>
+                                <div style={{ fontSize:'0.65rem', color:'var(--silver)', opacity:0.6 }}>{selectedDetail.wins}–{selectedDetail.losses} · {selectedDetail.pf>0?`${selectedDetail.pf.toFixed(0)} PF`:''}</div>
+                                <div style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1.8rem', lineHeight:1, color:selectedDetail.tierColor }}>{selectedDetail.healthScore}</div>
+                            </div>
+                            <div className="score-row" style={{ marginBottom:'0.4rem' }}>
+                                <span className="score-label">WEEKLY</span>
+                                <div className="score-bar-wrap"><div className="score-bar-fill" style={{ width:`${Math.min(100,Math.round((selectedDetail.weeklyPts/WEEKLY_TARGET)*100))}%`, background:selectedDetail.tierColor }} /></div>
+                                <span className="score-val" style={{ color:selectedDetail.tierColor }}>{selectedDetail.weeklyPts||'—'}</span>
+                            </div>
+                            <div className="pos-grid">
+                                {Object.entries(selectedDetail.posAssessment)
+                                    .sort((a,b)=>(POS_ORDER[a[0]]||9)-(POS_ORDER[b[0]]||9))
+                                    .map(([pos,data]) => {
+                                        const posIds = selectedDetail.posGroups[pos] || [];
+                                        const eliteHere = posIds.filter(id => elitePlayerSet.has(id)).length;
+                                        return (
+                                            <div key={pos} style={{ display:'flex', alignItems:'center', gap:'0.3rem' }}>
+                                                <div style={{ flex:1 }}><AuditPosRow pos={pos} assessment={data} /></div>
+                                                {eliteHere > 0 && <span style={{ fontSize:'0.65rem', color:'var(--gold)' }}>{'★'.repeat(eliteHere)}</span>}
+                                            </div>
+                                        );
+                                    })
+                                }
+                            </div>
+                            <div className="divider" style={{ margin:'0.5rem 0' }} />
+                            <PanicMeter level={selectedDetail.panic} />
+                        </div>
+                        {/* Right: commentary */}
+                        <CommentaryPanel assessment={selectedDetail} />
+                    </div>
+                )}
+
+                {/* ── Filters + All Teams Grid ── */}
+                <div className="section-hdr" style={{ marginBottom:'0.6rem' }}>ALL TEAMS</div>
                 <div className="filter-bar">
                     <span style={{ fontSize:'0.68rem', color:'var(--silver)', opacity:0.6 }}>SORT</span>
                     <select className="filter-select" value={sortMode} onChange={e => setSortMode(e.target.value)}>
@@ -1239,25 +1725,34 @@ function TradeCalculator() {
                         <option value="ALL">All Tiers</option>
                         <option value="ELITE">Elite</option>
                         <option value="CONTENDER">Contender</option>
-                        <option value="MIDDLE">Middle</option>
+                        <option value="CHALLENGER">Challenger</option>
                         <option value="REBUILDER">Rebuilder</option>
                     </select>
                 </div>
-
-                {/* Methodology note */}
-                <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.45, marginBottom:'0.75rem', lineHeight:1.4 }}>
-                    Health score = scoring potential (60%) + roster depth coverage (40%) · Weekly target: {WEEKLY_TARGET} pts/wk · Stats: {STATS_YEAR} season · Ideal depth: QB×3 RB×7 WR×7 TE×4 K×2 DL×7 LB×6 DB×6
+                <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.4, marginBottom:'0.75rem', lineHeight:1.4 }}>
+                    Health = scoring (60%) + depth (40%) · Target {WEEKLY_TARGET} pts/wk · Ideal depth QB×3 RB×7 WR×7 TE×4 K×2 DL×7 LB×6 DB×6 · ★ = top-5 at position
                 </div>
 
                 <div className="team-grid">
-                    {sortedAssessments.map(a => (
-                        <TeamCard
-                            key={a.rosterId}
-                            assessment={a}
-                            isMyTeam={a.rosterId === myRosterId}
-                            ownerDna={ownerDna[a.ownerId] || 'NONE'}
-                        />
-                    ))}
+                    {sortedAssessments.map(a => {
+                        const isMe = a.rosterId === myRosterId;
+                        const eliteHere = countElite(a, elitePlayerSet);
+                        return (
+                            <div key={a.rosterId} style={{ display:'flex', flexDirection:'column', gap:'0.3rem' }}>
+                                <TeamCard assessment={a} isMyTeam={isMe} ownerDna={ownerDna[a.ownerId]||'NONE'} />
+                                {eliteHere > 0 && (
+                                    <div style={{ textAlign:'center', fontSize:'0.6rem', color:'var(--gold)', letterSpacing:'0.05em' }}>
+                                        {'★'.repeat(Math.min(eliteHere,5))} {eliteHere} ELITE PLAYER{eliteHere>1?'S':''}
+                                    </div>
+                                )}
+                                {!isMe && (
+                                    <button className="team-card-link" onClick={() => setSelectedAuditTeam(selectedAuditTeam === a.rosterId ? null : a.rosterId)}>
+                                        {selectedAuditTeam === a.rosterId ? '▲ Hide Detail' : '▼ View Detail'}
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         );
@@ -1334,16 +1829,20 @@ function TradeCalculator() {
 
                         {/* Trade Partner List */}
                         <div>
-                            <div className="section-hdr">RECOMMENDED TRADE PARTNERS</div>
-                            <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.45, marginBottom:'0.75rem' }}>
-                                Ranked by roster complementarity — how well each team fills your gaps while you fill theirs.
+                            <div className="section-hdr">TRADE PARTNERS</div>
+                            <div style={{ fontSize:'0.62rem', color:'var(--silver)', opacity:0.5, marginBottom:'0.75rem', lineHeight:1.45 }}>
+                                <strong style={{ color:'#2ECC71' }}>Optimal Partners</strong> have genuine two-way positional fit — they need what you have <em>and</em> you need what they have. All others are ranked by partial complementarity.
                             </div>
-                            <div className="partner-list">
-                                {tradePartners.length === 0
-                                    ? <div className="no-data-msg">No potential partners found.</div>
-                                    : tradePartners.map(partner => {
+                            {tradePartners.length === 0
+                                ? <div className="no-data-msg">No potential partners found.</div>
+                                : (() => {
+                                    const optimal = tradePartners.filter(p => p.compat >= 50);
+                                    const others  = tradePartners.filter(p => p.compat < 50);
+
+                                    function PartnerRow({ partner }) {
                                         const dnaKey = ownerDna[partner.ownerId] || 'NONE';
                                         const dna    = DNA_TYPES[dnaKey] || DNA_TYPES.NONE;
+                                        const isOptimal = partner.compat >= 50;
                                         const theyHelp = myAssessment.needs
                                             .filter(n => partner.posAssessment[n.pos]?.status === 'surplus' || partner.posAssessment[n.pos]?.status === 'ok')
                                             .map(n => n.pos);
@@ -1351,12 +1850,14 @@ function TradeCalculator() {
                                             .filter(n => myAssessment.posAssessment[n.pos]?.status === 'surplus' || myAssessment.posAssessment[n.pos]?.status === 'ok')
                                             .map(n => n.pos);
                                         const compatColor = partner.compat >= 70 ? 'var(--win-green)' : partner.compat >= 40 ? 'var(--amber)' : 'var(--loss-red)';
-
                                         return (
-                                            <div key={partner.rosterId} className="partner-card">
+                                            <div className={`partner-card${isOptimal?' optimal':''}`}>
                                                 <div className="partner-header">
                                                     <div>
-                                                        <div style={{ fontWeight:700, fontSize:'0.85rem' }}>{partner.ownerName}</div>
+                                                        <div style={{ fontWeight:700, fontSize:'0.88rem', display:'flex', alignItems:'center', gap:'0.35rem' }}>
+                                                            {partner.ownerName}
+                                                            {isOptimal && <span className="optimal-badge">OPTIMAL</span>}
+                                                        </div>
                                                         <div style={{ fontSize:'0.62rem', color:'var(--silver)', opacity:0.6 }}>{partner.teamName}</div>
                                                     </div>
                                                     <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'0.2rem' }}>
@@ -1365,23 +1866,21 @@ function TradeCalculator() {
                                                     </div>
                                                 </div>
 
-                                                {/* Compat score */}
                                                 <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
                                                     <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.6, width:80, flexShrink:0 }}>COMPAT</span>
                                                     <div className="compat-bar-wrap" style={{ flex:1 }}>
                                                         <div className="compat-bar-fill" style={{ width:`${partner.compat}%` }} />
                                                     </div>
-                                                    <span style={{ fontSize:'0.7rem', fontWeight:700, color:compatColor, width:32, textAlign:'right' }}>{partner.compat}%</span>
+                                                    <span style={{ fontSize:'0.72rem', fontWeight:700, color:compatColor, width:32, textAlign:'right' }}>{partner.compat}%</span>
                                                 </div>
 
-                                                {/* Exchange analysis */}
                                                 <div className="tf-exchange">
                                                     <div className="tf-side">
                                                         <div className="tf-side-label">They can provide</div>
                                                         <div className="chip-row">
                                                             {theyHelp.length > 0
                                                                 ? theyHelp.map(p => <span key={p} className="chip chip-strength">{p}</span>)
-                                                                : <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.4 }}>No overlap</span>}
+                                                                : <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.4 }}>No positional overlap</span>}
                                                         </div>
                                                     </div>
                                                     <div className="tf-side">
@@ -1389,34 +1888,47 @@ function TradeCalculator() {
                                                         <div className="chip-row">
                                                             {iHelp.length > 0
                                                                 ? iHelp.map(p => <span key={p} className="chip chip-strength">{p}</span>)
-                                                                : <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.4 }}>No overlap</span>}
+                                                                : <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.4 }}>No positional overlap</span>}
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                {/* Panic + window */}
                                                 <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', flexWrap:'wrap' }}>
                                                     <span className="chip chip-window">{partner.window}</span>
                                                     <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.5 }}>Panic: {partner.panic}/5</span>
                                                     {partner.panic >= 3 && <span className="chip chip-need">HIGH URGENCY</span>}
                                                 </div>
 
-                                                {/* DNA strategy tip */}
                                                 {dnaKey !== 'NONE' && dna.strategy && (
-                                                    <div className="tax-warning">
-                                                        Approach: {dna.strategy}
-                                                    </div>
+                                                    <div className="tax-warning">Approach: {dna.strategy}</div>
                                                 )}
                                                 {dnaKey !== 'NONE' && dna.taxes?.length > 0 && (
-                                                    <div className="dna-taxes">
-                                                        {dna.taxes.map((t,i) => <span key={i} className="tax-chip">{t}</span>)}
-                                                    </div>
+                                                    <div className="dna-taxes">{dna.taxes.map((t,i) => <span key={i} className="tax-chip">{t}</span>)}</div>
                                                 )}
                                             </div>
                                         );
-                                    })
-                                }
-                            </div>
+                                    }
+
+                                    return (
+                                        <div className="partner-list">
+                                            {optimal.length > 0 && (
+                                                <>
+                                                    <div className="partner-tier-label">★ Optimal Trading Partners ({optimal.length})</div>
+                                                    {optimal.map(p => <PartnerRow key={p.rosterId} partner={p} />)}
+                                                </>
+                                            )}
+                                            {others.length > 0 && (
+                                                <>
+                                                    <div className="partner-tier-label" style={{ marginTop: optimal.length ? '0.75rem' : 0 }}>
+                                                        Other Potential Partners ({others.length})
+                                                    </div>
+                                                    {others.map(p => <PartnerRow key={p.rosterId} partner={p} />)}
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+                                })()
+                            }
                         </div>
                     </div>
                 ) : (
@@ -1433,6 +1945,49 @@ function TradeCalculator() {
 
         return (
             <div>
+                {/* Owner DNA explainer */}
+                <div className="explainer-box" style={{ marginBottom:'0.75rem' }}>
+                    <div className="explainer-title">Owner DNA — How This Works</div>
+                    <div className="explainer-text" style={{ marginBottom:'0.5rem' }}>
+                        Profile each owner's trading personality. The DNA type you assign unlocks psychological tax calculations throughout the app — adjusting trade acceptance likelihood and telling you exactly <em>how</em> to approach each negotiation. Profiles are saved locally.
+                    </div>
+                    <div className="explainer-row">
+                        <span className="explainer-icon">🎯</span>
+                        <span className="explainer-text"><strong style={{ color:'var(--white)' }}>Start by estimating:</strong> Pick the DNA that best describes how this owner has behaved in past trades. It's a starting point — not a permanent label.</span>
+                    </div>
+                    <div className="explainer-row">
+                        <span className="explainer-icon">📈</span>
+                        <span className="explainer-text"><strong style={{ color:'var(--white)' }}>It grows over time:</strong> As you log trade outcomes in the Trade Analyzer, the app builds a behavioral history. After 3+ interactions, it auto-suggests a DNA type based on observed patterns (look for the <strong>AUTO</strong> badge).</span>
+                    </div>
+                </div>
+
+                {/* Grudge Log explainer */}
+                <div className="explainer-box" style={{ borderColor:'rgba(231,76,60,0.2)' }}>
+                    <div className="explainer-title" style={{ color:'#E74C3C' }}>The Grudge Log — What It Means</div>
+                    <div className="explainer-text" style={{ marginBottom:'0.5rem' }}>
+                        Every logged trade interaction with an owner lives here. The Grudge Log is what makes this tool self-fulfilling — it learns your history and adjusts how likely that owner is to accept future offers.
+                    </div>
+                    <div className="explainer-row">
+                        <span className="explainer-icon" style={{ color:'#2ECC71' }}>✓</span>
+                        <span className="explainer-text"><strong style={{ color:'var(--white)' }}>Accepted — Fair Trade (+5):</strong> Mutual respect. Slightly positive — builds trust.</span>
+                    </div>
+                    <div className="explainer-row">
+                        <span className="explainer-icon" style={{ color:'#E67E22' }}>⬆</span>
+                        <span className="explainer-text"><strong style={{ color:'var(--white)' }}>Accepted — Fleeced Them (−8):</strong> You won the deal. They may be more cautious next time.</span>
+                    </div>
+                    <div className="explainer-row">
+                        <span className="explainer-icon" style={{ color:'#BB8FCE' }}>⬇</span>
+                        <span className="explainer-text"><strong style={{ color:'var(--white)' }}>Accepted — Got Fleeced (+10):</strong> They won. They'll be more willing to deal with you again.</span>
+                    </div>
+                    <div className="explainer-row">
+                        <span className="explainer-icon" style={{ color:'#E74C3C' }}>✗</span>
+                        <span className="explainer-text"><strong style={{ color:'var(--white)' }}>Rejected (−15):</strong> Hard no. Significant negative drag on future acceptance likelihood.</span>
+                    </div>
+                    <div style={{ marginTop:'0.4rem', fontSize:'0.62rem', color:'var(--silver)', opacity:0.6 }}>
+                        All entries decay over time — interactions from 90+ days ago carry only 10% of their original weight. Recent history matters most.
+                    </div>
+                </div>
+
                 <div style={{ fontSize:'0.65rem', color:'var(--silver)', opacity:0.55, marginBottom:'0.75rem', lineHeight:1.5 }}>
                     Profile each owner's behavioral DNA. This unlocks psychological tax calculations in the Trade Finder — telling you <em>how</em> to approach each deal, not just whether to make it. Profiles are saved locally.
                 </div>
@@ -1675,7 +2230,7 @@ function TradeCalculator() {
         const verdictText     = diff > fairMargin ? 'YOU WIN' : diff < -fairMargin ? 'YOU LOSE' : 'EVEN TRADE';
         const diffDisplay     = diff > 0 ? `+${absDiff.toLocaleString()}` : diff < 0 ? `-${absDiff.toLocaleString()}` : '±0';
 
-        // Roster-specific player list (when owner is selected on a side)
+        // Roster-specific player list — sorted by position group then value
         function rosterPlayersFor(side) {
             const ownerId = tradeOwner[side];
             if (!ownerId) return null; // null = use global search
@@ -1702,7 +2257,10 @@ function TradeCalculator() {
                     const v = getPlayerValue(id, valueIndex);
                     return { id, name:`${p.first_name||''} ${p.last_name||''}`.trim(), pos:normPos(p.position), team:p.team||'FA', value:v.value, source:v.source };
                 })
-                .sort((a,b) => b.value - a.value);
+                .sort((a,b) => {
+                    const pd = (POS_ORDER[a.pos]||9) - (POS_ORDER[b.pos]||9);
+                    return pd !== 0 ? pd : b.value - a.value;
+                });
         }
 
         // Global search fallback (computed per side)
@@ -1725,33 +2283,74 @@ function TradeCalculator() {
         ];
 
         function TradeSide({ side, color, label }) {
-            const ids          = tradeIds[side];
-            const tot          = tradeSideValue(ids);
-            const srch         = searchText[side];
-            const show         = showSearch[side];
-            const rosterPlayers= rosterPlayersFor(side);  // null = no owner selected
-            const globalResults= side === 'A' ? resultsA : resultsB;
-            const ownerSelected= !!tradeOwner[side];
+            const ids           = tradeIds[side];
+            const tot           = tradeSideValue(ids);
+            const srch          = searchText[side];
+            const show          = showSearch[side];
+            const rosterPlayers = rosterPlayersFor(side);
+            const globalResults = side === 'A' ? resultsA : resultsB;
+            const ownerSelected = !!tradeOwner[side];
+            const isLockedSide  = side === 'A'; // Side A is always my team
+
+            // Group roster players by position for display
+            function RosterListGrouped({ players }) {
+                if (!players || players.length === 0) return <div className="ta-roster-empty">No players match</div>;
+                const grouped = {};
+                players.forEach(r => { if (!grouped[r.pos]) grouped[r.pos] = []; grouped[r.pos].push(r); });
+                return (
+                    <>
+                        {Object.entries(grouped)
+                            .sort((a,b) => (POS_ORDER[a[0]]||9)-(POS_ORDER[b[0]]||9))
+                            .map(([pos, posPlayers]) => (
+                                <div key={pos}>
+                                    <div className="ta-pos-group-hdr" style={{ color: posColor(pos) }}>{pos}</div>
+                                    {posPlayers.map(r => {
+                                        const added = ids.includes(r.id);
+                                        return (
+                                            <div key={r.id} className={`ta-roster-item${added?' added':''}`} onClick={() => !added && addPlayer(side, r.id)}>
+                                                <span className="ta-pos-dot" style={{ background: posColor(r.pos) }} />
+                                                <span style={{ flex:1, fontWeight:600, fontSize:'0.72rem', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.name}</span>
+                                                <span className="ta-player-meta">{r.team}</span>
+                                                <span className="ta-player-val">
+                                                    {r.value > 0 ? r.value.toLocaleString() : '—'}
+                                                    {r.source === 'internal' && <span className="source-badge">INT</span>}
+                                                    {elitePlayerSet.has(r.id) && <span style={{ marginLeft:'0.2rem', color:'var(--gold)' }}>★</span>}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ))
+                        }
+                    </>
+                );
+            }
 
             return (
-                <div className={`ta-side side-${side.toLowerCase()}`}>
-                    <div className="side-hdr">
-                        <span style={{ fontFamily:'Bebas Neue,cursive', fontSize:'0.9rem', color, letterSpacing:'0.08em' }}>{label}</span>
-                        {side === 'A' && <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.5 }}>Your offer</span>}
-                        {side === 'B' && <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.5 }}>You receive</span>}
+                <div className={`ta-side side-${side.toLowerCase()}${isLockedSide?' ta-side-locked':''}`}>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'0.5rem', flexWrap:'wrap' }}>
+                        <span style={{ fontFamily:'Bebas Neue,cursive', fontSize:'0.95rem', color, letterSpacing:'0.08em' }}>{label}</span>
+                        {isLockedSide
+                            ? <span style={{ fontSize:'0.6rem', color, opacity:0.7, fontWeight:700, letterSpacing:'0.05em' }}>
+                                MY TEAM {myAssessment ? `· ${myAssessment.ownerName}` : ''}
+                              </span>
+                            : <span style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.5 }}>You receive</span>
+                        }
                     </div>
 
-                    {/* Owner selector */}
-                    <select
-                        className="ta-owner-select"
-                        value={tradeOwner[side] || ''}
-                        onChange={e => {
-                            setTradeOwner(prev => ({ ...prev, [side]: e.target.value || null }));
-                            setSearchText(prev => ({ ...prev, [side]: '' }));
-                        }}
-                    >
-                        {ownerOptions.map(o => <option key={o.id||'none'} value={o.id||''}>{o.label}</option>)}
-                    </select>
+                    {/* Owner selector — hidden for Side A (locked to my team) */}
+                    {!isLockedSide && (
+                        <select
+                            className="ta-owner-select"
+                            value={tradeOwner[side] || ''}
+                            onChange={e => {
+                                setTradeOwner(prev => ({ ...prev, [side]: e.target.value || null }));
+                                setSearchText(prev => ({ ...prev, [side]: '' }));
+                            }}
+                        >
+                            {ownerOptions.map(o => <option key={o.id||'none'} value={o.id||''}>{o.label}</option>)}
+                        </select>
+                    )}
 
                     {/* Added players */}
                     {ids.map(pid => {
@@ -1763,56 +2362,41 @@ function TradeCalculator() {
                             <div key={pid} className="ta-player-row">
                                 <button className="ta-remove" onClick={() => removePlayer(side, pid)}>✕</button>
                                 <span className="ta-pos-dot" style={{ background: posColor(normPos(p.position)) }} />
-                                <span style={{ flex:1, fontSize:'0.72rem', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                <span style={{ flex:1, fontSize:'0.75rem', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                                     {p.first_name} {p.last_name}
+                                    {elitePlayerSet.has(pid) && <span style={{ color:'var(--gold)', marginLeft:'0.25rem' }}>★</span>}
                                 </span>
-                                <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:2, width:70 }}>
+                                <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:2, width:75 }}>
                                     <div className="ta-val-bar-wrap">
                                         <div className="ta-val-bar-fill" style={{ width:`${pct}%`, background: color }} />
                                     </div>
-                                    <span style={{ fontSize:'0.6rem', fontWeight:700, color }}>
+                                    <span style={{ fontSize:'0.62rem', fontWeight:700, color }}>
                                         {v.value > 0 ? v.value.toLocaleString() : '—'}
-                                        {v.source === 'internal' && <span className="source-badge" title="Stats-based internal estimate">INT</span>}
+                                        {v.source === 'internal' && <span className="source-badge">INT</span>}
                                     </span>
                                 </div>
                             </div>
                         );
                     })}
 
-                    {/* ── ROSTER PICKER (owner selected) ── */}
+                    {/* Roster picker or global search */}
                     {ownerSelected && rosterPlayers !== null ? (
                         <div>
                             <input
                                 className="ta-roster-filter"
-                                placeholder={`Filter ${rosterPlayers.length} roster players…`}
+                                placeholder={`Filter ${rosterPlayers.length} players by position/name…`}
                                 value={srch}
                                 onChange={e => setSearchText(prev => ({ ...prev, [side]: e.target.value }))}
                             />
-                            <div className="ta-roster-list">
-                                {rosterPlayers.length === 0 ? (
-                                    <div className="ta-roster-empty">No players match</div>
-                                ) : rosterPlayers.map(r => {
-                                    const added = ids.includes(r.id);
-                                    return (
-                                        <div key={r.id} className={`ta-roster-item${added?' added':''}`} onClick={() => !added && addPlayer(side, r.id)}>
-                                            <span className="ta-pos-dot" style={{ background: posColor(r.pos) }} />
-                                            <span style={{ flex:1, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.name}</span>
-                                            <span className="ta-player-meta">{r.pos} · {r.team}</span>
-                                            <span className="ta-player-val">
-                                                {r.value > 0 ? r.value.toLocaleString() : '—'}
-                                                {r.source === 'internal' && <span className="source-badge">INT</span>}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
+                            <div className="ta-roster-list-tall">
+                                <RosterListGrouped players={rosterPlayers} />
                             </div>
                         </div>
                     ) : (
-                        /* ── GLOBAL SEARCH (no owner selected) ── */
                         <div className="ta-search-wrap">
                             <input
                                 className="ta-search"
-                                placeholder="Search any player to add…"
+                                placeholder={isLockedSide ? 'Loading your roster…' : 'Search any player to add…'}
                                 value={srch}
                                 onChange={e => { setSearchText(prev=>({...prev,[side]:e.target.value})); setShowSearch(prev=>({...prev,[side]:true})); }}
                                 onFocus={() => setShowSearch(prev => ({...prev,[side]:true}))}
@@ -1834,11 +2418,9 @@ function TradeCalculator() {
                     )}
 
                     {/* Total */}
-                    <div className="ta-total-row" style={{ background: `${color}12`, border: `1px solid ${color}30` }}>
+                    <div className="ta-total-row" style={{ background:`${color}12`, border:`1px solid ${color}30` }}>
                         <span className="ta-total-label">Total Value</span>
-                        <span className="ta-total-val" style={{ color }}>
-                            {tot > 0 ? tot.toLocaleString() : '—'}
-                        </span>
+                        <span className="ta-total-val" style={{ color }}>{tot > 0 ? tot.toLocaleString() : '—'}</span>
                     </div>
                 </div>
             );
@@ -1855,7 +2437,7 @@ function TradeCalculator() {
                 </div>
 
                 {/* Trade sides */}
-                <div className="ta-layout">
+                <div className="ta-layout-wide">
                     {TradeSide({ side:'A', color:'#5DADE2', label:'SIDE A — YOUR GIVE' })}
                     {TradeSide({ side:'B', color:'#E74C3C', label:'SIDE B — YOU RECEIVE' })}
                 </div>
@@ -1944,9 +2526,23 @@ function TradeCalculator() {
                             const cColor = cVerdict==='FAIR' ? 'var(--win-green)'
                                 : cVerdict==='LOWBALL' ? 'var(--loss-red)' : '#5DADE2';
 
+                            function handleAcceptedResult(grudgeType, resultLabel, resultColor) {
+                                logGrudge(grudgeType);
+                                setTradeResult({ label: resultLabel, color: resultColor, grudgeType });
+                                setOutcomeStep('done');
+                            }
+
+                            function resetTrade() {
+                                setTradeIds({ A:[], B:[] });
+                                setTradeOwner(prev => ({ A: myAssessment?.ownerId || null, B: null }));
+                                setSearchText({ A:'', B:'' });
+                                setOutcomeStep(null);
+                                setTradeResult(null);
+                            }
+
                             return (
                                 <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
-                                    <div className="log-section-hdr">LOG OUTCOME</div>
+                                    <div className="log-section-hdr">TRADE OUTCOME</div>
 
                                     {/* ── Step 0: Three primary outcome buttons ── */}
                                     {outcomeStep === null && (
@@ -1961,16 +2557,61 @@ function TradeCalculator() {
                                         </div>
                                     )}
 
-                                    {/* ── Step 1a: Accepted — follow-up ── */}
+                                    {/* ── Step 1a: Accepted — how did it go? ── */}
                                     {outcomeStep === 'accepted' && (
                                         <div style={{ display:'flex', flexDirection:'column', gap:'0.4rem' }}>
-                                            <div className="outcome-question">How did the trade go for you?</div>
+                                            <div className="outcome-question">Trade accepted — how did it go for you?</div>
                                             <div className="outcome-row">
-                                                <button className="outcome-btn primary" onClick={() => { logGrudge('ACCEPTED_FAIR'); setOutcomeStep(null); }}>✓ Fair Trade</button>
-                                                <button className="outcome-btn amber"   onClick={() => { logGrudge('ACCEPTED_WON');  setOutcomeStep(null); }}>⬆ Fleeced Them</button>
-                                                <button className="outcome-btn purple"  onClick={() => { logGrudge('ACCEPTED_LOST'); setOutcomeStep(null); }}>⬇ Got Fleeced</button>
+                                                <button className="outcome-btn primary" onClick={() => handleAcceptedResult('ACCEPTED_FAIR', 'FAIR TRADE', 'var(--win-green)')}>✓ Fair</button>
+                                                <button className="outcome-btn amber"   onClick={() => handleAcceptedResult('ACCEPTED_WON',  'YOU FLEECED THEM', '#F0A500')}>⬆ Fleeced Them</button>
+                                                <button className="outcome-btn purple"  onClick={() => handleAcceptedResult('ACCEPTED_LOST', 'GOT FLEECED', '#BB8FCE')}>⬇ Got Fleeced</button>
                                             </div>
                                             <button className="back-link" onClick={() => setOutcomeStep(null)}>← Back</button>
+                                        </div>
+                                    )}
+
+                                    {/* ── Step 1c: TRADE COMPLETE ── */}
+                                    {outcomeStep === 'done' && tradeResult && (
+                                        <div className="trade-complete">
+                                            <div className="trade-complete-icon">✅</div>
+                                            <div className="trade-complete-title">TRADE COMPLETE</div>
+                                            <div className="trade-complete-result" style={{ color: tradeResult.color, background:`${tradeResult.color}18`, border:`1px solid ${tradeResult.color}40` }}>
+                                                {tradeResult.label}
+                                            </div>
+                                            <div className="trade-players-wrap">
+                                                <div className="trade-players-col">
+                                                    <div className="trade-players-col-title">You gave</div>
+                                                    {tradeIds.A.map(pid => {
+                                                        const p = playersData[pid];
+                                                        if (!p) return null;
+                                                        return (
+                                                            <div key={pid} className="trade-player-chip">
+                                                                <span className="ta-pos-dot" style={{ background: posColor(normPos(p.position)) }} />
+                                                                {p.first_name} {p.last_name}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <div className="trade-players-col">
+                                                    <div className="trade-players-col-title">You received</div>
+                                                    {tradeIds.B.map(pid => {
+                                                        const p = playersData[pid];
+                                                        if (!p) return null;
+                                                        return (
+                                                            <div key={pid} className="trade-player-chip">
+                                                                <span className="ta-pos-dot" style={{ background: posColor(normPos(p.position)) }} />
+                                                                {p.first_name} {p.last_name}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                            <div className="trade-complete-sub">
+                                                This outcome has been logged to the Grudge Log and will influence future acceptance likelihood calculations with this owner.
+                                            </div>
+                                            <button className="outcome-btn primary" onClick={resetTrade} style={{ marginTop:'0.25rem' }}>
+                                                + Start New Trade
+                                            </button>
                                         </div>
                                     )}
 
@@ -1978,7 +2619,7 @@ function TradeCalculator() {
                                     {outcomeStep === 'counter' && (
                                         <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
                                             <div className="outcome-question">Build their counter-offer — modify either side, then log the verdict:</div>
-                                            <div className="ta-layout">
+                                            <div className="ta-layout-wide">
                                                 {['A','B'].map(side => {
                                                     const sideColor = side==='A' ? '#5DADE2' : '#E74C3C';
                                                     const cIds = counterIds[side];
@@ -2113,10 +2754,11 @@ function TradeCalculator() {
             {/* Tab Bar */}
             <div className="tab-bar">
                 {[
-                    { key:'audit',    label:'Roster Audit'    },
-                    { key:'finder',  label:'Trade Finder'   },
-                    { key:'dna',     label:'Owner DNA'      },
-                    { key:'analyzer',label:'Trade Analyzer' },
+                    { key:'guide',   label:'How to Use'    },
+                    { key:'audit',   label:'Roster Audit'  },
+                    { key:'finder',  label:'Trade Finder'  },
+                    { key:'dna',     label:'Owner DNA'     },
+                    { key:'analyzer',label:'Trade Analyzer'},
                 ].map(t => (
                     <button
                         key={t.key}
@@ -2130,6 +2772,7 @@ function TradeCalculator() {
 
             {/* Tab Content */}
             <div className="tab-content" style={{ flex:1, paddingBottom:'2rem' }}>
+                {activeTab === 'guide'    && renderGuide()}
                 {activeTab === 'audit'    && renderAudit()}
                 {activeTab === 'finder'   && renderTradeFinder()}
                 {activeTab === 'analyzer' && renderTradeAnalyzer()}
