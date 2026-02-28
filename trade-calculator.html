@@ -1471,21 +1471,21 @@ function TradeCalculator() {
                         </div>
                     </div>
 
-                    {/* Step 3 — Trade Finder */}
+                    {/* Step 3 — Finding Your Trade Partner */}
                     <div className="guide-card">
-                        <div className="guide-card-title">Step 3 — Trade Finder</div>
+                        <div className="guide-card-title">Step 3 — Finding Your Trade Partner</div>
                         <div className="guide-step">
                             <span className="guide-step-num">1</span>
                             <div className="guide-step-body">
-                                <div className="guide-step-title">Optimal Partners Come First</div>
-                                <div className="guide-step-desc">Partners are ranked by roster complementarity. "Optimal Partners" (≥50% compat) have genuine positional overlap — they need what you have and have what you need. These are your best deal targets.</div>
+                                <div className="guide-step-title">Use the League Scouting Panel</div>
+                                <div className="guide-step-desc">Inside the Trade Analyzer, the right column shows every team in the league ranked by complementarity to your roster. Teams at the top have the most positional overlap — they need what you have and have what you need.</div>
                             </div>
                         </div>
                         <div className="guide-step">
                             <span className="guide-step-num">2</span>
                             <div className="guide-step-body">
-                                <div className="guide-step-title">Use the DNA Strategy Tips</div>
-                                <div className="guide-step-desc">If you've profiled an owner's DNA in the Owner DNA tab, the Trade Finder shows the exact approach to use with them — whether to lowball, frame a "win," or lead with future assets.</div>
+                                <div className="guide-step-title">One Click to Load a Partner</div>
+                                <div className="guide-step-desc">Click any team card in the scouting panel and their roster automatically loads into Side B. Their needs, tier, and posture are shown so you know exactly what to offer before building the deal.</div>
                             </div>
                         </div>
                     </div>
@@ -1511,7 +1511,7 @@ function TradeCalculator() {
 
                     {/* Step 5 — Trade Analyzer */}
                     <div className="guide-card">
-                        <div className="guide-card-title">Step 5 — Trade Analyzer</div>
+                        <div className="guide-card-title">Step 5 — Build and Analyze the Trade</div>
                         <div className="guide-step">
                             <span className="guide-step-num">1</span>
                             <div className="guide-step-body">
@@ -2047,7 +2047,7 @@ function TradeCalculator() {
                 </div>
 
                 <div style={{ fontSize:'0.65rem', color:'var(--silver)', opacity:0.55, marginBottom:'0.75rem', lineHeight:1.5 }}>
-                    Profile each owner's behavioral DNA. This unlocks psychological tax calculations in the Trade Finder — telling you <em>how</em> to approach each deal, not just whether to make it. Profiles are saved locally.
+                    Profile each owner's behavioral DNA. This unlocks psychological tax calculations in the Trade Analyzer — telling you <em>how</em> to approach each deal, not just whether to make it. Profiles are saved locally.
                 </div>
                 <div className="dna-grid">
                     {assessments.map(a => {
@@ -2897,7 +2897,6 @@ function TradeCalculator() {
                 {[
                     { key:'guide',   label:'How to Use'    },
                     { key:'audit',   label:'Roster Audit'  },
-                    { key:'finder',  label:'Trade Finder'  },
                     { key:'dna',     label:'Owner DNA'     },
                     { key:'analyzer',label:'Trade Analyzer'},
                 ].map(t => (
@@ -2915,7 +2914,6 @@ function TradeCalculator() {
             <div className="tab-content" style={{ flex:1, paddingBottom:'2rem' }}>
                 {activeTab === 'guide'    && renderGuide()}
                 {activeTab === 'audit'    && renderAudit()}
-                {activeTab === 'finder'   && renderTradeFinder()}
                 {activeTab === 'analyzer' && renderTradeAnalyzer()}
                 {activeTab === 'dna'      && renderOwnerDna()}
             </div>
