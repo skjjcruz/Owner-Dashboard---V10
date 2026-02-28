@@ -1175,7 +1175,7 @@ function TeamCard({ assessment, isMyTeam, ownerDna }) {
                 {/* Position health */}
                 <div className="pos-grid">
                     {Object.entries(posAssessment)
-                        .sort((a,b) => (POS_ORDER[a[0]]||9) - (POS_ORDER[b[0]]||9))
+                        .sort((a,b) => (POS_ORDER[a[0]]??9) - (POS_ORDER[b[0]]??9))
                         .map(([pos, data]) => <PosRow key={pos} pos={pos} assessment={data} />)
                     }
                 </div>
@@ -1355,7 +1355,7 @@ function TradeCalculator() {
             })
             .filter(p => p.value > 0 || query.length >= 3)
             .sort((a,b) => {
-                const pd = (POS_ORDER[a.pos]||9) - (POS_ORDER[b.pos]||9);
+                const pd = (POS_ORDER[a.pos]??9) - (POS_ORDER[b.pos]??9);
                 return pd !== 0 ? pd : b.value - a.value;
             })
             .slice(0, 20);
@@ -1697,7 +1697,7 @@ function TradeCalculator() {
                                 </div>
                                 <div className="pos-grid">
                                     {Object.entries(myAssessment.posAssessment)
-                                        .sort((a,b)=>(POS_ORDER[a[0]]||9)-(POS_ORDER[b[0]]||9))
+                                        .sort((a,b)=>(POS_ORDER[a[0]]??9)-(POS_ORDER[b[0]]??9))
                                         .map(([pos, data]) => {
                                             // Count elite players for this position on my team
                                             const posIds = myAssessment.posGroups[pos] || [];
@@ -1747,7 +1747,7 @@ function TradeCalculator() {
                             </div>
                             <div className="pos-grid">
                                 {Object.entries(selectedDetail.posAssessment)
-                                    .sort((a,b)=>(POS_ORDER[a[0]]||9)-(POS_ORDER[b[0]]||9))
+                                    .sort((a,b)=>(POS_ORDER[a[0]]??9)-(POS_ORDER[b[0]]??9))
                                     .map(([pos,data]) => {
                                         const posIds = selectedDetail.posGroups[pos] || [];
                                         const eliteHere = posIds.filter(id => elitePlayerSet.has(id)).length;
@@ -2320,7 +2320,7 @@ function TradeCalculator() {
                     return { id, name:`${p.first_name||''} ${p.last_name||''}`.trim(), pos:normPos(p.position), team:p.team||'FA', value:v.value, source:v.source };
                 })
                 .sort((a,b) => {
-                    const pd = (POS_ORDER[a.pos]||9) - (POS_ORDER[b.pos]||9);
+                    const pd = (POS_ORDER[a.pos]??9) - (POS_ORDER[b.pos]??9);
                     return pd !== 0 ? pd : b.value - a.value;
                 });
         }
@@ -2362,7 +2362,7 @@ function TradeCalculator() {
                 return (
                     <>
                         {Object.entries(grouped)
-                            .sort((a,b) => (POS_ORDER[a[0]]||9)-(POS_ORDER[b[0]]||9))
+                            .sort((a,b) => (POS_ORDER[a[0]]??9)-(POS_ORDER[b[0]]??9))
                             .map(([pos, posPlayers]) => (
                                 <div key={pos}>
                                     <div className="ta-pos-group-hdr" style={{ color: posColor(pos) }}>{pos}</div>
