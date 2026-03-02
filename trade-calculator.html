@@ -98,7 +98,8 @@
         .pos-dots { display: flex; gap: 2px; flex: 1; flex-wrap: wrap; }
         .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
         .dot-filled { background: var(--win-green); }
-        .dot-empty  { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); }
+        .dot-depth  { background: rgba(255,255,255,0.28); border: 1px solid rgba(255,255,255,0.35); }
+        .dot-empty  { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); }
         .dot-surplus{ background: var(--gold); }
         .pos-count { font-size: 0.58rem; width: 28px; text-align: right; flex-shrink: 0; }
         .pos-status-icon { font-size: 0.65rem; width: 14px; flex-shrink: 0; }
@@ -538,6 +539,14 @@ const ANNUAL_TARGET = 3402;
 // Ideal dynasty roster depth per position
 const IDEAL_ROSTER = { QB:3, RB:7, WR:7, TE:4, K:2, DL:7, LB:6, DB:6 };
 
+// Dedicated lineup starters per position (drives NFL-starter-quality demand)
+// 32 NFL teams × starters/team = how many "NFL starters" exist at each position
+const LINEUP_STARTERS = { QB:1, RB:2, WR:3, TE:1, K:1, DL:3, LB:2, DB:3 };
+
+// Weekly points each position group must produce (sums to 243)
+// QB:20 | RB:36 | WR:36 | TE:10 | K:9 | DL:24 | LB:16 | DB:24
+const POS_PT_TARGETS = { QB:20, RB:36, WR:36, TE:10, K:9, DL:24, LB:16, DB:24 };
+
 // Position importance weights (must sum to ~100 for coverage calc)
 const POS_WEIGHTS = { QB:14, RB:14, WR:14, TE:8, K:3, DL:13, LB:10, DB:12 };
 const TOTAL_WEIGHT = Object.values(POS_WEIGHTS).reduce((a,b)=>a+b,0);
@@ -916,15 +925,37 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users) {
 
     // Assess each position vs ideal
     const posAssessment = {};
+    // Each position is assessed by how many "NFL-starter-quality" players the
+    // team has, not raw count.  A player qualifies as starter-quality when their
+    // PPG meets 65% of the per-slot weekly target for that position.
+    //   QB threshold  ≈ 13 pts  (65% of 20)
+    //   RB threshold  ≈ 12 pts  (65% of 18)
+    //   WR threshold  ≈  8 pts  (65% of 12)
+    //   TE threshold  ≈  7 pts  (65% of 10)
+    //   K  threshold  ≈  6 pts  (65% of  9)
+    //   DL/LB/DB      ≈  5 pts  (65% of  8)
     for (const [pos, ideal] of Object.entries(IDEAL_ROSTER)) {
-        const actual = (posGroups[pos] || []).length;
-        const diff   = actual - ideal;
+        const playerIds   = posGroups[pos] || [];
+        const startingReq = LINEUP_STARTERS[pos] || 1;
+        const ptTarget    = POS_PT_TARGETS[pos]  || 8;
+        const threshold   = (ptTarget / startingReq) * 0.65;
+
+        const withPPG = playerIds
+            .map(id => ({ id, ppg: calcPPG(id, statsData, scoring) }))
+            .sort((a,b) => b.ppg - a.ppg);
+
+        const nflStarters  = withPPG.filter(p => p.ppg >= threshold).length;
+        const projectedPts = withPPG.slice(0, startingReq).reduce((s, p) => s + p.ppg, 0);
+        const actual       = playerIds.length;
+        const diff         = actual - ideal;
+
         let status;
-        if      (diff >= 2)  status = 'surplus';
-        else if (diff >= 0)  status = 'ok';
-        else if (diff === -1) status = 'thin';
-        else                  status = 'deficit';
-        posAssessment[pos] = { actual, ideal, diff, status };
+        if      (nflStarters === 0)          status = 'deficit';  // no starter-quality player
+        else if (nflStarters < startingReq)  status = 'thin';     // can't fill all starting slots
+        else if (actual >= ideal)            status = 'surplus';  // starters covered + solid depth
+        else                                 status = 'ok';       // starters covered, thin on depth
+
+        posAssessment[pos] = { actual, ideal, diff, nflStarters, startingReq, ptTarget, projectedPts, threshold, status };
     }
 
     // Optimal weekly scoring
@@ -936,8 +967,13 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users) {
     // Health score: 60% scoring + 40% coverage  (kept as a diagnostic 0-100 number)
     const scoringScore  = Math.min(60, (weeklyPts / WEEKLY_TARGET) * 60);
     let coverageScore   = 0;
-    for (const [pos, { actual, ideal }] of Object.entries(posAssessment)) {
-        coverageScore += Math.min(1, actual / ideal) * ((POS_WEIGHTS[pos]||0) / TOTAL_WEIGHT) * 40;
+    for (const [pos, data] of Object.entries(posAssessment)) {
+        // When stats are available rank by starter quality (NFL starters filled vs required).
+        // When no stats yet, fall back to raw depth count to preserve the health score proxy.
+        const ratio = weeklyPts > 0
+            ? Math.min(1, data.nflStarters / (data.startingReq || 1))
+            : Math.min(1, data.actual / data.ideal);
+        coverageScore += ratio * ((POS_WEIGHTS[pos]||0) / TOTAL_WEIGHT) * 40;
     }
     const healthScore = Math.round(scoringScore + coverageScore);
 
@@ -984,7 +1020,12 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users) {
 
     const needs     = Object.entries(posAssessment)
         .filter(([,v]) => v.status === 'deficit' || v.status === 'thin')
-        .sort((a,b) => a[1].diff - b[1].diff)
+        // Sort by starter quality gap first (deficit before thin), then depth gap
+        .sort((a,b) => {
+            const aGap = a[1].nflStarters - a[1].startingReq;
+            const bGap = b[1].nflStarters - b[1].startingReq;
+            return aGap !== bGap ? aGap - bGap : a[1].diff - b[1].diff;
+        })
         .map(([pos,v]) => ({ pos, urgency: v.status }));
     const strengths = Object.entries(posAssessment)
         .filter(([,v]) => v.status === 'surplus')
@@ -1088,25 +1129,29 @@ function avatarUrl(id) {
 
 // ─── SUB-COMPONENTS ──────────────────────────────────────────────────────────
 function PosRow({ pos, assessment }) {
-    const { actual, ideal, status } = assessment;
-    const statusIcon = { surplus:'↑', ok:'✓', thin:'~', deficit:'✗' }[status];
+    const { actual, ideal, status, nflStarters = actual, startingReq = 1 } = assessment;
+    const statusIcon  = { surplus:'↑', ok:'✓', thin:'~', deficit:'✗' }[status];
     const statusColor = { surplus:'var(--gold)', ok:'var(--win-green)', thin:'var(--amber)', deficit:'var(--loss-red)' }[status];
     const dots = [];
-    const maxDots = Math.max(ideal, actual);
-    for (let i = 0; i < maxDots; i++) {
-        if (i >= ideal) {
-            dots.push(<span key={i} className="dot dot-surplus" title="Surplus player" />);
-        } else if (i < actual) {
-            dots.push(<span key={i} className="dot dot-filled" />);
-        } else {
-            dots.push(<span key={i} className="dot dot-empty" />);
-        }
+    // Starter zone: solid = NFL-starter quality, empty = starting slot unfilled
+    for (let i = 0; i < startingReq; i++) {
+        dots.push(<span key={`s${i}`} className={`dot ${i < nflStarters ? 'dot-filled' : 'dot-empty'}`}
+            title={i < nflStarters ? 'NFL-starter quality' : 'Starting slot unfilled'} />);
+    }
+    // Depth zone: dim = depth player, empty = depth slot open
+    for (let i = startingReq; i < ideal; i++) {
+        dots.push(<span key={`d${i}`} className={`dot ${i < actual ? 'dot-depth' : 'dot-empty'}`}
+            title={i < actual ? 'Depth player' : 'Depth needed'} />);
+    }
+    // Surplus beyond ideal
+    for (let i = ideal; i < actual; i++) {
+        dots.push(<span key={`x${i}`} className="dot dot-surplus" title="Surplus" />);
     }
     return (
         <div className="pos-row">
             <span className="pos-label" style={{ color: posColor(pos) }}>{pos}</span>
             <span className="pos-dots">{dots}</span>
-            <span className="pos-count" style={{ color: statusColor }}>{actual}/{ideal}</span>
+            <span className="pos-count" style={{ color: statusColor }}>{nflStarters}/{startingReq}</span>
             <span className="pos-status-icon" style={{ color: statusColor }}>{statusIcon}</span>
         </div>
     );
@@ -1621,21 +1666,29 @@ function TradeCalculator() {
 
         // Enhanced TeamCard with elite markers in pos rows
         function AuditPosRow({ pos, assessment }) {
-            const { actual, ideal, status } = assessment;
+            const { actual, ideal, status, nflStarters = actual, startingReq = 1 } = assessment;
             const statusIcon  = { surplus:'↑', ok:'✓', thin:'~', deficit:'✗' }[status];
             const statusColor = { surplus:'var(--gold)', ok:'var(--win-green)', thin:'var(--amber)', deficit:'var(--loss-red)' }[status];
             const dots = [];
-            const maxDots = Math.max(ideal, actual);
-            for (let i = 0; i < maxDots; i++) {
-                if (i >= ideal) dots.push(<span key={i} className="dot dot-surplus" title="Surplus" />);
-                else if (i < actual) dots.push(<span key={i} className="dot dot-filled" />);
-                else dots.push(<span key={i} className="dot dot-empty" />);
+            // Starter zone: solid = NFL-starter quality, empty = slot unfilled
+            for (let i = 0; i < startingReq; i++) {
+                dots.push(<span key={`s${i}`} className={`dot ${i < nflStarters ? 'dot-filled' : 'dot-empty'}`}
+                    title={i < nflStarters ? 'NFL-starter quality' : 'Starting slot unfilled'} />);
+            }
+            // Depth zone: dim = depth player, empty = needs depth
+            for (let i = startingReq; i < ideal; i++) {
+                dots.push(<span key={`d${i}`} className={`dot ${i < actual ? 'dot-depth' : 'dot-empty'}`}
+                    title={i < actual ? 'Depth player' : 'Depth needed'} />);
+            }
+            // Surplus beyond ideal
+            for (let i = ideal; i < actual; i++) {
+                dots.push(<span key={`x${i}`} className="dot dot-surplus" title="Surplus" />);
             }
             return (
                 <div className="pos-row">
                     <span className="pos-label" style={{ color:posColor(pos) }}>{pos}</span>
                     <span className="pos-dots">{dots}</span>
-                    <span className="pos-count" style={{ color:statusColor }}>{actual}/{ideal}</span>
+                    <span className="pos-count" style={{ color:statusColor }}>{nflStarters}/{startingReq}</span>
                     <span className="pos-status-icon" style={{ color:statusColor }}>{statusIcon}</span>
                 </div>
             );
@@ -1693,7 +1746,7 @@ function TradeCalculator() {
 
                                 {/* Position depth */}
                                 <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.45, marginBottom:'0.3rem' }}>
-                                    ● Green=OK · ↑ Gold=Surplus · ~ Amber=Thin · ✗ Red=Critical · ★=Elite Player
+                                    ● Green=NFL Starter · ◐ Gray=Depth Only · ↑ Gold=Surplus · ~ Amber=Needs Starter · ✗ Red=No Starter · ★=Elite Player
                                 </div>
                                 <div className="pos-grid">
                                     {Object.entries(myAssessment.posAssessment)
