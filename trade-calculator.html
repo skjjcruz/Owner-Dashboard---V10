@@ -955,7 +955,8 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
         else if (actual >= ideal)            status = 'surplus';  // starters covered + solid depth
         else                                 status = 'ok';       // starters covered, thin on depth
 
-        posAssessment[pos] = { actual, ideal, diff, nflStarters, nflStarterIds, startingReq, ptTarget, projectedPts, status };
+        const sortedIds = withPPG.map(p => p.id);   // best → worst by PPG
+        posAssessment[pos] = { actual, ideal, diff, nflStarters, nflStarterIds, sortedIds, startingReq, ptTarget, projectedPts, status };
     }
 
     // Optimal weekly scoring
@@ -1700,8 +1701,8 @@ function TradeCalculator() {
         }
 
         // Enhanced TeamCard with elite markers in pos rows
-        function AuditPosRow({ pos, assessment, posGroupIds = [] }) {
-            const { actual, ideal, status, nflStarters = actual, nflStarterIds = [], startingReq = 1 } = assessment;
+        function AuditPosRow({ pos, assessment }) {
+            const { actual, ideal, status, nflStarters = actual, nflStarterIds = [], sortedIds = [], startingReq = 1 } = assessment;
             const statusIcon  = { surplus:'↑', ok:'✓', thin:'~', deficit:'✗' }[status];
             const statusColor = { surplus:'var(--gold)', ok:'var(--win-green)', thin:'var(--amber)', deficit:'var(--loss-red)' }[status];
             const dots = [];
@@ -1718,15 +1719,12 @@ function TradeCalculator() {
                 dots.push(<span key={`x${i}`} className="dot dot-surplus" />);
             }
 
-            // Build starter names and non-starter names for display
-            const starterNames = nflStarterIds.map(id => {
+            // Players ranked best→worst by PPG; starters in green, depth in gray
+            const starterSet = new Set(nflStarterIds);
+            const rankedNames = sortedIds.map(id => {
                 const p = playersData[id];
-                return p ? `${p.first_name?.[0]||''}. ${p.last_name||''}`.trim() : id;
-            });
-            const nonStarterIds = posGroupIds.filter(id => !nflStarterIds.includes(id));
-            const nonStarterNames = nonStarterIds.map(id => {
-                const p = playersData[id];
-                return p ? `${p.first_name?.[0]||''}. ${p.last_name||''}`.trim() : id;
+                const name = p ? `${p.first_name?.[0]||''}. ${p.last_name||''}`.trim() : id;
+                return { name, isStarter: starterSet.has(id) };
             });
 
             return (
@@ -1737,18 +1735,18 @@ function TradeCalculator() {
                         <span className="pos-count" style={{ color:statusColor }}>{nflStarters}/{startingReq}</span>
                         <span className="pos-status-icon" style={{ color:statusColor }}>{statusIcon}</span>
                     </div>
-                    {(starterNames.length > 0 || nonStarterNames.length > 0) && (
-                        <div style={{ paddingLeft:'24px', marginTop:'0.05rem', lineHeight:1.3 }}>
-                            {starterNames.length > 0 && (
-                                <div style={{ fontSize:'0.52rem', color:'var(--win-green)', opacity:0.9 }}>
-                                    ✓ {starterNames.join(', ')}
-                                </div>
-                            )}
-                            {nonStarterNames.length > 0 && (
-                                <div style={{ fontSize:'0.52rem', color:'var(--silver)', opacity:0.45 }}>
-                                    {nonStarterNames.join(', ')}
-                                </div>
-                            )}
+                    {rankedNames.length > 0 && (
+                        <div style={{ paddingLeft:'24px', marginTop:'0.05rem', lineHeight:1.5 }}>
+                            {rankedNames.map(({ name, isStarter }, i) => (
+                                <span key={i} style={{
+                                    fontSize:'0.52rem',
+                                    color: isStarter ? 'var(--win-green)' : 'var(--silver)',
+                                    opacity: isStarter ? 0.9 : 0.45,
+                                    marginRight:'0.4rem',
+                                }}>
+                                    {i + 1}. {name}
+                                </span>
+                            ))}
                         </div>
                     )}
                 </div>
@@ -1818,7 +1816,7 @@ function TradeCalculator() {
                                             const eliteHere = posIds.filter(id => elitePlayerSet.has(id)).length;
                                             return (
                                                 <div key={pos} style={{ display:'flex', alignItems:'center', gap:'0.3rem' }}>
-                                                    <div style={{ flex:1 }}><AuditPosRow pos={pos} assessment={data} posGroupIds={myAssessment.posGroups[pos]||[]} /></div>
+                                                    <div style={{ flex:1 }}><AuditPosRow pos={pos} assessment={data} /></div>
                                                     {eliteHere > 0 && <span title={`${eliteHere} elite player(s)`} style={{ fontSize:'0.65rem', color:'var(--gold)' }}>{'★'.repeat(eliteHere)}</span>}
                                                 </div>
                                             );
@@ -1867,7 +1865,7 @@ function TradeCalculator() {
                                         const eliteHere = posIds.filter(id => elitePlayerSet.has(id)).length;
                                         return (
                                             <div key={pos} style={{ display:'flex', alignItems:'center', gap:'0.3rem' }}>
-                                                <div style={{ flex:1 }}><AuditPosRow pos={pos} assessment={data} posGroupIds={selectedDetail.posGroups[pos]||[]} /></div>
+                                                <div style={{ flex:1 }}><AuditPosRow pos={pos} assessment={data} /></div>
                                                 {eliteHere > 0 && <span style={{ fontSize:'0.65rem', color:'var(--gold)' }}>{'★'.repeat(eliteHere)}</span>}
                                             </div>
                                         );
