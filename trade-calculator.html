@@ -97,10 +97,11 @@
         .pos-label { font-size: 0.6rem; font-weight: 700; width: 20px; flex-shrink: 0; }
         .pos-dots { display: flex; gap: 2px; flex: 1; flex-wrap: wrap; }
         .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-        .dot-filled { background: var(--win-green); }
-        .dot-depth  { background: rgba(255,255,255,0.28); border: 1px solid rgba(255,255,255,0.35); }
-        .dot-empty  { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); }
-        .dot-surplus{ background: var(--gold); }
+        .dot-filled  { background: var(--win-green); }
+        .dot-depth   { background: rgba(255,255,255,0.28); border: 1px solid rgba(255,255,255,0.35); }
+        .dot-empty   { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); }
+        .dot-surplus { background: var(--gold); }
+        .dot-deficit { background: var(--loss-red); }
         .pos-count { font-size: 0.58rem; width: 28px; text-align: right; flex-shrink: 0; }
         .pos-status-icon { font-size: 0.65rem; width: 14px; flex-shrink: 0; }
 
@@ -1718,27 +1719,23 @@ function TradeCalculator() {
             const { actual, ideal, status, nflStarters = actual, nflStarterIds = [], sortedIds = [], startingReq = 1 } = assessment;
             const statusIcon  = { surplus:'↑', ok:'✓', thin:'~', deficit:'✗' }[status];
             const statusColor = { surplus:'var(--gold)', ok:'var(--win-green)', thin:'var(--amber)', deficit:'var(--loss-red)' }[status];
-            const dots = [];
-            // Starter zone: solid = NFL-starter quality, empty = slot unfilled
-            for (let i = 0; i < startingReq; i++) {
-                dots.push(<span key={`s${i}`} className={`dot ${i < nflStarters ? 'dot-filled' : 'dot-empty'}`} />);
-            }
-            // Depth zone: dim = depth player, empty = needs depth
-            for (let i = startingReq; i < ideal; i++) {
-                dots.push(<span key={`d${i}`} className={`dot ${i < actual ? 'dot-depth' : 'dot-empty'}`} />);
-            }
-            // Surplus beyond ideal
-            for (let i = ideal; i < actual; i++) {
-                dots.push(<span key={`x${i}`} className="dot dot-surplus" />);
-            }
 
-            // Players ranked best→worst by PPG; starters in green, depth in gray
+            // One dot per player in rank order, plus red dots for missing ideal slots
             const starterSet = new Set(nflStarterIds);
-            const rankedNames = sortedIds.map(id => {
+            const rankedNames = sortedIds.map((id, i) => {
                 const p = playersData[id];
                 const name = p ? `${p.first_name?.[0]||''}. ${p.last_name||''}`.trim() : id;
-                return { name, isStarter: starterSet.has(id) };
+                return { id, name, isStarter: starterSet.has(id), isSurplus: i >= ideal };
             });
+            const dots = [
+                ...rankedNames.map(({ id, isStarter, isSurplus }) => (
+                    <span key={id} className={`dot ${isSurplus ? 'dot-surplus' : isStarter ? 'dot-filled' : 'dot-depth'}`} />
+                )),
+                // Red dots for unfilled ideal slots
+                ...Array.from({ length: Math.max(0, ideal - actual) }, (_, i) => (
+                    <span key={`deficit-${i}`} className="dot dot-deficit" />
+                )),
+            ];
 
             return (
                 <div style={{ marginBottom:'0.1rem' }}>
@@ -1750,11 +1747,11 @@ function TradeCalculator() {
                     </div>
                     {rankedNames.length > 0 && (
                         <div style={{ paddingLeft:'24px', marginTop:'0.05rem', lineHeight:1.5 }}>
-                            {rankedNames.map(({ name, isStarter }, i) => (
+                            {rankedNames.map(({ name, isStarter, isSurplus }, i) => (
                                 <span key={i} style={{
                                     fontSize:'0.52rem',
-                                    color: isStarter ? 'var(--win-green)' : 'var(--silver)',
-                                    opacity: isStarter ? 0.9 : 0.45,
+                                    color: isSurplus ? 'var(--gold)' : isStarter ? 'var(--win-green)' : 'var(--silver)',
+                                    opacity: isSurplus ? 0.85 : isStarter ? 0.9 : 0.45,
                                     marginRight:'0.4rem',
                                 }}>
                                     {i + 1}. {name}
