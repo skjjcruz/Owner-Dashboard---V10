@@ -546,9 +546,9 @@ const LINEUP_STARTERS = { QB:1, RB:2, WR:3, TE:1, K:1, DL:3, LB:2, DB:3 };
 
 // Minimum number of starting-caliber players a team must hold at each position
 // to be considered adequately covered (not a need/shortfall).
-// QB specifically requires 2 — a starter + a viable backup — since losing your
-// only starting-caliber QB is a season-altering event.
-const MIN_STARTER_QUALITY = { QB:2, RB:2, WR:3, TE:1, K:1, DL:3, LB:2, DB:3 };
+// QB: 2 — starter + viable backup; losing your only top-32 QB is season-altering.
+// RB: 3 — need a true starter plus two quality handcuffs/flex options (top-64 pool).
+const MIN_STARTER_QUALITY = { QB:2, RB:3, WR:3, TE:1, K:1, DL:3, LB:2, DB:3 };
 
 // How many players league-wide are considered "starting quality" at each position
 const NFL_STARTER_POOL = { QB:32, RB:64, WR:96, TE:32, DL:96, LB:64, DB:96 };
@@ -975,6 +975,11 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
             if      (nflStarters === 1)  status = 'thin';    // only 1 — real need/shortfall
             else if (nflStarters === 2)  status = 'ok';      // covered — 2 starting-caliber QBs
             else                         status = 'surplus';  // 3+ top-32 QBs — tradeable asset
+        } else if (pos === 'RB') {
+            // RB rule: need 3 top-64 RBs; anything less is a shortfall, more is a surplus
+            if      (nflStarters < 3)    status = 'thin';    // fewer than 3 — real need
+            else if (nflStarters === 3)  status = 'ok';      // covered — 3 starting-caliber RBs
+            else                         status = 'surplus';  // 4+ top-64 RBs — tradeable depth
         } else {
             if      (nflStarters < minQuality)  status = 'thin';    // can't meet quality threshold
             else if (actual >= ideal)           status = 'surplus';  // quality + solid depth
