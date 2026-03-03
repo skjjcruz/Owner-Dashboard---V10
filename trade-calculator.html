@@ -1021,6 +1021,12 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
             else                                status = 'ok';       // quality covered, thin depth
         }
 
+        // Depth override: quality threshold met but not enough total players is still a shortfall.
+        // e.g. a team with 4 starting-caliber DBs but only 5 total DBs (ideal = 6) → thin.
+        if ((status === 'ok' || status === 'surplus') && actual < ideal) {
+            status = 'thin';
+        }
+
         // Sort display order by 2025 total season points — same signal as green/gray.
         const sortedIds = [...playerIds]
             .map(id => ({ id, score: calcSeasonPts(id, statsData, scoring) }))
