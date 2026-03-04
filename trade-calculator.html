@@ -1058,11 +1058,17 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
     // so we start from leagueSeason (not +1) to include the upcoming 2026 draft.
     const pickYears = Array.from({ length: PICK_HORIZON }, (_, i) => String(leagueSeason + i));
 
-    // Count picks per round (summed across years) AND per year (summed across rounds)
-    const pickCountByRound = {};
-    const pickCountByYear  = {};
+    // Count picks per round (summed across years), per year (summed across rounds),
+    // AND per year+round combination for the detailed bullet display.
+    const pickCountByRound     = {};
+    const pickCountByYear      = {};
+    const pickCountByYearRound = {};
     for (let r = 1; r <= DRAFT_ROUNDS; r++) pickCountByRound[r] = 0;
-    for (const year of pickYears)           pickCountByYear[year] = 0;
+    for (const year of pickYears) {
+        pickCountByYear[year]      = 0;
+        pickCountByYearRound[year] = {};
+        for (let r = 1; r <= DRAFT_ROUNDS; r++) pickCountByYearRound[year][r] = 0;
+    }
 
     for (const year of pickYears) {
         for (let r = 1; r <= DRAFT_ROUNDS; r++) {
@@ -1085,8 +1091,9 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
                 // If my pick never appears in traded_picks → I still have my natural pick
                 n = (myOwnEntry ? (iHoldMyOwn ? 1 : 0) : 1) + iAcquired;
             }
-            pickCountByRound[r]   += n;
-            pickCountByYear[year] += n;
+            pickCountByRound[r]          += n;
+            pickCountByYear[year]        += n;
+            pickCountByYearRound[year][r] += n;
         }
     }
     const totalPicks    = Object.values(pickCountByRound).reduce((a, b) => a + b, 0);
@@ -1096,7 +1103,7 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
     else if (totalPicks < PICK_IDEAL) picksStatus = 'thin';   // fewer than 21 across 3 years
     else if (totalPicks === PICK_IDEAL) picksStatus = 'ok';   // exactly 21 — full coverage
     else                             picksStatus = 'surplus'; // more than 21 — strong capital
-    const picksAssessment = { pickCountByRound, pickCountByYear, totalPicks, draftRounds: DRAFT_ROUNDS, idealTotal: PICK_IDEAL, pickYears, roundsMissing, status: picksStatus };
+    const picksAssessment = { pickCountByRound, pickCountByYear, pickCountByYearRound, totalPicks, draftRounds: DRAFT_ROUNDS, idealTotal: PICK_IDEAL, pickYears, roundsMissing, status: picksStatus };
 
     // Optimal weekly scoring
     const weeklyPts = calcOptimalLineup(
@@ -1347,15 +1354,15 @@ function PosRow({ pos, assessment }) {
 
 function PicksRow({ picksAssessment }) {
     if (!picksAssessment) return null;
-    const { pickCountByYear, pickYears, totalPicks, draftRounds, idealTotal, status } = picksAssessment;
-    const statusIcon  = { surplus:'↑', ok:'✓', thin:'~', deficit:'✗' }[status];
-    const statusColor = { surplus:'var(--gold)', ok:'var(--win-green)', thin:'var(--amber)', deficit:'var(--loss-red)' }[status];
+    const { pickCountByYear, pickCountByYearRound, pickYears, totalPicks, draftRounds, idealTotal, status } = picksAssessment;
     const displayIdeal = idealTotal ?? (draftRounds * (pickYears?.length || 1));
     const iconMap  = { surplus:'↑', ok:'✓', thin:'~', deficit:'✗' };
     const colorMap = { surplus:'var(--gold)', ok:'var(--win-green)', thin:'var(--amber)', deficit:'var(--loss-red)' };
+    const statusIcon  = iconMap[status];
+    const statusColor = colorMap[status];
 
     return (
-        <div style={{ display:'flex', flexDirection:'column', gap:'0.1rem' }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:'0.06rem' }}>
             {/* Header: label + overall total */}
             <div className="pos-row">
                 <span className="pos-label" style={{ color:'#A8D8A8', fontSize:'0.51rem', letterSpacing:'-0.02em' }}>PICKS</span>
@@ -1363,24 +1370,40 @@ function PicksRow({ picksAssessment }) {
                 <span className="pos-count" style={{ color: statusColor }}>{totalPicks}/{displayIdeal}</span>
                 <span className="pos-status-icon" style={{ color: statusColor }}>{statusIcon}</span>
             </div>
-            {/* Per-year rows */}
-            {(pickYears || []).map(year => {
-                const count    = (pickCountByYear && pickCountByYear[year]) ?? 0;
-                const yrStatus = count === 0 ? 'deficit' : count < draftRounds ? 'thin' : count === draftRounds ? 'ok' : 'surplus';
-                const yrColor  = colorMap[yrStatus];
-                const dots = [];
-                for (let i = 0; i < draftRounds; i++) {
-                    dots.push(<span key={`f${i}`} className={`dot ${i < count ? 'dot-filled' : 'dot-empty'}`} />);
-                }
-                for (let i = draftRounds; i < count; i++) {
-                    dots.push(<span key={`s${i}`} className="dot dot-surplus" />);
-                }
+            {/* Per-year groups, each broken into per-round rows */}
+            {(pickYears || []).map((year, yi) => {
+                const yearCount = (pickCountByYear && pickCountByYear[year]) ?? 0;
+                const yrStatus  = yearCount === 0 ? 'deficit' : yearCount < draftRounds ? 'thin' : yearCount === draftRounds ? 'ok' : 'surplus';
+                const yrColor   = colorMap[yrStatus];
                 return (
-                    <div key={year} style={{ display:'flex', alignItems:'center', gap:'0.4rem', paddingLeft:'22px' }}>
-                        <span style={{ fontSize:'0.52rem', color:'var(--silver)', opacity:0.6, width:'26px', flexShrink:0 }}>{year}</span>
-                        <span style={{ display:'flex', gap:'2px', flex:1 }}>{dots}</span>
-                        <span style={{ fontSize:'0.55rem', width:'28px', textAlign:'right', flexShrink:0, color: yrColor }}>{count}/{draftRounds}</span>
-                        <span style={{ fontSize:'0.55rem', width:'10px', flexShrink:0, color: yrColor }}>{iconMap[yrStatus]}</span>
+                    <div key={year} style={{ paddingLeft:'22px', marginTop: yi > 0 ? '0.22rem' : '0.04rem' }}>
+                        {/* Year label + year total */}
+                        <div style={{ display:'flex', alignItems:'baseline', gap:'0.35rem', marginBottom:'0.1rem' }}>
+                            <span style={{ fontSize:'0.54rem', fontWeight:700, color: yrColor, flexShrink:0 }}>{year}</span>
+                            <span style={{ fontSize:'0.44rem', color: yrColor, opacity:0.7 }}>{yearCount}/{draftRounds}</span>
+                            <span style={{ fontSize:'0.44rem', color: yrColor, opacity:0.7 }}>{iconMap[yrStatus]}</span>
+                        </div>
+                        {/* One row per round */}
+                        {Array.from({ length: draftRounds }, (_, i) => {
+                            const r     = i + 1;
+                            const count = (pickCountByYearRound?.[year]?.[r]) ?? 0;
+                            const isEmpty = count === 0;
+                            const rLabelColor = isEmpty ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.55)';
+                            // One bullet per pick; extras beyond the first are gold (acquired/surplus)
+                            const bullets = isEmpty
+                                ? [<span key="e" className="dot dot-empty" title={`R${r} — no pick`} />]
+                                : Array.from({ length: count }, (_, j) =>
+                                    <span key={j}
+                                        className={`dot ${j === 0 ? 'dot-filled' : 'dot-surplus'}`}
+                                        title={`R${r} pick ${j + 1}`} />
+                                  );
+                            return (
+                                <div key={r} style={{ display:'flex', alignItems:'center', gap:'0.28rem', marginBottom:'0.04rem' }}>
+                                    <span style={{ fontSize:'0.46rem', color: rLabelColor, width:'14px', flexShrink:0 }}>R{r}</span>
+                                    <span style={{ display:'flex', gap:'2px', flexWrap:'wrap' }}>{bullets}</span>
+                                </div>
+                            );
+                        })}
                     </div>
                 );
             })}
