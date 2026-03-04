@@ -1053,8 +1053,10 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
     const myRosterId   = roster.roster_id;
     const myUserId     = roster.owner_id;
 
-    // Build year list: next PICK_HORIZON seasons (e.g. 2026, 2027, 2028)
-    const pickYears = Array.from({ length: PICK_HORIZON }, (_, i) => String(leagueSeason + 1 + i));
+    // Build year list: current season + next two (e.g. 2026, 2027, 2028)
+    // Sleeper updates leagueInfo.season to the current year during the off-season,
+    // so we start from leagueSeason (not +1) to include the upcoming 2026 draft.
+    const pickYears = Array.from({ length: PICK_HORIZON }, (_, i) => String(leagueSeason + i));
 
     // Count picks per round, summed across all horizon years
     const pickCountByRound = {};
