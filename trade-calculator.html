@@ -542,7 +542,11 @@ const ANNUAL_TARGET = 3402;
 const IDEAL_ROSTER = { QB:3, RB:7, WR:7, TE:4, K:2, DL:7, LB:6, DB:6 };
 
 // Number of draft rounds in this league (Psycho League = 7)
-const DRAFT_ROUNDS = 7;
+const DRAFT_ROUNDS  = 7;
+// Number of future draft years to assess pick capital across (2026 + 2027 + 2028)
+const PICK_HORIZON  = 3;
+// Ideal total picks across the full horizon: one per round per year = 21
+const PICK_IDEAL    = DRAFT_ROUNDS * PICK_HORIZON;
 
 // Dedicated lineup starters per position (drives NFL-starter-quality demand)
 // 32 NFL teams × starters/team = how many "NFL starters" exist at each position
@@ -1040,41 +1044,42 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
         posAssessment[pos] = { actual, ideal, diff, nflStarters, nflStarterIds, sortedIds, startingReq, minQuality, ptTarget, projectedPts, status };
     }
 
-    // Draft picks assessment — one pick per round is the minimum (7 rounds in Psycho League)
-    // Uses the /league/{id}/traded_picks endpoint.
-    // Rule: every team naturally holds their own pick for each round of the upcoming draft
-    // unless that pick appears in traded_picks (meaning it changed hands).
-    // If a pick IS in traded_picks, the current holder is roster.picks[*].roster_id.
-    const leagueSeason   = parseInt(leagueInfo?.season || new Date().getFullYear());
-    const upcomingYear   = String(leagueSeason + 1);
-    const myRosterId     = roster.roster_id;
-    const myUserId       = roster.owner_id;
-    const upcomingTrades = tradedPicksAll.filter(p => p.season === upcomingYear);
+    // Draft picks assessment — ideal = PICK_IDEAL picks across next PICK_HORIZON drafts (21 over 3 years).
+    // Uses /league/{id}/traded_picks. Per (season, round) slot:
+    //   • Not in traded_picks  → team naturally holds their own pick (+1)
+    //   • previous_owner_id = myUserId → gave it away (−1 natural)
+    //   • roster_id = myRosterId       → holds an acquired pick (+1)
+    const leagueSeason = parseInt(leagueInfo?.season || new Date().getFullYear());
+    const myRosterId   = roster.roster_id;
+    const myUserId     = roster.owner_id;
 
+    // Build year list: next PICK_HORIZON seasons (e.g. 2026, 2027, 2028)
+    const pickYears = Array.from({ length: PICK_HORIZON }, (_, i) => String(leagueSeason + 1 + i));
+
+    // Count picks per round, summed across all horizon years
     const pickCountByRound = {};
     for (let r = 1; r <= DRAFT_ROUNDS; r++) {
-        // All traded_picks entries for this round in the upcoming draft
-        const slot = upcomingTrades.filter(p => p.round === r);
-        if (slot.length === 0) {
-            // No trades affected this round → every team holds their natural pick
-            pickCountByRound[r] = 1;
-        } else {
-            // Picks traded — determine this team's count for this round
-            // Natural pick is gone if this team appears as previous_owner (they gave it away)
-            const ownPickGivenAway = slot.some(p => p.previous_owner_id === myUserId) ? 1 : 0;
-            // External picks held: entries where this team is the current holder
-            const heldFromTrade    = slot.filter(p => p.roster_id === myRosterId).length;
-            pickCountByRound[r]    = Math.max(0, (1 - ownPickGivenAway) + heldFromTrade);
+        let count = 0;
+        for (const year of pickYears) {
+            const slot = tradedPicksAll.filter(p => p.season === year && p.round === r);
+            if (slot.length === 0) {
+                count += 1; // not traded → natural pick still held
+            } else {
+                const ownGivenAway = slot.some(p => p.previous_owner_id === myUserId) ? 1 : 0;
+                const heldFromTrade = slot.filter(p => p.roster_id === myRosterId).length;
+                count += Math.max(0, (1 - ownGivenAway) + heldFromTrade);
+            }
         }
+        pickCountByRound[r] = count;
     }
     const totalPicks    = Object.values(pickCountByRound).reduce((a, b) => a + b, 0);
-    const roundsMissing = Object.values(pickCountByRound).filter(c => c === 0).length;
+    const roundsMissing = Object.values(pickCountByRound).filter(c => c === 0).length; // rounds with zero picks across all years
     let picksStatus;
-    if (totalPicks === 0)               picksStatus = 'deficit';  // no picks at all
-    else if (roundsMissing > 0)         picksStatus = 'thin';     // at least one round uncovered
-    else if (totalPicks > DRAFT_ROUNDS) picksStatus = 'surplus';  // acquired extra picks
-    else                                picksStatus = 'ok';       // exactly one pick per round
-    const picksAssessment = { pickCountByRound, totalPicks, draftRounds: DRAFT_ROUNDS, roundsMissing, status: picksStatus, upcomingYear };
+    if (totalPicks === 0)            picksStatus = 'deficit'; // no picks at all
+    else if (totalPicks < PICK_IDEAL) picksStatus = 'thin';   // fewer than 21 across 3 years
+    else if (totalPicks === PICK_IDEAL) picksStatus = 'ok';   // exactly 21 — full coverage
+    else                             picksStatus = 'surplus'; // more than 21 — strong capital
+    const picksAssessment = { pickCountByRound, totalPicks, draftRounds: DRAFT_ROUNDS, idealTotal: PICK_IDEAL, pickYears, roundsMissing, status: picksStatus };
 
     // Optimal weekly scoring
     const weeklyPts = calcOptimalLineup(
@@ -1240,20 +1245,25 @@ function teamCommentary(assessment, eliteSet) {
     else if (criticals.length > 0) needsText = `Critical shortage at ${criticals.map(n=>n.pos).join(', ')}${thins.length > 0 ? ` and running thin at ${thins.map(n=>n.pos).join(', ')}` : ''}. These are your priority targets.`;
     else needsText = `Running thin at ${thins.map(n=>n.pos).join(', ')} — not critical yet, but worth addressing before these become liabilities.`;
 
-    // Draft pick capital
+    // Draft pick capital — evaluated across next PICK_HORIZON drafts (ideal = PICK_IDEAL = 21)
     let picksText;
-    const pa = picksAssessment;
-    const yr = pa?.upcomingYear || '';
+    const pa      = picksAssessment;
+    const years   = pa?.pickYears || [];
+    const yearStr = years.length ? `${years[0]}–${years[years.length - 1]}` : '';
     if (!pa || pa.totalPicks === 0) {
-        picksText = `No picks for the ${yr} draft — a critical gap. Acquiring at least one pick per round should be an immediate priority before the draft window closes.`;
+        picksText = `No draft picks on hand across the ${yearStr} window — a serious capital crisis. Without picks, this roster cannot add college talent or leverage trades. Acquiring picks immediately is the top priority.`;
+    } else if (pa.status === 'deficit') {
+        picksText = `No draft picks on hand across the ${yearStr} window — a serious capital crisis. Acquiring picks immediately is the top priority.`;
     } else if (pa.status === 'thin') {
-        const missingRounds = Object.entries(pa.pickCountByRound).filter(([,c]) => c === 0).map(([r]) => `Round ${r}`);
-        picksText = `Missing ${yr} picks in ${missingRounds.join(', ')} — ${pa.roundsMissing} of ${pa.draftRounds} rounds uncovered. These gaps need to be addressed; a roster without full draft coverage loses future replenishment options.`;
+        const gap = pa.idealTotal - pa.totalPicks;
+        const emptyRounds = Object.entries(pa.pickCountByRound).filter(([,c]) => c === 0).map(([r]) => `R${r}`);
+        const emptyNote   = emptyRounds.length ? ` Completely missing ${emptyRounds.join(', ')} across all three drafts.` : '';
+        picksText = `${pa.totalPicks} of ${pa.idealTotal} picks across ${yearStr} — ${gap} short of the ideal bounty.${emptyNote} Limited draft capital constrains the ability to bring in rookies and use picks as trade bait.`;
     } else if (pa.status === 'ok') {
-        picksText = `Full ${yr} draft coverage — one pick in each of the ${pa.draftRounds} rounds. Solid foundation for roster replenishment heading into the draft.`;
+        picksText = `${pa.totalPicks} picks across ${yearStr} — right at the ${pa.idealTotal}-pick baseline. Full draft coverage across all three years; a solid foundation to bring in college talent and maintain roster depth.`;
     } else {
-        const extraRounds = Object.entries(pa.pickCountByRound).filter(([,c]) => c > 1).map(([r]) => `Round ${r}`);
-        picksText = `${pa.totalPicks} picks for the ${yr} draft — surplus capital in ${extraRounds.join(', ')}. These extra picks are prime trading currency; package them to address positional needs.`;
+        const extra = pa.totalPicks - pa.idealTotal;
+        picksText = `${pa.totalPicks} picks across ${yearStr} — ${extra} above the ${pa.idealTotal}-pick baseline. Strong draft capital enables both rookie development and use of picks as high-value trading currency.`;
     }
 
     // Tier identity
@@ -1320,26 +1330,27 @@ function PosRow({ pos, assessment }) {
 
 function PicksRow({ picksAssessment }) {
     if (!picksAssessment) return null;
-    const { pickCountByRound, totalPicks, draftRounds, status } = picksAssessment;
+    const { pickCountByRound, totalPicks, draftRounds, idealTotal, status } = picksAssessment;
     const statusIcon  = { surplus:'↑', ok:'✓', thin:'~', deficit:'✗' }[status];
     const statusColor = { surplus:'var(--gold)', ok:'var(--win-green)', thin:'var(--amber)', deficit:'var(--loss-red)' }[status];
+    // One base dot per round; extra dots for picks beyond 1 in a round (surplus years)
     const dots = [];
     for (let r = 1; r <= draftRounds; r++) {
         const count = pickCountByRound[r] || 0;
-        // First pick slot for this round
         dots.push(<span key={`r${r}`}
             className={`dot ${count > 0 ? 'dot-filled' : 'dot-empty'}`}
-            title={count > 0 ? `Round ${r} — ${count} pick${count>1?'s':''}` : `Round ${r} — no pick`} />);
-        // Extra picks in this round are surplus
+            title={count > 0 ? `R${r} — ${count} pick${count>1?'s across '+count+' drafts':''} ` : `R${r} — no picks`} />);
         for (let x = 1; x < count; x++) {
-            dots.push(<span key={`r${r}x${x}`} className="dot dot-surplus" title={`Round ${r} — extra pick`} />);
+            dots.push(<span key={`r${r}x${x}`} className="dot dot-surplus" title={`R${r} extra pick`} />);
         }
     }
+    // Count display: X/21
+    const displayIdeal = idealTotal ?? draftRounds;
     return (
         <div className="pos-row">
             <span className="pos-label" style={{ color:'#A8D8A8', fontSize:'0.51rem', letterSpacing:'-0.02em' }}>PICKS</span>
             <span className="pos-dots">{dots}</span>
-            <span className="pos-count" style={{ color: statusColor }}>{totalPicks}/{draftRounds}</span>
+            <span className="pos-count" style={{ color: statusColor }}>{totalPicks}/{displayIdeal}</span>
             <span className="pos-status-icon" style={{ color: statusColor }}>{statusIcon}</span>
         </div>
     );
