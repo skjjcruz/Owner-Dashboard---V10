@@ -1058,21 +1058,26 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
     // so we start from leagueSeason (not +1) to include the upcoming 2026 draft.
     const pickYears = Array.from({ length: PICK_HORIZON }, (_, i) => String(leagueSeason + i));
 
-    // Count picks per round, summed across all horizon years
+    // Count picks per round (summed across years) AND per year (summed across rounds)
     const pickCountByRound = {};
-    for (let r = 1; r <= DRAFT_ROUNDS; r++) {
-        let count = 0;
-        for (const year of pickYears) {
+    const pickCountByYear  = {};
+    for (let r = 1; r <= DRAFT_ROUNDS; r++) pickCountByRound[r] = 0;
+    for (const year of pickYears)           pickCountByYear[year] = 0;
+
+    for (const year of pickYears) {
+        for (let r = 1; r <= DRAFT_ROUNDS; r++) {
             const slot = tradedPicksAll.filter(p => p.season === year && p.round === r);
+            let n;
             if (slot.length === 0) {
-                count += 1; // not traded → natural pick still held
+                n = 1; // not traded → natural pick still held
             } else {
-                const ownGivenAway = slot.some(p => p.previous_owner_id === myUserId) ? 1 : 0;
+                const ownGivenAway  = slot.some(p => p.previous_owner_id === myUserId) ? 1 : 0;
                 const heldFromTrade = slot.filter(p => p.roster_id === myRosterId).length;
-                count += Math.max(0, (1 - ownGivenAway) + heldFromTrade);
+                n = Math.max(0, (1 - ownGivenAway) + heldFromTrade);
             }
+            pickCountByRound[r]    += n;
+            pickCountByYear[year]  += n;
         }
-        pickCountByRound[r] = count;
     }
     const totalPicks    = Object.values(pickCountByRound).reduce((a, b) => a + b, 0);
     const roundsMissing = Object.values(pickCountByRound).filter(c => c === 0).length; // rounds with zero picks across all years
@@ -1081,7 +1086,7 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
     else if (totalPicks < PICK_IDEAL) picksStatus = 'thin';   // fewer than 21 across 3 years
     else if (totalPicks === PICK_IDEAL) picksStatus = 'ok';   // exactly 21 — full coverage
     else                             picksStatus = 'surplus'; // more than 21 — strong capital
-    const picksAssessment = { pickCountByRound, totalPicks, draftRounds: DRAFT_ROUNDS, idealTotal: PICK_IDEAL, pickYears, roundsMissing, status: picksStatus };
+    const picksAssessment = { pickCountByRound, pickCountByYear, totalPicks, draftRounds: DRAFT_ROUNDS, idealTotal: PICK_IDEAL, pickYears, roundsMissing, status: picksStatus };
 
     // Optimal weekly scoring
     const weeklyPts = calcOptimalLineup(
@@ -1332,28 +1337,43 @@ function PosRow({ pos, assessment }) {
 
 function PicksRow({ picksAssessment }) {
     if (!picksAssessment) return null;
-    const { pickCountByRound, totalPicks, draftRounds, idealTotal, status } = picksAssessment;
+    const { pickCountByYear, pickYears, totalPicks, draftRounds, idealTotal, status } = picksAssessment;
     const statusIcon  = { surplus:'↑', ok:'✓', thin:'~', deficit:'✗' }[status];
     const statusColor = { surplus:'var(--gold)', ok:'var(--win-green)', thin:'var(--amber)', deficit:'var(--loss-red)' }[status];
-    // One base dot per round; extra dots for picks beyond 1 in a round (surplus years)
-    const dots = [];
-    for (let r = 1; r <= draftRounds; r++) {
-        const count = pickCountByRound[r] || 0;
-        dots.push(<span key={`r${r}`}
-            className={`dot ${count > 0 ? 'dot-filled' : 'dot-empty'}`}
-            title={count > 0 ? `R${r} — ${count} pick${count>1?'s across '+count+' drafts':''} ` : `R${r} — no picks`} />);
-        for (let x = 1; x < count; x++) {
-            dots.push(<span key={`r${r}x${x}`} className="dot dot-surplus" title={`R${r} extra pick`} />);
-        }
-    }
-    // Count display: X/21
-    const displayIdeal = idealTotal ?? draftRounds;
+    const displayIdeal = idealTotal ?? (draftRounds * (pickYears?.length || 1));
+    const iconMap  = { surplus:'↑', ok:'✓', thin:'~', deficit:'✗' };
+    const colorMap = { surplus:'var(--gold)', ok:'var(--win-green)', thin:'var(--amber)', deficit:'var(--loss-red)' };
+
     return (
-        <div className="pos-row">
-            <span className="pos-label" style={{ color:'#A8D8A8', fontSize:'0.51rem', letterSpacing:'-0.02em' }}>PICKS</span>
-            <span className="pos-dots">{dots}</span>
-            <span className="pos-count" style={{ color: statusColor }}>{totalPicks}/{displayIdeal}</span>
-            <span className="pos-status-icon" style={{ color: statusColor }}>{statusIcon}</span>
+        <div style={{ display:'flex', flexDirection:'column', gap:'0.1rem' }}>
+            {/* Header: label + overall total */}
+            <div className="pos-row">
+                <span className="pos-label" style={{ color:'#A8D8A8', fontSize:'0.51rem', letterSpacing:'-0.02em' }}>PICKS</span>
+                <span style={{ flex:1 }} />
+                <span className="pos-count" style={{ color: statusColor }}>{totalPicks}/{displayIdeal}</span>
+                <span className="pos-status-icon" style={{ color: statusColor }}>{statusIcon}</span>
+            </div>
+            {/* Per-year rows */}
+            {(pickYears || []).map(year => {
+                const count    = (pickCountByYear && pickCountByYear[year]) ?? 0;
+                const yrStatus = count === 0 ? 'deficit' : count < draftRounds ? 'thin' : count === draftRounds ? 'ok' : 'surplus';
+                const yrColor  = colorMap[yrStatus];
+                const dots = [];
+                for (let i = 0; i < draftRounds; i++) {
+                    dots.push(<span key={`f${i}`} className={`dot ${i < count ? 'dot-filled' : 'dot-empty'}`} />);
+                }
+                for (let i = draftRounds; i < count; i++) {
+                    dots.push(<span key={`s${i}`} className="dot dot-surplus" />);
+                }
+                return (
+                    <div key={year} style={{ display:'flex', alignItems:'center', gap:'0.4rem', paddingLeft:'22px' }}>
+                        <span style={{ fontSize:'0.52rem', color:'var(--silver)', opacity:0.6, width:'26px', flexShrink:0 }}>{year}</span>
+                        <span style={{ display:'flex', gap:'2px', flex:1 }}>{dots}</span>
+                        <span style={{ fontSize:'0.55rem', width:'28px', textAlign:'right', flexShrink:0, color: yrColor }}>{count}/{draftRounds}</span>
+                        <span style={{ fontSize:'0.55rem', width:'10px', flexShrink:0, color: yrColor }}>{iconMap[yrStatus]}</span>
+                    </div>
+                );
+            })}
         </div>
     );
 }
