@@ -1069,14 +1069,24 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
             const slot = tradedPicksAll.filter(p => p.season === year && p.round === r);
             let n;
             if (slot.length === 0) {
-                n = 1; // not traded → natural pick still held
+                n = 1; // slot never traded → every team holds their own natural pick
             } else {
-                const ownGivenAway  = slot.some(p => p.previous_owner_id === myUserId) ? 1 : 0;
-                const heldFromTrade = slot.filter(p => p.roster_id === myRosterId).length;
-                n = Math.max(0, (1 - ownGivenAway) + heldFromTrade);
+                // Sleeper traded_picks semantics:
+                //   roster_id  = original owner of the pick slot (never changes through re-trades)
+                //   owner_id   = current holder's user_id (updates with every trade)
+                // This correctly handles multi-step trades (A→B→C):
+                //   roster_id stays = A's roster, owner_id updates to C's user_id.
+                const myOwnEntry  = slot.find(p => String(p.roster_id) === String(myRosterId));
+                const iHoldMyOwn  = myOwnEntry && String(myOwnEntry.owner_id) === String(myUserId);
+                const iAcquired   = slot.filter(p =>
+                    String(p.roster_id) !== String(myRosterId) &&
+                    String(p.owner_id)  === String(myUserId)
+                ).length;
+                // If my pick never appears in traded_picks → I still have my natural pick
+                n = (myOwnEntry ? (iHoldMyOwn ? 1 : 0) : 1) + iAcquired;
             }
-            pickCountByRound[r]    += n;
-            pickCountByYear[year]  += n;
+            pickCountByRound[r]   += n;
+            pickCountByYear[year] += n;
         }
     }
     const totalPicks    = Object.values(pickCountByRound).reduce((a, b) => a + b, 0);
