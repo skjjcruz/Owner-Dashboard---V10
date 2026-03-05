@@ -888,6 +888,8 @@
 <body>
     <div id="root"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase-client.js"></script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -924,7 +926,7 @@
     }
 
     // ===== CALENDAR DATA LAYER =====
-    const CALENDAR_KEY = 'od_calendar_events';
+    // Persistence handled by supabase-client.js (window.OD.*) with localStorage fallback.
 
     const DEFAULT_EVENTS = [
         { id: 'default-1', title: 'Dynasty Draft', date: '2026-08-15', time: '8:00 PM', league: 'Owner Dynasty', details: 'Round 1 starts at 8 PM EST' },
@@ -935,49 +937,37 @@
         { id: 'default-6', title: 'Playoffs Start', date: '2026-12-14', time: '', league: 'All Leagues', details: 'Championship run begins' }
     ];
 
+    // Sync wrapper — returns cached localStorage value instantly so React state
+    // initialises without a flash, then the async cloud load triggers a re-render.
     function loadCalendarEvents() {
         try {
-            const raw = localStorage.getItem(CALENDAR_KEY);
+            const raw = localStorage.getItem('od_calendar_events');
             if (raw) {
                 const saved = JSON.parse(raw);
-                // Merge: keep all saved events + add any new defaults not already present
                 const savedIds = new Set(saved.map(e => e.id));
                 const missing = DEFAULT_EVENTS.filter(d => !savedIds.has(d.id));
-                if (missing.length > 0) {
-                    const merged = [...saved, ...missing];
-                    saveCalendarEvents(merged);
-                    return merged;
-                }
-                return saved;
+                return missing.length > 0 ? [...saved, ...missing] : saved;
             }
-            // First load — seed defaults
-            saveCalendarEvents(DEFAULT_EVENTS);
-            return DEFAULT_EVENTS;
-        } catch (e) {
-            // Corrupted storage — fall back to defaults instead of empty
-            saveCalendarEvents(DEFAULT_EVENTS);
-            return DEFAULT_EVENTS;
-        }
+        } catch {}
+        return DEFAULT_EVENTS;
     }
 
     function saveCalendarEvents(events) {
-        localStorage.setItem(CALENDAR_KEY, JSON.stringify(events));
+        window.OD.saveCalendarEvents(events);
     }
 
     // ===== EARNINGS DATA LAYER =====
-    const EARNINGS_KEY = 'od_earnings_entries';
+    // Persistence handled by supabase-client.js (window.OD.*) with localStorage fallback.
 
     function loadEarnings() {
         try {
-            const raw = localStorage.getItem(EARNINGS_KEY);
+            const raw = localStorage.getItem('od_earnings_entries');
             return raw ? JSON.parse(raw) : [];
-        } catch (e) {
-            return [];
-        }
+        } catch { return []; }
     }
 
     function saveEarnings(entries) {
-        localStorage.setItem(EARNINGS_KEY, JSON.stringify(entries));
+        window.OD.saveEarnings(entries);
     }
 
     // ===== FULL DATA BACKUP / RESTORE =====
@@ -2360,6 +2350,16 @@
         // Calendar state
         const [calendarEvents, setCalendarEvents] = useState(() => loadCalendarEvents());
         const [showCalendar, setShowCalendar] = useState(false);
+
+        // Cloud sync — load from Supabase on mount and update state if remote data differs
+        useEffect(() => {
+            window.OD.loadCalendarEvents(DEFAULT_EVENTS).then(remote => {
+                setCalendarEvents(remote);
+            }).catch(() => {});
+            window.OD.loadEarnings().then(remote => {
+                if (remote && remote.length > 0) setEarningsEntries(remote);
+            }).catch(() => {});
+        }, []);
         const [showEventForm, setShowEventForm] = useState(false);
         const [editingEvent, setEditingEvent] = useState(null);
         const [selectedEvent, setSelectedEvent] = useState(null);

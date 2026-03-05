@@ -422,6 +422,8 @@
 <body>
     <div id="root"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="supabase-client.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -512,16 +514,17 @@
         const SW = { yrs:24, pts:34, gp:22, avg:32, proj:38 };
 
         // ===== TARGET STORAGE =====
+        // Persistence handled by supabase-client.js (window.OD.*) with localStorage fallback.
         function loadTargets(leagueId) {
+            // Returns cached localStorage value synchronously so UI renders instantly.
+            // The caller should also call window.OD.loadTargets(leagueId) for the cloud version.
             try {
                 const raw = localStorage.getItem(FA_KEY(leagueId));
                 return raw ? JSON.parse(raw) : { startingBudget: 1000, targets: [] };
-            } catch (e) {
-                return { startingBudget: 1000, targets: [] };
-            }
+            } catch { return { startingBudget: 1000, targets: [] }; }
         }
         function saveTargets(leagueId, data) {
-            localStorage.setItem(FA_KEY(leagueId), JSON.stringify(data));
+            window.OD.saveTargets(leagueId, data);
         }
 
         // ===== APP =====
@@ -612,6 +615,7 @@
                     setPlayersData(players);
                     setStatsData(stats);
 
+                    // Load targets: start from cache, then merge cloud data
                     const saved = loadTargets(leagueId);
                     setTargets(saved.targets || []);
 
@@ -627,6 +631,15 @@
                         setStartingBudget(saved.startingBudget || 1000);
                         setBudgetDraft(String(saved.startingBudget || 1000));
                     }
+
+                    // Async cloud load — overwrites local cache if remote has data
+                    window.OD.loadTargets(leagueId).then(remote => {
+                        if (remote && remote.targets && remote.targets.length > 0) {
+                            setTargets(remote.targets);
+                            setStartingBudget(remote.startingBudget || 1000);
+                            setBudgetDraft(String(remote.startingBudget || 1000));
+                        }
+                    }).catch(() => {});
                 } catch (e) {
                     console.error('League load failed:', e);
                 } finally {
