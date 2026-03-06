@@ -785,7 +785,7 @@
         align-items: center;
         height: 100%;
         white-space: nowrap;
-        animation: scroll-ticker 30s linear infinite;
+        animation: scroll-ticker 15s linear infinite;
         will-change: transform;
     }
 
@@ -2936,7 +2936,7 @@
 
                 {/* News Ticker */}
                 <div className="news-ticker-container">
-                    <div className="news-ticker" style={{ animationDuration: newsItems.length > 0 ? `${Math.max(newsItems.length * 4, 30)}s` : '30s' }}>
+                    <div className="news-ticker" style={{ animationDuration: newsItems.length > 0 ? `${Math.max(newsItems.length * 2, 15)}s` : '15s' }}>
                         <span className="news-ticker-label">NFL NEWS</span>
                         {newsItems.length > 0 ? (
                             newsItems.map((item, idx) => (
