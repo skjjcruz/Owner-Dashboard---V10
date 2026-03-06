@@ -1618,18 +1618,21 @@
                             {filteredMates.length === 0 && (
                                 <div style={{ color: 'var(--silver)', fontSize: '0.8rem', textAlign: 'center', marginTop: '1.5rem' }}>No league mates found</div>
                             )}
-                            {filteredMates.map(mate => (
-                                <div key={mate.username} onClick={() => openThread(mate.username)}
+                            {filteredMates.map(mate => {
+                                const threadKey = mate.username || mate.display_name || mate.user_id;
+                                return (
+                                <div key={mate.user_id || mate.username} onClick={() => openThread(threadKey)}
                                     style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', marginBottom: '0.25rem' }}
                                     onMouseEnter={e => e.currentTarget.style.background = 'var(--charcoal)'}
                                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                                     <Avatar username={mate.username} size={36} />
                                     <div>
                                         <div style={{ color: 'var(--white)', fontSize: '0.85rem', fontWeight: '600' }}>{mate.display_name || mate.username}</div>
-                                        <div style={{ color: 'var(--silver)', fontSize: '0.72rem' }}>@{mate.username}</div>
+                                        <div style={{ color: 'var(--silver)', fontSize: '0.72rem' }}>{mate.username ? `@${mate.username}` : mate.display_name}</div>
                                     </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     ) : thread ? (
                         <>
@@ -2485,18 +2488,21 @@
         const upcomingEvents = getUpcomingEvents(calendarEvents);
 
         const leagueMates = React.useMemo(() => {
-            const seen = new Set([sleeperUsername]);
+            const seen = new Set();
+            // seed with current user's id so we exclude ourselves
+            if (sleeperUser?.user_id) seen.add(sleeperUser.user_id);
             const mates = [];
             sleeperLeagues.forEach(league => {
                 (league.users || []).forEach(u => {
-                    if (u.username && !seen.has(u.username)) {
-                        seen.add(u.username);
+                    const uid = u.user_id;
+                    if (uid && !seen.has(uid)) {
+                        seen.add(uid);
                         mates.push(u);
                     }
                 });
             });
             return mates.sort((a, b) => (a.display_name || a.username || '').localeCompare(b.display_name || b.username || ''));
-        }, [sleeperLeagues]);
+        }, [sleeperLeagues, sleeperUser]);
 
         // News ticker state
         const [newsItems, setNewsItems] = useState([]);
