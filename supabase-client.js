@@ -414,3 +414,48 @@ window.OD.status = function() {
     console.log('[OD] Supabase connected:', SUPABASE_URL);
     console.log('[OD] Current user:', getCurrentUsername() || '(not logged in)');
 };
+
+// ============================================================
+// AUTO-UPDATE POLLING
+// Polls this page's own URL via HEAD every 2 minutes.
+// When the ETag/Last-Modified changes (new deploy on GitHub
+// Pages), shows a brief toast then silently reloads — so all
+// owners always run the latest version without manual refresh.
+// ============================================================
+(function startAutoUpdatePoller() {
+    if (typeof fetch === 'undefined' || typeof window === 'undefined') return;
+
+    let baseline = null;
+
+    async function getSignature() {
+        try {
+            const r = await fetch(location.href, { method: 'HEAD', cache: 'no-store' });
+            // Prefer ETag; fall back to Last-Modified
+            return r.headers.get('etag') || r.headers.get('last-modified') || null;
+        } catch { return null; }
+    }
+
+    function reload() {
+        const el = document.createElement('div');
+        el.textContent = '⚡ Updating to latest version...';
+        el.style.cssText = [
+            'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
+            'background:#D4AF37', 'color:#0A0A0A',
+            'font-family:Oswald,sans-serif', 'font-weight:700',
+            'font-size:0.82rem', 'letter-spacing:0.06em',
+            'text-align:center', 'padding:0.55rem', 'pointer-events:none'
+        ].join(';');
+        document.body.appendChild(el);
+        setTimeout(() => location.reload(), 1500);
+    }
+
+    // Wait 5 s for page to fully settle, then capture baseline
+    setTimeout(async () => {
+        baseline = await getSignature();
+        setInterval(async () => {
+            if (!baseline) { baseline = await getSignature(); return; }
+            const current = await getSignature();
+            if (current && current !== baseline) reload();
+        }, 2 * 60 * 1000); // poll every 2 minutes
+    }, 5000);
+})();
