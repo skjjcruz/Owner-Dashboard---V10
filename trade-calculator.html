@@ -834,6 +834,11 @@ const MAX_VALUE = 10000;
 const PICK_VALUES = { 1:5500, 2:2800, 3:1500, 4:900, 5:500, 6:250, 7:150 };
 const PICK_COLORS  = { 1:'#D4AF37', 2:'#5DADE2', 3:'#2ECC71', 4:'#BB8FCE', 5:'#95A5A6', 6:'#7F8C8D', 7:'#6C7A7D' };
 
+// FAAB: dynasty value per $1 of FAAB budget remaining.
+// Full $1000 budget ≈ a mid 3rd-round pick (1500), so $1 ≈ 1.5 pts.
+// Rounded slightly higher to reflect in-season utility.
+const FAAB_RATE = 2.0;
+
 // ─── UTILITIES ───────────────────────────────────────────────────────────────
 function normPos(pos) {
     if (!pos) return null;
@@ -1017,6 +1022,10 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
     const losses = roster.settings?.losses || 0;
     const ties   = roster.settings?.ties   || 0;
     const pf     = Number(roster.settings?.fpts || 0) + Number(roster.settings?.fpts_decimal || 0) / 100;
+
+    const waiverBudget  = Number(leagueInfo?.settings?.waiver_budget || 1000);
+    const waiverUsed    = Number(roster.settings?.waiver_budget_used || 0);
+    const faabRemaining = Math.max(0, waiverBudget - waiverUsed);
 
     // Group all players by normalized position (depth assessment)
     const posGroups = {};
@@ -1224,7 +1233,8 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
         .map(([pos]) => pos);
 
     return { rosterId:roster.roster_id, ownerId:roster.owner_id, teamName, ownerName, avatar, wins, losses, ties, pf,
-             posGroups, posAssessment, picksAssessment, weeklyPts, healthScore, tier, tierColor, tierBg, panic, window, needs, strengths };
+             posGroups, posAssessment, picksAssessment, weeklyPts, healthScore, tier, tierColor, tierBg, panic, window, needs, strengths,
+             faabRemaining, waiverBudget };
 }
 
 // Build per-position "NFL starter sets" using a hybrid score:
@@ -1278,7 +1288,8 @@ function countElite(assessment, eliteSet) {
 
 // Generate narrative commentary for a team
 function teamCommentary(assessment, eliteSet) {
-    const { weeklyPts, tier, needs, strengths, posAssessment, picksAssessment, panic } = assessment;
+    const { weeklyPts, tier, needs, strengths, posAssessment, picksAssessment, panic,
+            faabRemaining = 0, waiverBudget = 1000 } = assessment;
     const eliteCount = countElite(assessment, eliteSet);
     const diff = weeklyPts - WEEKLY_TARGET;
 
@@ -1342,7 +1353,22 @@ function teamCommentary(assessment, eliteSet) {
         REBUILDING: 'Building for the future — position yourself as a willing seller for premium return.',
     };
 
-    return { scoring, elite, strengthText, needsText, picksText, identity: identities[tier] || '', eliteCount };
+    // FAAB
+    const faabPct  = waiverBudget > 0 ? faabRemaining / waiverBudget : 0;
+    let faabText;
+    if (waiverBudget === 0) {
+        faabText = 'This league does not use a FAAB waiver system.';
+    } else if (faabRemaining === 0) {
+        faabText = `FAAB fully depleted ($0 of $${waiverBudget.toLocaleString()} remaining). No budget to win bidding wars for waiver wire pickups.`;
+    } else if (faabPct > 0.6) {
+        faabText = `$${faabRemaining.toLocaleString()} of $${waiverBudget.toLocaleString()} FAAB remaining (${Math.round(faabPct*100)}%). Strong budget — well-positioned to win key waiver wire battles or include FAAB in a trade.`;
+    } else if (faabPct > 0.3) {
+        faabText = `$${faabRemaining.toLocaleString()} of $${waiverBudget.toLocaleString()} FAAB remaining (${Math.round(faabPct*100)}%). Moderate budget — enough flexibility for a key pickup or to sweeten a trade.`;
+    } else {
+        faabText = `$${faabRemaining.toLocaleString()} of $${waiverBudget.toLocaleString()} FAAB remaining (${Math.round(faabPct*100)}%). Budget is running thin — prioritize high-impact pickups only.`;
+    }
+
+    return { scoring, elite, strengthText, needsText, picksText, faabText, faabRemaining, waiverBudget, identity: identities[tier] || '', eliteCount };
 }
 
 function calcComplementarity(mine, theirs) {
@@ -1411,9 +1437,12 @@ function PanicMeter({ level }) {
 
 function TeamCard({ assessment, isMyTeam, ownerDna }) {
     const { teamName, ownerName, wins, losses, ties, pf, weeklyPts, healthScore, tier, tierColor, tierBg,
-            posAssessment, picksAssessment, panic, window: tradeWindow, needs, strengths } = assessment;
+            posAssessment, picksAssessment, panic, window: tradeWindow, needs, strengths,
+            faabRemaining = 0, waiverBudget = 1000 } = assessment;
 
     const dna   = DNA_TYPES[ownerDna] || DNA_TYPES.NONE;
+    const faabPct   = waiverBudget > 0 ? faabRemaining / waiverBudget : 0;
+    const faabColor = faabPct > 0.5 ? 'var(--win-green)' : faabPct > 0.25 ? 'var(--amber)' : 'var(--loss-red)';
     const pct   = Math.round((weeklyPts / WEEKLY_TARGET) * 100);
     const scoreBarColor = healthScore >= 85 ? '#D4AF37' : healthScore >= 70 ? '#2ECC71' : healthScore >= 55 ? '#F0A500' : '#E74C3C';
     const projClass = weeklyPts >= WEEKLY_TARGET ? 'proj-above' : weeklyPts >= WEEKLY_TARGET * 0.9 ? 'proj-close' : 'proj-below';
@@ -1489,6 +1518,13 @@ function TeamCard({ assessment, isMyTeam, ownerDna }) {
                         ))}
                     </div>
                 )}
+                {waiverBudget > 0 && (
+                    <div className="chip-row">
+                        <span className="chip" style={{ background:`${faabColor}18`, border:`1px solid ${faabColor}40`, color:faabColor }}>
+                            ${faabRemaining.toLocaleString()} FAAB
+                        </span>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -1521,6 +1557,7 @@ function TradeCalculator() {
     const [internalVals,  setInternalVals]  = useState({});
     const [tradeIds,      setTradeIds]      = useState({ A:[], B:[] });
     const [tradePickIds,  setTradePickIds]  = useState({ A:[], B:[] });
+    const [tradeFaab,     setTradeFaab]     = useState({ A:0, B:0 });
     const [tradeOwner,    setTradeOwner]    = useState({ A:null, B:null });
     const [searchText,    setSearchText]    = useState({ A:'', B:'' });
     const [showSearch,    setShowSearch]    = useState({ A:false, B:false });
@@ -1564,7 +1601,7 @@ function TradeCalculator() {
     async function loadLeague() {
         setLoading(true);
         setAllRosters([]); setLeagueUsers([]); setPlayersData({}); setStatsData({});
-        setTradeIds({ A:[], B:[] }); setTradePickIds({ A:[], B:[] }); setSearchText({ A:'', B:'' }); setShowSearch({ A:false, B:false });
+        setTradeIds({ A:[], B:[] }); setTradePickIds({ A:[], B:[] }); setTradeFaab({ A:0, B:0 }); setSearchText({ A:'', B:'' }); setShowSearch({ A:false, B:false });
         try {
             const [rosters, info, users, players, stats, fc, tPicks] = await Promise.all([
                 fetchRosters(leagueId),
@@ -1670,13 +1707,13 @@ function TradeCalculator() {
     }, [playersData, valueIndex]);
 
     // Total trade value for a side
-    const tradeSideValue = useCallback((ids, pickIds = []) => {
+    const tradeSideValue = useCallback((ids, pickIds = [], faab = 0) => {
         const playerSum = ids.reduce((sum, id) => sum + (getPlayerValue(id, valueIndex).value || 0), 0);
         const pickSum   = pickIds.reduce((sum, pkId) => {
             const round = Number(pkId.split('-')[2]); // "PICK-year-round-rosterId"
             return sum + (PICK_VALUES[round] || 100);
         }, 0);
-        return playerSum + pickSum;
+        return playerSum + pickSum + Math.round(faab * FAAB_RATE);
     }, [valueIndex]);
 
     // Sorted + filtered assessments for audit tab
@@ -1938,7 +1975,7 @@ function TradeCalculator() {
                         </div>
                     </div>
                     <div className="commentary-card">
-                        <div className="commentary-card-title">Draft Pick Capital</div>
+                        <div className="commentary-card-title">Draft Pick Capital &amp; FAAB</div>
                         <div className="commentary-card-text">{commentary.picksText}</div>
                         {(() => {
                             const pa = assessment.picksAssessment;
@@ -1967,6 +2004,11 @@ function TradeCalculator() {
                                 </div>
                             );
                         })()}
+                        {commentary.waiverBudget > 0 && (
+                            <div style={{ marginTop:'0.5rem', paddingTop:'0.4rem', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                                <div className="commentary-card-text">{commentary.faabText}</div>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -2607,14 +2649,14 @@ function TradeCalculator() {
         if (!Object.keys(playersData).length) return <div className="no-data-msg">No player data. Select a league above.</div>;
 
         const fcReady   = Object.keys(fcValues).length > 0;
-        const totalA    = tradeSideValue(tradeIds.A, tradePickIds.A);
-        const totalB    = tradeSideValue(tradeIds.B, tradePickIds.B);
+        const totalA    = tradeSideValue(tradeIds.A, tradePickIds.A, tradeFaab.A);
+        const totalB    = tradeSideValue(tradeIds.B, tradePickIds.B, tradeFaab.B);
         // diff = totalA - totalB = value the OTHER team gains (used for likelihood calc)
         // userGain = totalB - totalA = value YOU gain (used for display)
         const diff      = totalA - totalB;
         const userGain  = totalB - totalA;
         const absDiff   = Math.abs(userGain);
-        const hasTrade  = tradeIds.A.length > 0 || tradeIds.B.length > 0 || tradePickIds.A.length > 0 || tradePickIds.B.length > 0;
+        const hasTrade  = tradeIds.A.length > 0 || tradeIds.B.length > 0 || tradePickIds.A.length > 0 || tradePickIds.B.length > 0 || tradeFaab.A > 0 || tradeFaab.B > 0;
 
         // DNA for the other owner
         const otherOwnerId  = tradeOwner.B;
@@ -2742,7 +2784,8 @@ function TradeCalculator() {
         function TradeSide({ side, color, label }) {
             const ids           = tradeIds[side];
             const pickIds       = tradePickIds[side];
-            const tot           = tradeSideValue(ids, pickIds);
+            const faab          = tradeFaab[side] || 0;
+            const tot           = tradeSideValue(ids, pickIds, faab);
             const srch          = searchText[side];
             const show          = showSearch[side];
             const rosterPlayers = rosterPlayersFor(side);
@@ -2929,6 +2972,37 @@ function TradeCalculator() {
                             )}
                         </div>
                     )}
+
+                    {/* FAAB input */}
+                    {(() => {
+                        const ownerAssessment = assessments.find(a => a.ownerId === ownerId);
+                        const faabCap = ownerAssessment?.faabRemaining ?? 0;
+                        const faabPct = faabCap > 0 && ownerAssessment ? faabCap / ownerAssessment.waiverBudget : 0;
+                        const capColor = faabPct > 0.5 ? 'var(--win-green)' : faabPct > 0.25 ? 'var(--amber)' : 'var(--loss-red)';
+                        return (
+                            <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', paddingTop:'0.4rem', marginTop:'0.2rem' }}>
+                                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+                                    <span style={{ fontSize:'0.6rem', fontWeight:700, color:'var(--win-green)', letterSpacing:'0.05em' }}>FAAB $</span>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={faabCap || 9999}
+                                        value={faab || ''}
+                                        onChange={e => setTradeFaab(prev => ({ ...prev, [side]: Math.max(0, Number(e.target.value)) }))}
+                                        placeholder="0"
+                                        style={{ width:70, background:'rgba(0,0,0,0.3)', border:'1px solid rgba(46,204,113,0.35)', color:'var(--win-green)', padding:'0.2rem 0.4rem', borderRadius:4, fontSize:'0.75rem', fontWeight:700 }}
+                                    />
+                                    {faab > 0 && <button className="ta-remove" onClick={() => setTradeFaab(prev => ({ ...prev, [side]: 0 }))}>✕</button>}
+                                    {faabCap > 0 && <span style={{ fontSize:'0.58rem', color:'var(--silver)', opacity:0.5 }}>of <span style={{ color: capColor }}>${faabCap.toLocaleString()}</span> avail</span>}
+                                </div>
+                                {faab > 0 && (
+                                    <div style={{ fontSize:'0.58rem', color:'var(--silver)', opacity:0.6, marginTop:'0.2rem' }}>
+                                        ≈ {Math.round(faab * FAAB_RATE).toLocaleString()} dynasty pts
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {/* Total */}
                     <div className="ta-total-row" style={{ background:`${color}12`, border:`1px solid ${color}30` }}>
@@ -3127,6 +3201,7 @@ function TradeCalculator() {
                             function resetTrade() {
                                 setTradeIds({ A:[], B:[] });
                                 setTradePickIds({ A:[], B:[] });
+                                setTradeFaab({ A:0, B:0 });
                                 setTradeOwner(prev => ({ A: myAssessment?.ownerId || null, B: null }));
                                 setSearchText({ A:'', B:'' });
                                 setOutcomeStep(null);
