@@ -86,6 +86,23 @@ alter table public.users add column if not exists password_hash text;
 alter table public.users add column if not exists display_name  text;
 alter table public.users add column if not exists is_gifted     boolean default false;
 
+-- ── MESSAGES (DMs between owners) ───────────────────────────
+create table if not exists public.messages (
+    id            uuid primary key default gen_random_uuid(),
+    from_username text not null,
+    to_username   text not null,
+    body          text not null,
+    read          boolean default false,
+    created_at    timestamptz default now()
+);
+
+drop policy if exists "messages_all" on public.messages;
+alter table public.messages enable row level security;
+create policy "messages_all" on public.messages for all using (true) with check (true);
+
+create index if not exists idx_messages_to   on public.messages (to_username);
+create index if not exists idx_messages_from on public.messages (from_username);
+
 -- ── DONE ──────────────────────────────────────────────────────
 -- After running this file, copy your project URL and anon key
 -- from Supabase → Settings → API and paste them into supabase-client.js

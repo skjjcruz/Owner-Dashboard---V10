@@ -1488,6 +1488,211 @@
         );
     }
 
+    // DM Modal
+    function DMModal({ onClose, currentUsername, leagueMates }) {
+        const [messages, setMessages] = React.useState([]);
+        const [thread, setThread] = React.useState(null);
+        const [composing, setComposing] = React.useState(false);
+        const [newMsg, setNewMsg] = React.useState('');
+        const [sending, setSending] = React.useState(false);
+        const [loading, setLoading] = React.useState(true);
+        const [search, setSearch] = React.useState('');
+        const threadEndRef = React.useRef(null);
+
+        React.useEffect(() => { loadMessages(); }, []);
+
+        React.useEffect(() => {
+            if (threadEndRef.current) threadEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }, [thread, messages.length]);
+
+        async function loadMessages() {
+            setLoading(true);
+            try { setMessages(await window.OD.loadDMs()); } catch {}
+            setLoading(false);
+        }
+
+        async function openThread(username) {
+            setThread(username); setComposing(false); setSearch('');
+            try {
+                await window.OD.markDMsRead(username);
+                setMessages(prev => prev.map(m =>
+                    m.from_username === username && m.to_username === currentUsername ? { ...m, read: true } : m
+                ));
+            } catch {}
+        }
+
+        async function handleSend() {
+            if (!newMsg.trim() || !thread || sending) return;
+            setSending(true);
+            try {
+                await window.OD.sendDM(thread, newMsg.trim());
+                setMessages(prev => [...prev, {
+                    id: Date.now() + Math.random(), from_username: currentUsername,
+                    to_username: thread, body: newMsg.trim(),
+                    created_at: new Date().toISOString(), read: true
+                }]);
+                setNewMsg('');
+            } catch (e) { alert('Send failed: ' + (e.message || e)); }
+            setSending(false);
+        }
+
+        const conversations = React.useMemo(() => {
+            const map = {};
+            messages.forEach(m => {
+                const other = m.from_username === currentUsername ? m.to_username : m.from_username;
+                if (!map[other]) map[other] = { username: other, messages: [], unread: 0 };
+                map[other].messages.push(m);
+                if (m.to_username === currentUsername && !m.read) map[other].unread++;
+            });
+            return Object.values(map).sort((a, b) => {
+                const aLast = a.messages[a.messages.length - 1]?.created_at || '';
+                const bLast = b.messages[b.messages.length - 1]?.created_at || '';
+                return bLast.localeCompare(aLast);
+            });
+        }, [messages]);
+
+        const threadMessages = thread ? messages.filter(m =>
+            (m.from_username === currentUsername && m.to_username === thread) ||
+            (m.from_username === thread && m.to_username === currentUsername)
+        ) : [];
+
+        function getMateName(username) {
+            const m = leagueMates.find(x => x.username === username);
+            return m?.display_name || m?.username || username;
+        }
+        function getMateAvatar(username) {
+            const m = leagueMates.find(x => x.username === username);
+            return m?.avatar ? `https://sleepercdn.com/avatars/thumbs/${m.avatar}` : null;
+        }
+        function formatTime(ts) {
+            if (!ts) return '';
+            const d = new Date(ts), now = new Date();
+            return d.toDateString() === now.toDateString()
+                ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
+        function Avatar({ username, size = 40 }) {
+            const av = getMateAvatar(username);
+            const initial = getMateName(username).charAt(0).toUpperCase();
+            return (
+                <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--charcoal)', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, color: 'var(--silver)', position: 'relative' }}>
+                    {av ? <img src={av} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" onError={e => e.target.style.display='none'} /> : initial}
+                </div>
+            );
+        }
+
+        const filteredMates = leagueMates.filter(m =>
+            !search ||
+            (m.username || '').toLowerCase().includes(search.toLowerCase()) ||
+            (m.display_name || '').toLowerCase().includes(search.toLowerCase())
+        );
+
+        const inputStyle = { flex: 1, background: 'var(--black)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '8px', color: 'var(--white)', fontSize: '0.85rem', padding: '0.6rem 0.75rem', outline: 'none', width: '100%', boxSizing: 'border-box' };
+        const sendBtnStyle = { background: 'var(--gold)', border: 'none', borderRadius: '8px', color: 'var(--black)', fontWeight: '700', fontFamily: 'Oswald, sans-serif', fontSize: '0.85rem', padding: '0 1rem', cursor: 'pointer' };
+
+        return (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} onClick={onClose}>
+                <div style={{ background: 'var(--off-black)', border: '2px solid var(--gold)', borderRadius: '12px', width: '100%', maxWidth: '460px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+
+                    {/* Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.85rem 1rem', borderBottom: '1px solid rgba(212,175,55,0.2)', flexShrink: 0 }}>
+                        {(thread || composing) && (
+                            <button onClick={() => { setThread(null); setComposing(false); }} style={{ background: 'none', border: 'none', color: 'var(--silver)', cursor: 'pointer', fontSize: '1rem', padding: '0 0.25rem' }}>←</button>
+                        )}
+                        <div style={{ fontFamily: 'Bebas Neue, cursive', fontSize: '1.2rem', color: 'var(--gold)', letterSpacing: '0.1em', flex: 1 }}>
+                            {composing ? 'NEW MESSAGE' : thread ? getMateName(thread).toUpperCase() : 'MESSAGES'}
+                        </div>
+                        {!thread && !composing && (
+                            <button onClick={() => setComposing(true)} style={{ background: 'var(--gold)', border: 'none', borderRadius: '6px', color: 'var(--black)', fontFamily: 'Oswald, sans-serif', fontWeight: '700', fontSize: '0.75rem', padding: '0.3rem 0.6rem', cursor: 'pointer', letterSpacing: '0.05em' }}>+ NEW</button>
+                        )}
+                        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--silver)', cursor: 'pointer', fontSize: '1.1rem', padding: '0 0.25rem' }}>✕</button>
+                    </div>
+
+                    {/* Body */}
+                    {loading ? (
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--silver)' }}>Loading...</div>
+                    ) : composing ? (
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
+                            <input autoFocus placeholder="Search league mates..." value={search} onChange={e => setSearch(e.target.value)}
+                                style={{ ...inputStyle, marginBottom: '0.5rem' }} />
+                            {filteredMates.length === 0 && (
+                                <div style={{ color: 'var(--silver)', fontSize: '0.8rem', textAlign: 'center', marginTop: '1.5rem' }}>No league mates found</div>
+                            )}
+                            {filteredMates.map(mate => (
+                                <div key={mate.username} onClick={() => openThread(mate.username)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', marginBottom: '0.25rem' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--charcoal)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                    <Avatar username={mate.username} size={36} />
+                                    <div>
+                                        <div style={{ color: 'var(--white)', fontSize: '0.85rem', fontWeight: '600' }}>{mate.display_name || mate.username}</div>
+                                        <div style={{ color: 'var(--silver)', fontSize: '0.72rem' }}>@{mate.username}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : thread ? (
+                        <>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {threadMessages.length === 0 && (
+                                    <div style={{ color: 'var(--silver)', fontSize: '0.8rem', textAlign: 'center', marginTop: '2rem' }}>No messages yet — say something!</div>
+                                )}
+                                {threadMessages.map(m => {
+                                    const isMe = m.from_username === currentUsername;
+                                    return (
+                                        <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                                            <div style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', background: isMe ? 'var(--gold)' : 'var(--charcoal)', color: isMe ? 'var(--black)' : 'var(--white)', borderRadius: isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px', padding: '0.5rem 0.75rem', maxWidth: '75%', fontSize: '0.85rem', lineHeight: 1.4, wordBreak: 'break-word' }}>{m.body}</div>
+                                            <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '0.15rem' }}>{formatTime(m.created_at)}</div>
+                                        </div>
+                                    );
+                                })}
+                                <div ref={threadEndRef} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem', padding: '0.75rem', borderTop: '1px solid rgba(212,175,55,0.2)', flexShrink: 0 }}>
+                                <input style={inputStyle} placeholder="Type a message..." value={newMsg}
+                                    onChange={e => setNewMsg(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
+                                <button onClick={handleSend} disabled={sending || !newMsg.trim()} style={{ ...sendBtnStyle, opacity: (sending || !newMsg.trim()) ? 0.5 : 1 }}>Send</button>
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                            {conversations.length === 0 ? (
+                                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--silver)', fontSize: '0.85rem' }}>
+                                    No messages yet.
+                                    <br />
+                                    <button onClick={() => setComposing(true)} style={{ marginTop: '0.75rem', background: 'none', border: '1px solid rgba(212,175,55,0.4)', borderRadius: '6px', color: 'var(--gold)', fontFamily: 'Oswald, sans-serif', fontSize: '0.8rem', padding: '0.4rem 0.8rem', cursor: 'pointer', letterSpacing: '0.05em' }}>Send your first message</button>
+                                </div>
+                            ) : conversations.map(conv => {
+                                const last = conv.messages[conv.messages.length - 1];
+                                return (
+                                    <div key={conv.username} onClick={() => openThread(conv.username)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--charcoal)'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                        <div style={{ position: 'relative' }}>
+                                            <Avatar username={conv.username} size={40} />
+                                            {conv.unread > 0 && <div style={{ position: 'absolute', top: -2, right: -2, width: '16px', height: '16px', background: 'var(--gold)', borderRadius: '50%', fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--black)', fontWeight: '700' }}>{conv.unread}</div>}
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ color: conv.unread > 0 ? 'var(--white)' : 'var(--silver)', fontWeight: conv.unread > 0 ? '700' : '500', fontSize: '0.85rem' }}>{getMateName(conv.username)}</span>
+                                                <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', flexShrink: 0, marginLeft: '0.5rem' }}>{formatTime(last?.created_at)}</span>
+                                            </div>
+                                            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {last?.from_username === currentUsername ? 'You: ' : ''}{last?.body}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
     // League Detail Component
     function LeagueDetail({ league, onBack, sleeperUserId }) {
         const [loading, setLoading] = useState(true);
@@ -2252,6 +2457,10 @@
             return localStorage.getItem('od_display_name') || '';
         });
 
+        // DM state
+        const [showDM, setShowDM] = useState(false);
+        const [dmUnread, setDmUnread] = useState(0);
+
         // Cloud sync — load from Supabase on mount and update state if remote data differs
         useEffect(() => {
             window.OD.loadCalendarEvents(DEFAULT_EVENTS).then(remote => {
@@ -2263,6 +2472,10 @@
             window.OD.loadDisplayName().then(name => {
                 if (name) { setCustomDisplayName(name); localStorage.setItem('od_display_name', name); }
             }).catch(() => {});
+            window.OD.loadDMs().then(msgs => {
+                const unread = msgs.filter(m => m.to_username === sleeperUsername && !m.read).length;
+                setDmUnread(unread);
+            }).catch(() => {});
         }, []);
         const [showEventForm, setShowEventForm] = useState(false);
         const [editingEvent, setEditingEvent] = useState(null);
@@ -2270,6 +2483,20 @@
         const [prefillDate, setPrefillDate] = useState('');
 
         const upcomingEvents = getUpcomingEvents(calendarEvents);
+
+        const leagueMates = React.useMemo(() => {
+            const seen = new Set([sleeperUsername]);
+            const mates = [];
+            sleeperLeagues.forEach(league => {
+                (league.users || []).forEach(u => {
+                    if (u.username && !seen.has(u.username)) {
+                        seen.add(u.username);
+                        mates.push(u);
+                    }
+                });
+            });
+            return mates.sort((a, b) => (a.display_name || a.username || '').localeCompare(b.display_name || b.username || ''));
+        }, [sleeperLeagues]);
 
         // News ticker state
         const [newsItems, setNewsItems] = useState([]);
@@ -2604,12 +2831,13 @@
 
                     {/* Right - Buttons */}
                     <div className="right-column">
-                        <button className="icon-button">
-                            <div className="icon-button-icon-container">
+                        <button className="icon-button" onClick={() => { setShowDM(true); setDmUnread(0); }}>
+                            <div className="icon-button-icon-container" style={{ position: 'relative' }}>
                                 <svg className="icon-button-icon" viewBox="0 0 24 24" fill="none">
                                     <path d="M8 12h8M8 8h8M8 16h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                                     <path d="M20 7l-3-3H7L4 7v10l3 3h10l3-3V7z" stroke="currentColor" strokeWidth="2" fill="none"/>
                                 </svg>
+                                {dmUnread > 0 && <div style={{ position: 'absolute', top: '-4px', right: '-4px', width: '16px', height: '16px', background: 'var(--gold)', borderRadius: '50%', fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--black)', fontWeight: '700' }}>{dmUnread}</div>}
                             </div>
                             <div className="icon-button-label">DM</div>
                         </button>
@@ -2695,6 +2923,14 @@
                         )}
                     </div>
                 </div>
+
+                {showDM && (
+                    <DMModal
+                        onClose={() => setShowDM(false)}
+                        currentUsername={sleeperUsername}
+                        leagueMates={leagueMates}
+                    />
+                )}
 
                 {showSettings && (
                     <SettingsModal

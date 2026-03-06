@@ -307,6 +307,43 @@ window.OD.saveDisplayName = function(name) {
 };
 
 // ============================================================
+// DIRECT MESSAGES
+// ============================================================
+
+window.OD.sendDM = async function(toUsername, body) {
+    const from = getCurrentUsername();
+    const db = getClient();
+    if (!db || !isConfigured() || !from) throw new Error('Not configured');
+    await ensureUser(from);
+    const { error } = await db.from('messages').insert({ from_username: from, to_username: toUsername, body });
+    if (error) throw error;
+};
+
+window.OD.loadDMs = async function() {
+    const username = getCurrentUsername();
+    const db = getClient();
+    if (!db || !isConfigured() || !username) return [];
+    const { data, error } = await db
+        .from('messages')
+        .select('*')
+        .or(`from_username.eq.${username},to_username.eq.${username}`)
+        .order('created_at', { ascending: true });
+    if (error) return [];
+    return data || [];
+};
+
+window.OD.markDMsRead = async function(fromUsername) {
+    const username = getCurrentUsername();
+    const db = getClient();
+    if (!db || !isConfigured() || !username) return;
+    await db.from('messages')
+        .update({ read: true })
+        .eq('to_username', username)
+        .eq('from_username', fromUsername)
+        .eq('read', false);
+};
+
+// ============================================================
 // GIFT USERS — create a personalised dashboard for a league mate
 // ============================================================
 
