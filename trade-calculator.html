@@ -1659,7 +1659,12 @@ function TradeCalculator() {
 
     // Total trade value for a side
     const tradeSideValue = useCallback((ids) => {
-        return ids.reduce((sum, id) => sum + (getPlayerValue(id, valueIndex).value || 0), 0);
+        return ids.reduce((sum, id) => {
+            const v = getPlayerValue(id, valueIndex);
+            // INT-source players (IDPs, kickers, internal fallback) are assessed at very low value
+            const val = v.source === 'internal' ? Math.min(v.value, 200) : (v.value || 0);
+            return sum + val;
+        }, 0);
     }, [valueIndex]);
 
     // Sorted + filtered assessments for audit tab
