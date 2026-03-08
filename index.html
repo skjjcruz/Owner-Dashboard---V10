@@ -2594,6 +2594,15 @@
             }).catch(() => {});
         }, []);
 
+        // Sync PWA home screen badge with unread DM count
+        useEffect(() => {
+            if (dmUnread > 0) {
+                navigator.setAppBadge?.(dmUnread).catch(() => {});
+            } else {
+                navigator.clearAppBadge?.().catch(() => {});
+            }
+        }, [dmUnread]);
+
         // Poll for new DMs every 30 seconds
         useEffect(() => {
             const poll = setInterval(() => {
@@ -2950,7 +2959,7 @@
                                         >
                                             <div className="league-item-name">{league.name}</div>
                                             <div className="league-item-record">
-                                                {league.wins}-{league.losses}{league.ties > 0 ? `-${league.ties}` : ''} • {league.championships} 🏆
+                                                {league.wins}-{league.losses}{league.ties > 0 ? `-${league.ties}` : ''}{league.championships > 0 ? ' 🏆' : ''}
                                             </div>
                                         </div>
                                     ))

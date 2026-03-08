@@ -560,7 +560,8 @@ async function fetchSeasonStats(year) {
 }
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
-const SEASON     = '2026';
+const SEASON           = '2026';
+const AVAILABLE_YEARS  = ['2023', '2024', '2025', '2026'];
 const STATS_YEAR = '2025';
 
 // Psycho League baseline (user-defined)
@@ -1584,6 +1585,7 @@ function TradeCalculator() {
     const [phase, setPhase]   = useState('boot');
     const [errMsg, setErrMsg] = useState('');
     const [userId,  setUserId]  = useState('');
+    const [selectedYear, setSelectedYear] = useState(SEASON);
     const [leagues, setLeagues] = useState([]);
     const [leagueId, setLeagueId] = useState('');
 
@@ -1623,14 +1625,21 @@ function TradeCalculator() {
     const [selectedAuditTeam, setSelectedAuditTeam] = useState(null); // rosterId
     const [showEliteModal, setShowEliteModal] = useState(false);
 
-    // Bootstrap
+    // Bootstrap — fetch user once, then leagues for the selected year
     useEffect(() => { boot(); }, []);
+    useEffect(() => {
+        if (!userId) return;
+        fetchLeagues(userId, selectedYear).then(lgs => {
+            setLeagues(lgs || []);
+            if (lgs?.length) setLeagueId(lgs[0].league_id);
+        }).catch(() => {});
+    }, [selectedYear, userId]);
 
     async function boot() {
         try {
             const user = await fetchUser(sleeperUsername);
             setUserId(user.user_id);
-            const lgs = await fetchLeagues(user.user_id, SEASON);
+            const lgs = await fetchLeagues(user.user_id, selectedYear);
             setLeagues(lgs || []);
             if (lgs?.length) {
                 setLeagueId(lgs[0].league_id);
@@ -3514,8 +3523,15 @@ function TradeCalculator() {
         <div style={{ display:'flex', flexDirection:'column', minHeight:'100vh' }}>
             {/* Header */}
             <div className="page-header">
-                <button className="back-btn" onClick={() => window.location.href='index.html'}>← Main</button>
-                <div className="page-title">Behavioral Trade Calculator</div>
+                <button className="back-btn" onClick={() => window.location.href='index.html'}>← Dashboard</button>
+                <div className="page-title">Trade Calculator</div>
+                <select
+                    value={selectedYear}
+                    onChange={e => setSelectedYear(e.target.value)}
+                    style={{ background:'var(--charcoal)', border:'1px solid rgba(212,175,55,0.4)', borderRadius:'4px', color:'var(--gold)', fontFamily:'Oswald,sans-serif', fontWeight:'700', fontSize:'0.72rem', padding:'0.18rem 0.45rem', cursor:'pointer', outline:'none', flexShrink:0 }}
+                >
+                    {AVAILABLE_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
                 <select
                     className="league-select"
                     value={leagueId}
@@ -3525,6 +3541,7 @@ function TradeCalculator() {
                         <option key={l.league_id} value={l.league_id}>{l.name}</option>
                     ))}
                 </select>
+                <button className="back-btn" onClick={() => window.open('https://skjjcruz.github.io/fantasy-football-owner-dashboard/', '_blank')}>Team Comp</button>
             </div>
 
             {/* Tab Bar */}
