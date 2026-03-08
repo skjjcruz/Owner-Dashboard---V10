@@ -849,8 +849,7 @@
                 return Object.entries(playersData)
                     .filter(([id, p]) =>
                         !takenIds.has(id) &&
-                        p.team &&
-                        p.team.trim() !== '' &&
+                        (p.team || p.active === true) &&
                         relevantPosSet.has(p.position)
                     )
                     .map(([id, p]) => ({
