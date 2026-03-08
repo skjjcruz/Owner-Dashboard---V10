@@ -787,26 +787,34 @@ async function fetchFantasyCalcValues() {
     }
 }
 
-// Compute an internal value from stats percentile (0–9999 scale) as fallback for IDP/kickers
+// Compute an internal value from stats as fallback for IDP/kickers.
+// IDP (DB/DL/LB): ranked by 2025 total season points → tiered values (Elite/T1/T2/T3/Fringe).
+// Non-IDP (kickers, etc.): linear percentile scale, capped at 200 in tradeSideValue.
 function buildInternalValues(playersData, statsData, scoring) {
     const byPos = {};
     for (const [id, p] of Object.entries(playersData)) {
         const np = normPos(p.position);
         if (!np) continue;
-        const ppg = calcPPG(id, statsData, scoring);
-        if (ppg <= 0) continue;
+        const pts = calcSeasonPts(id, statsData, scoring);
+        if (pts <= 0) continue;
         if (!byPos[np]) byPos[np] = [];
-        byPos[np].push({ id, ppg });
+        byPos[np].push({ id, pts });
     }
     const idx = {};
-    // Map PPG rank within position to a 0–8000 value scale
-    for (const [, players] of Object.entries(byPos)) {
-        const sorted = players.sort((a,b) => b.ppg - a.ppg);
+    for (const [pos, players] of Object.entries(byPos)) {
+        const sorted = players.sort((a, b) => b.pts - a.pts);
         const total  = sorted.length;
-        sorted.forEach(({ id, ppg }, rank) => {
-            // Linear scale: rank 0 = 8000, rank=total-1 = 200
-            const pct = total > 1 ? (1 - rank / (total - 1)) : 1;
-            idx[id] = { value: Math.round(200 + pct * 7800), trend: 0, rank: rank + 1, posRank: rank + 1, source: 'internal' };
+        sorted.forEach(({ id }, i) => {
+            const rank = i + 1;
+            if (IDP_POSITIONS.has(pos)) {
+                // Tier-based value for defenders
+                const tier = idpTier(rank);
+                idx[id] = { value: tier.value, trend: 0, rank, posRank: rank, source: 'internal', tier: tier.label };
+            } else {
+                // Linear scale for kickers / other non-IDP
+                const pct = total > 1 ? (1 - i / (total - 1)) : 1;
+                idx[id] = { value: Math.round(200 + pct * 7800), trend: 0, rank, posRank: rank, source: 'internal', tier: null };
+            }
         });
     }
     return idx;
@@ -838,6 +846,20 @@ const PICK_COLORS  = { 1:'#D4AF37', 2:'#5DADE2', 3:'#2ECC71', 4:'#BB8FCE', 5:'#9
 // Full $1000 budget ≈ a mid 3rd-round pick (1500), so $1 ≈ 1.5 pts.
 // Rounded slightly higher to reflect in-season utility.
 const FAAB_RATE = 2.0;
+
+// ─── IDP TIER CONFIG ──────────────────────────────────────────────────────────
+// Tiers are assigned per-position by total season points rank (lower rank = better)
+const IDP_POSITIONS = new Set(['DB', 'DL', 'LB']);
+const IDP_TIERS = [
+    { maxRank:  3, label: 'ELITE', value: 6500 },
+    { maxRank: 10, label: 'T1',    value: 4500 },
+    { maxRank: 20, label: 'T2',    value: 2500 },
+    { maxRank: 36, label: 'T3',    value:  900 },
+    { maxRank: Infinity, label: 'INT', value: 150 },
+];
+function idpTier(rank) {
+    return IDP_TIERS.find(t => rank <= t.maxRank);
+}
 
 // ─── UTILITIES ───────────────────────────────────────────────────────────────
 function normPos(pos) {
@@ -1695,7 +1717,7 @@ function TradeCalculator() {
             })
             .map(([id, p]) => {
                 const v = getPlayerValue(id, valueIndex);
-                return { id, name: `${p.first_name||''} ${p.last_name||''}`.trim(), pos: normPos(p.position), team: p.team||'FA', value: v.value, source: v.source };
+                return { id, name: `${p.first_name||''} ${p.last_name||''}`.trim(), pos: normPos(p.position), team: p.team||'FA', value: v.value, source: v.source, tier: v.tier || null };
             })
             .filter(p => p.value > 0 || query.length >= 3)
             .sort((a,b) => {
@@ -2887,7 +2909,7 @@ function TradeCalculator() {
                                                 <span className="ta-player-meta" style={{ fontSize:'0.68rem' }}>{r.team}</span>
                                                 <span className="ta-player-val">
                                                     {r.value > 0 ? r.value.toLocaleString() : '—'}
-                                                    {r.source === 'internal' && <span className="source-badge">INT</span>}
+                                                    {r.source === 'internal' && <span className="source-badge">{r.tier || 'INT'}</span>}
                                                     {elitePlayerSet.has(r.id) && <span style={{ marginLeft:'0.2rem', color:'var(--gold)' }}>★</span>}
                                                 </span>
                                             </div>
@@ -2946,7 +2968,7 @@ function TradeCalculator() {
                                     </div>
                                     <span style={{ fontSize:'0.7rem', fontWeight:700, color }}>
                                         {v.value > 0 ? v.value.toLocaleString() : '—'}
-                                        {v.source === 'internal' && <span className="source-badge">INT</span>}
+                                        {v.source === 'internal' && <span className="source-badge">{v.tier || 'INT'}</span>}
                                     </span>
                                 </div>
                             </div>
@@ -3087,8 +3109,8 @@ function TradeCalculator() {
                 {/* Source indicator */}
                 <div style={{ fontSize:'0.62rem', color:'var(--silver)', opacity:0.45, marginBottom:'0.75rem', lineHeight:1.5 }}>
                     {fcReady
-                        ? <>Values sourced from <strong style={{ color:'var(--gold)' }}>FantasyCalc</strong> (dynasty 2QB/SF, full PPR). IDP &amp; kickers use internal stats-based ranking <span className="source-badge">INT</span>.</>
-                        : <>FantasyCalc unavailable — showing internal stats-based values only <span className="source-badge">INT</span>. Values reflect 2025 PPG percentile rank.</>
+                        ? <>Values sourced from <strong style={{ color:'var(--gold)' }}>FantasyCalc</strong> (dynasty 2QB/SF, full PPR). IDP defenders use 2025 total-points tiers <span className="source-badge">ELITE</span><span className="source-badge">T1</span><span className="source-badge">T2</span><span className="source-badge">T3</span>; kickers use percentile rank <span className="source-badge">INT</span>.</>
+                        : <>FantasyCalc unavailable — showing internal stats-based values only. IDP defenders use 2025 total-points tiers <span className="source-badge">ELITE</span><span className="source-badge">T1</span><span className="source-badge">T2</span><span className="source-badge">T3</span>.</>
                     }
                 </div>
 
