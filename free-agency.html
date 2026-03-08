@@ -526,7 +526,8 @@
 
         // ===== CONSTANTS =====
         // Current league year; stats pulled from the prior completed season
-        const SEASON      = '2026';
+        const SEASON         = '2026';
+        const AVAILABLE_YEARS = ['2023', '2024', '2025', '2026'];
         const STATS_YEAR  = '2025';
         const FA_KEY      = id => `od_fa_targets_v1_${id}`;
 
@@ -586,6 +587,7 @@
             const [nflWeek, setNflWeek]       = useState(null);
             const [projStats, setProjStats]   = useState({});
             const projInFlight = useRef(new Set());
+            const [selectedYear, setSelectedYear] = useState(SEASON);
             const [leagues, setLeagues]   = useState([]);
             const [leagueId, setLeagueId] = useState('');
 
@@ -616,6 +618,13 @@
 
             // ---- Bootstrap ----
             useEffect(() => { boot(); }, []);
+            useEffect(() => {
+                if (!userId) return;
+                fetchLeagues(userId, selectedYear).then(lgs => {
+                    setLeagues(lgs || []);
+                    if (lgs?.length) setLeagueId(lgs[0].league_id);
+                }).catch(() => {});
+            }, [selectedYear, userId]);
 
             async function boot() {
                 try {
@@ -626,8 +635,7 @@
                     setUserId(user.user_id);
                     if (user.avatar) setUserAvatar(user.avatar);
                     setNflWeek(Number(nflState?.week) || 1);
-                    // Fetch 2026 leagues only
-                    const lgs = await fetchLeagues(user.user_id, SEASON);
+                    const lgs = await fetchLeagues(user.user_id, selectedYear);
                     setLeagues(lgs || []);
                     if (lgs && lgs.length > 0) setLeagueId(lgs[0].league_id);
                     setPhase('ready');
@@ -975,11 +983,18 @@
                     {/* HEADER */}
                     <div className="tracker-header">
                         <button className="back-btn" onClick={() => window.location.href='index.html'}>&larr; Dashboard</button>
-                        <div className="tracker-title">&#9889; FREE AGENCY TRACKER &mdash; 2026</div>
+                        <div className="tracker-title">&#9889; FREE AGENCY TRACKER</div>
+                        <select
+                            value={selectedYear}
+                            onChange={e => setSelectedYear(e.target.value)}
+                            style={{ background:'var(--charcoal)', border:'1px solid rgba(212,175,55,0.4)', borderRadius:'4px', color:'var(--gold)', fontFamily:'Oswald,sans-serif', fontWeight:'700', fontSize:'0.72rem', padding:'0.18rem 0.45rem', cursor:'pointer', outline:'none', flexShrink:0 }}
+                        >
+                            {AVAILABLE_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
                         <select className="league-select" value={leagueId} onChange={e => setLeagueId(e.target.value)}>
                             {leagues.map(l => <option key={l.league_id} value={l.league_id}>{l.name}</option>)}
                         </select>
-                        <span className="header-user">{sleeperUsername}</span>
+                        <button className="back-btn" onClick={() => window.open('https://skjjcruz.github.io/fantasy-football-owner-dashboard/', '_blank')}>Team Comp</button>
                     </div>
 
                     {leagueLoading ? (
