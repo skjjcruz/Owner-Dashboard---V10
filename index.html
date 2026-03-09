@@ -795,10 +795,10 @@
 
     @keyframes scroll-ticker {
         0% {
-            transform: translateX(100%);
+            transform: translateX(var(--ticker-start, 100vw));
         }
         100% {
-            transform: translateX(-100%);
+            transform: translateX(var(--ticker-end, -100vw));
         }
     }
 
@@ -2647,6 +2647,21 @@
 
         // News ticker state
         const [newsItems, setNewsItems] = useState([]);
+        const tickerRef = useRef(null);
+
+        // Measure real scrollWidth after items render and set precise animation values
+        useEffect(() => {
+            if (!tickerRef.current || newsItems.length === 0) return;
+            const el = tickerRef.current;
+            requestAnimationFrame(() => {
+                const scrollW = el.scrollWidth;
+                const viewW = window.innerWidth;
+                const speed = 80; // px per second
+                el.style.setProperty('--ticker-start', `${viewW}px`);
+                el.style.setProperty('--ticker-end', `-${scrollW}px`);
+                el.style.animationDuration = `${Math.round((viewW + scrollW) / speed)}s`;
+            });
+        }, [newsItems]);
 
         useEffect(() => {
             fetchNFLNews().then(items => {
@@ -3059,7 +3074,7 @@
 
                 {/* News Ticker */}
                 <div className="news-ticker-container">
-                    <div className="news-ticker" style={{ animationDuration: newsItems.length > 0 ? `${Math.max(newsItems.length * 2, 15)}s` : '15s' }}>
+                    <div ref={tickerRef} className="news-ticker">
                         <span className="news-ticker-label">NFL NEWS</span>
                         {newsItems.length > 0 ? (
                             newsItems.map((item, idx) => (
