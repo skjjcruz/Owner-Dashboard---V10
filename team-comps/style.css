@@ -46,9 +46,8 @@ body{
   top: 0;
   z-index: 50;
   background: linear-gradient(135deg, var(--bg) 0%, var(--panel) 100%);
-  border-bottom: 3px solid var(--gold);
+  border-bottom: 2px solid var(--gold);
   padding: 10px 12px;
-  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.2);
 }
 
 .controls{
@@ -90,27 +89,50 @@ body{
   box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
 }
 
+/* Nav buttons — outlined gold, matches V10 back-btn style */
 #mainBtn,
-#reloadBtn{
-  height: 34px;
-  padding: 0 14px;
-  border: none;
-  border-radius: 6px;
-  font-weight: 700;
-  cursor: pointer;
-  background: linear-gradient(135deg, var(--gold) 0%, var(--dark-gold) 100%);
-  color: var(--bg);
+#draftBoardBtn{
+  height: 30px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1.5px solid var(--gold);
+  border-radius: 4px;
+  color: var(--gold);
   font-family: 'Oswald', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+  letter-spacing: 0.06em;
+  transition: background 0.2s ease;
+  white-space: nowrap;
 }
 
 #mainBtn:hover,
+#draftBoardBtn:hover{
+  background: rgba(212,175,55,0.1);
+}
+
+/* Reload — solid gold action button */
+#reloadBtn{
+  height: 30px;
+  padding: 0 12px;
+  border: 1.5px solid var(--gold);
+  border-radius: 4px;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--gold);
+  color: var(--bg);
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
 #reloadBtn:hover{
-  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.5);
-  transform: translateY(-1px);
+  background: var(--dark-gold);
 }
 
 .status{
