@@ -1007,7 +1007,7 @@
                         <select className="league-select" value={leagueId} onChange={e => setLeagueId(e.target.value)}>
                             {leagues.map(l => <option key={l.league_id} value={l.league_id}>{l.name}</option>)}
                         </select>
-                        <button className="back-btn" onClick={() => window.open('https://skjjcruz.github.io/fantasy-football-owner-dashboard/', '_blank')}>Team Comp</button>
+                        <button className="back-btn" onClick={() => window.open('team-comps/', '_blank')}>Team Comp</button>
                     </div>
 
                     {leagueLoading ? (

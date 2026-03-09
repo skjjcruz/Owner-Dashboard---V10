@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Draft Board v2.0</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="./csv-loader.js"></script>
+  <!-- Supabase JS v2 (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <!-- Supabase project credentials — edit before deploying -->
+  <script src="./supabase-config.js"></script>
+  <!-- Draft board + mock draft Supabase helpers -->
+  <script src="./supabase-draft-client.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            gold: '#D4AF37',
+            'dark-gold': '#B8941E',
+            black: '#0A0A0A',
+            'off-black': '#1A1A1A',
+            charcoal: '#2A2A2A',
+            silver: '#C0C0C0',
+            'win-green': '#2ECC71',
+            'loss-red': '#E74C3C',
+          },
+          fontFamily: {
+            'bebas': ['Bebas Neue', 'cursive'],
+            'oswald': ['Oswald', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Oswald', sans-serif;
+      background: #0A0A0A;
+    }
+    .scroll-container {
+      scrollbar-width: thin;
+      scrollbar-color: #D4AF37 #1A1A1A;
+    }
+    .scroll-container::-webkit-scrollbar { width: 6px; }
+    .scroll-container::-webkit-scrollbar-track { background: #1A1A1A; border-radius: 3px; }
+    .scroll-container::-webkit-scrollbar-thumb { background: #D4AF37; border-radius: 3px; }
+
+    /* Mobile optimizations for phones only */
+    @media (max-width: 768px) {
+      .mobile-compact { font-size: 0.75rem; }
+      .mobile-compact-xs { font-size: 0.65rem; }
+      .mobile-padding { padding: 0.5rem; }
+      .mobile-gap { gap: 0.5rem; }
+
+      /* More aggressive phone-specific optimizations */
+      .font-bold { font-weight: 600 !important; }
+      h2 { font-size: 0.875rem !important; }
+      h3 { font-size: 0.8rem !important; }
+
+      /* Draft Board optimizations */
+      .draft-board-container .space-y-2 { gap: 0.25rem !important; }
+      .draft-board-pick { padding: 0.5rem !important; }
+      .pick-number { font-size: 0.7rem !important; }
+      .pick-overall { font-size: 0.6rem !important; }
+      .pick-name { font-size: 0.7rem !important; }
+      .pick-details { font-size: 0.6rem !important; }
+
+      /* Player Rankings optimizations */
+      .player-card-mobile { padding: 0.5rem 0.25rem !important; }
+      .player-name { font-size: 0.7rem !important; line-height: 1.2 !important; }
+      .player-details { font-size: 0.6rem !important; line-height: 1.1 !important; }
+      .player-rank-number { font-size: 0.65rem !important; }
+
+      /* Position filters - better spacing */
+      .position-filter-btn {
+        font-size: 0.65rem !important;
+        padding: 0.5rem 0.8rem !important;
+        margin: 0.2rem !important;
+      }
+
+      /* Ranking mode buttons - more compact */
+      .ranking-mode-btn {
+        font-size: 0.6rem !important;
+        padding: 0.25rem 0.375rem !important;
+      }
+
+      /* Search bar - more compact */
+      .search-input-mobile {
+        font-size: 0.7rem !important;
+        padding: 0.375rem 0.5rem !important;
+      }
+    }
+
+    /* Info icon in top-right corner of player cards */
+.player-info-icon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    background: rgba(102, 126, 234, 0.9);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s ease;
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.player-info-icon:hover {
+    background: rgba(118, 75, 162, 1);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.player-card {
+    position: relative;
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const SPORT = "nfl";
+    const DEFAULT_LEAGUE_SEASON = "2026";
+    const DEFAULT_STATS_SEASON = "2025";
+    const LS_LOCKED_USERNAME = "draft_board_v2_username";
+
+    const mockPlayers = [
+      { id: 1, name: 'Cameron Ward', pos: 'QB', school: 'Miami', size: '6\'2"', weight: 223, speed: 4.58, tier: 1 },
+      { id: 2, name: 'Shedeur Sanders', pos: 'QB', school: 'Colorado', size: '6\'2"', weight: 215, speed: 4.6, tier: 1 },
+      { id: 3, name: 'Quinn Ewers', pos: 'QB', school: 'Texas', size: '6\'2"', weight: 195, speed: 4.7, tier: 1 },
+      { id: 4, name: 'Riley Leonard', pos: 'QB', school: 'Notre Dame', size: '6\'4"', weight: 212, speed: 4.5, tier: 2 },
+      { id: 5, name: 'Ashton Jeanty', pos: 'RB', school: 'Boise State', size: '5\'9"', weight: 215, speed: 4.42, tier: 1 },
+      { id: 6, name: 'Omarion Hampton', pos: 'RB', school: 'UNC', size: '6\'0"', weight: 220, speed: 4.5, tier: 1 },
+      { id: 7, name: 'Travis Hunter', pos: 'WR', school: 'Colorado', size: '6\'1"', weight: 185, speed: 4.3, tier: 1 },
+      { id: 8, name: 'Tetairoa McMillan', pos: 'WR', school: 'Arizona', size: '6\'5"', weight: 210, speed: 4.5, tier: 1 },
+      { id: 9, name: 'Emeka Egbuka', pos: 'WR', school: 'Ohio State', size: '6\'1"', weight: 206, speed: 4.3, tier: 1 },
+      { id: 10, name: 'Abdul Carter', pos: 'EDGE', school: 'Penn State', size: '6\'3"', weight: 252, speed: 4.4, tier: 1 },
+    ];
+
+    const positions = ['QB', 'RB', 'WR', 'TE', 'EDGE', 'DL', 'LB', 'CB', 'S', 'K'];
+
+    async function fetchJSON(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    // Read URL parameters
+    function getUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        username: params.get('username') || '',
+        season: params.get('season') || DEFAULT_LEAGUE_SEASON
+      };
+    }
+
+    const DraftBoard = () => {
+      const [numTeams] = useState(16);
+      const [numRounds] = useState(7);
+      const [draftType] = useState('linear');
+      const [selectedPos, setSelectedPos] = useState('ALL');
+      const [searchTerm, setSearchTerm] = useState('');
+      const [rankingMode, setRankingMode] = useState('fantasy'); // 'consensus' or 'fantasy'
+      const [showPositionFilters, setShowPositionFilters] = useState(false); // toggle for position filter tabs
+      const [players, setPlayers] = useState([]);
+      const [draftPicks, setDraftPicks] = useState({});
+      const [selectedPickSlot, setSelectedPickSlot] = useState(null);
+      const [selectedPlayerDetail, setSelectedPlayerDetail] = useState(null);
+      
+      // Get URL params on mount
+      const urlParams = getUrlParams();
+      
+      const [sleeperUsername, setSleeperUsername] = useState(() => {
+        return urlParams.username || localStorage.getItem(LS_LOCKED_USERNAME) || 'skjjcruz';
+      });
+      const [sleeperUserId, setSleeperUserId] = useState(null);
+      const [userLeagues, setUserLeagues] = useState([]);
+      const [selectedLeague, setSelectedLeague] = useState(null);
+      const [leagueSeason, setLeagueSeason] = useState(urlParams.season || DEFAULT_LEAGUE_SEASON);
+      const [statsSeason, setStatsSeason] = useState(DEFAULT_STATS_SEASON);
+      const [loading, setLoading] = useState(false);
+      const [status, setStatus] = useState('Loading from dashboard...');
+      
+      // Draft history
+      const [availableDrafts, setAvailableDrafts] = useState([]);
+      const [selectedDraft, setSelectedDraft] = useState(null);
+      const [draftYear, setDraftYear] = useState(null);
+      const [sleeperPlayers, setSleeperPlayers] = useState(null);
+      const [leagueRosters, setLeagueRosters] = useState([]);
+      const [leagueUsers, setLeagueUsers] = useState([]);
+      const [draftSlotOwners, setDraftSlotOwners] = useState({}); // { slotNum: {userId, displayName, avatar} }
+
+      // Refs: prevent auto-save from firing during initial load/restore
+      const isRestoringRef = React.useRef(true);
+      const autoSaveTimerRef = React.useRef(null);
+
+      // Auto-load on mount if we have URL params
+      useEffect(() => {
+        if (urlParams.username) {
+          fetchSleeperUser(urlParams.username);
+        } else if (localStorage.getItem(LS_LOCKED_USERNAME)) {
+          fetchSleeperUser(localStorage.getItem(LS_LOCKED_USERNAME));
+        } else {
+          setStatus('Enter Sleeper username and click Reload');
+        }
+      }, []);
+
+      // Load players from CSV files
+      useEffect(() => {
+        loadPlayersFromCSV()
+          .then(data => {
+            console.log(`Loaded ${data.length} players from CSV files`);
+            setPlayers(data);
+          })
+          .catch(err => {
+            console.error('Error loading players:', err);
+            // Fallback to mock players if CSV fails to load
+            setPlayers(mockPlayers);
+          });
+      }, []);
+
+      const fetchSleeperUser = async (username, season) => {
+        if (!username) {
+          setStatus('Enter a Sleeper username.');
+          return;
+        }
+
+        const activeSeason = season || leagueSeason;
+        setLoading(true);
+
+        try {
+          setStatus('Loading Sleeper user…');
+          const userData = await fetchJSON(`https://api.sleeper.app/v1/user/${encodeURIComponent(username)}`);
+          setSleeperUserId(userData.user_id);
+          localStorage.setItem(LS_LOCKED_USERNAME, username);
+
+          setStatus('Loading leagues…');
+          const leaguesData = await fetchJSON(
+            `https://api.sleeper.app/v1/user/${userData.user_id}/leagues/${SPORT}/${activeSeason}`
+          );
+          
+          if (!leaguesData || leaguesData.length === 0) {
+            setStatus('No leagues found for that season.');
+            setUserLeagues([]);
+            return;
+          }
+          
+          const mappedLeagues = leaguesData.map(league => ({
+            id: league.league_id,
+            name: league.name,
+            type: league.settings?.type || 'redraft',
+            totalRosters: league.total_rosters,
+            season: league.season,
+            status: league.status,
+            draftId: league.draft_id
+          }));
+          
+          setUserLeagues(mappedLeagues);
+          
+          let auto = mappedLeagues[0];
+          const psycho = mappedLeagues.find(l => (l.name || '').toLowerCase().includes('psycho'));
+          if (psycho) auto = psycho;
+          
+          setSelectedLeague(auto);
+          
+          // Load drafts for selected league
+          await loadDraftsForLeague(auto.id);
+          
+          setStatus(`Leagues loaded ✅ - ${mappedLeagues.length} league(s) found`);
+          
+        } catch (err) {
+          setStatus(`Error: ${err.message}`);
+          console.error('Sleeper API Error:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const loadDraftsForLeague = async (leagueId) => {
+        if (!leagueId) return;
+        
+        try {
+          setStatus('Loading draft history…');
+          
+          // Load league rosters and users for owner info
+          const [draftsData, rostersData, usersData] = await Promise.all([
+            fetchJSON(`https://api.sleeper.app/v1/league/${leagueId}/drafts`),
+            fetchJSON(`https://api.sleeper.app/v1/league/${leagueId}/rosters`),
+            fetchJSON(`https://api.sleeper.app/v1/league/${leagueId}/users`)
+          ]);
+          
+          setLeagueRosters(rostersData || []);
+          setLeagueUsers(usersData || []);
+          
+          if (!draftsData || draftsData.length === 0) {
+            setAvailableDrafts([]);
+            setSelectedDraft(null);
+            setDraftYear(null);
+            setStatus('No drafts found for this league.');
+            return;
+          }
+          
+          // Sort drafts by most recent first
+          const sortedDrafts = draftsData.sort((a, b) => {
+            return Number(b.season || 0) - Number(a.season || 0);
+          });
+          
+          setAvailableDrafts(sortedDrafts);
+          
+          // Auto-select most recent draft
+          const mostRecent = sortedDrafts[0];
+          setSelectedDraft(mostRecent);
+          setDraftYear(mostRecent.season);
+          
+          // Load picks for this draft (pass fresh rosters/users/leagueId before React state settles)
+          await loadDraftPicks(mostRecent.draft_id, rostersData, usersData, leagueId);
+          
+        } catch (err) {
+          console.error('Error loading drafts:', err);
+          setStatus('Failed to load draft history.');
+        }
+      };
+
+      const loadDraftPicks = async (draftId, rostersOverride, usersOverride, leagueIdOverride) => {
+        if (!draftId) return;
+
+        isRestoringRef.current = true;
+        try {
+          setStatus('Loading draft picks…');
+
+          // 1. Fetch draft details + traded picks in parallel to resolve current pick ownership
+          const leagueId = leagueIdOverride !== undefined ? leagueIdOverride : selectedLeague?.id;
+          const [draftDetails, tradedPicksRaw] = await Promise.all([
+            fetchJSON(`https://api.sleeper.app/v1/draft/${draftId}`),
+            leagueId
+              ? fetchJSON(`https://api.sleeper.app/v1/league/${leagueId}/traded_picks`).catch(() => [])
+              : Promise.resolve([])
+          ]);
+
+          const slotToRosterId = draftDetails?.slot_to_roster_id || {};
+          const draftSeason = draftDetails?.season;
+          const rosters = rostersOverride !== undefined ? rostersOverride : leagueRosters;
+          const users = usersOverride !== undefined ? usersOverride : leagueUsers;
+
+          // Filter traded picks to this draft's season
+          const tradedPicks = (tradedPicksRaw || []).filter(tp => String(tp.season) === String(draftSeason));
+
+          if (Object.keys(slotToRosterId).length && rosters.length && users.length) {
+            const slotOwners = {};
+            // Key: "round_slot" so each round can have a different owner after trades
+            Object.entries(slotToRosterId).forEach(([slot, originalRosterId]) => {
+              const slotNum = parseInt(slot);
+              for (let round = 1; round <= numRounds; round++) {
+                // Check if this pick was traded — traded_picks uses roster_id (original team) to identify picks
+                const traded = tradedPicks.find(
+                  tp => tp.roster_id === originalRosterId && parseInt(tp.round) === round
+                );
+                const currentRosterId = traded ? traded.owner_id : originalRosterId;
+                const roster = rosters.find(r => r.roster_id === currentRosterId);
+                if (roster) {
+                  const user = users.find(u => u.user_id === roster.owner_id);
+                  if (user) {
+                    slotOwners[`${round}_${slotNum}`] = {
+                      userId: user.user_id,
+                      displayName: user.display_name || user.username,
+                      avatar: user.avatar
+                    };
+                  }
+                }
+              }
+            });
+            setDraftSlotOwners(slotOwners);
+          }
+
+          // 2. Check Supabase for a previously saved board first.
+          //    If the owner already built one, restore it and skip Sleeper.
+          if (window.SupabaseDraftClient) {
+            const { data: saved } = await window.SupabaseDraftClient.loadDraftBoardBySleeperDraftId(draftId);
+            if (saved && saved.picks && Object.keys(saved.picks).length > 0) {
+              setDraftPicks(saved.picks);
+              setStatus(`Board restored ✅ - ${Object.keys(saved.picks).length} picks`);
+              return;
+            }
+          }
+
+          // 3. No saved board — fall back to Sleeper API picks as a baseline.
+          // Load Sleeper player database if not already loaded
+          if (!sleeperPlayers) {
+            setStatus('Loading player database…');
+            const playersData = await fetchJSON(`https://api.sleeper.app/v1/players/${SPORT}`);
+            setSleeperPlayers(playersData);
+          }
+
+          const picksData = await fetchJSON(`https://api.sleeper.app/v1/draft/${draftId}/picks`);
+
+          if (!picksData || picksData.length === 0) {
+            setDraftPicks({});
+            setStatus('No picks found for this draft.');
+            return;
+          }
+
+          // Map picks to our format with player data
+          const mappedPicks = {};
+          picksData.forEach(pick => {
+            const key = `${pick.round}.${String(pick.draft_slot).padStart(2, '0')}`;
+            mappedPicks[key] = {
+              playerId: pick.player_id,
+              metadata: pick.metadata,
+              pickedBy: pick.picked_by
+            };
+          });
+
+          setDraftPicks(mappedPicks);
+          setStatus(`Draft loaded ✅ - ${picksData.length} picks`);
+
+        } catch (err) {
+          console.error('Error loading picks:', err);
+          setStatus('Failed to load draft picks.');
+        } finally {
+          isRestoringRef.current = false;
+        }
+      };
+
+      const handleDraftYearChange = (year) => {
+        const draft = availableDrafts.find(d => d.season === year);
+        if (draft) {
+          setSelectedDraft(draft);
+          setDraftYear(year);
+          loadDraftPicks(draft.draft_id, undefined, undefined, selectedLeague?.id);
+        }
+      };
+
+      const handleLeagueChange = (leagueId) => {
+        const league = userLeagues.find(l => l.id === leagueId);
+        setSelectedLeague(league);
+        loadDraftsForLeague(leagueId);
+      };
+
+      const handleReload = () => {
+        fetchSleeperUser(sleeperUsername);
+      };
+
+      const handleBackToDashboard = () => {
+        // Always navigate back to the dashboard URL
+        window.location.href = '../';
+      };
+
+      // ---- Supabase: stable key for the current board -----------------------
+      // Uses the Sleeper draft_id when available, otherwise a composite key.
+      const getBoardKey = () => {
+        if (selectedDraft?.draft_id) return selectedDraft.draft_id;
+        return `custom_${sleeperUsername || 'anon'}_${selectedLeague?.id || 'none'}`;
+      };
+
+      // ---- Supabase: auto-save on every draftPicks change (debounced 600ms) -
+      useEffect(() => {
+        if (isRestoringRef.current) return;   // skip while loading/restoring
+        if (!window.SupabaseDraftClient) return;
+
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = setTimeout(async () => {
+          const { error } = await window.SupabaseDraftClient.saveDraftBoard({
+            picks:           draftPicks,
+            sleeperDraftId:  getBoardKey(),
+            sleeperUsername: sleeperUsername || null,
+            leagueId:        selectedLeague?.id || null,
+            draftYear:       draftYear || null,
+            boardName:       `${sleeperUsername || 'owner'} — ${draftYear || 'custom'}`,
+            numTeams,
+            numRounds,
+            draftType,
+          });
+          if (error) console.error('[auto-save] Failed:', error.message);
+        }, 600);
+      }, [draftPicks]);
+
+      const generateDraftOrder = () => {
+        const order = [];
+        for (let round = 1; round <= numRounds; round++) {
+          for (let team = 1; team <= numTeams; team++) {
+            const pickNum = draftType === 'snake' && round % 2 === 0 
+              ? numTeams - team + 1 
+              : team;
+            order.push({
+              round,
+              pick: pickNum,
+              overall: (round - 1) * numTeams + team,
+              team: pickNum,
+              slot: team, // draft slot (owner's assigned position, 1-N)
+              key: `${round}.${String(pickNum).padStart(2, '0')}`
+            });
+          }
+        }
+        return order;
+      };
+
+      const draftOrder = generateDraftOrder();
+
+      // Positions to always exclude (OL/special teams - no fantasy value)
+      const excludedPositions = ['OL', 'OT', 'IOL', 'T', 'G', 'C', 'OG', 'P', 'LS'];
+
+      const filteredPlayers = players
+        .filter(p => {
+          const matchesPos = selectedPos === 'ALL' || p.pos === selectedPos;
+          const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                               (p.school && p.school.toLowerCase().includes(searchTerm.toLowerCase()));
+          const notDrafted = !Object.values(draftPicks).includes(p.id);
+          // Always exclude OL/special teams positions
+          const notExcludedPosition = !excludedPositions.includes(p.pos);
+          return matchesPos && matchesSearch && notDrafted && notExcludedPosition;
+        })
+        .sort((a, b) => {
+          if (rankingMode === 'fantasy') {
+            // For fantasy, sort by fantasyRank ascending (lower is better)
+            return (a.fantasyRank || 999) - (b.fantasyRank || 999);
+          } else {
+            // For consensus, sort by consensusRank ascending (lower is better)
+            return (a.consensusRank || 999) - (b.consensusRank || 999);
+          }
+        });
+
+      const positionCounts = positions.reduce((acc, pos) => {
+        acc[pos] = players.filter(p => p.pos === pos && !Object.values(draftPicks).includes(p.id)).length;
+        return acc;
+      }, {});
+      const totalAvailable = players.filter(p => !Object.values(draftPicks).includes(p.id)).length;
+
+      const handlePlayerClick = (player) => {
+        if (!selectedPickSlot) {
+          const nextPick = draftOrder.find(pick => !draftPicks[pick.key]);
+          if (nextPick) {
+            setDraftPicks(prev => ({ ...prev, [nextPick.key]: player.id }));
+          }
+        } else {
+          setDraftPicks(prev => ({ ...prev, [selectedPickSlot]: player.id }));
+          setSelectedPickSlot(null);
+        }
+      };
+
+      const handlePickSlotClick = (pickKey) => {
+        if (draftPicks[pickKey]) {
+          const newPicks = { ...draftPicks };
+          delete newPicks[pickKey];
+          setDraftPicks(newPicks);
+        } else {
+          setSelectedPickSlot(pickKey);
+        }
+      };
+
+      const picksByRound = draftOrder.reduce((acc, pick) => {
+        if (!acc[pick.round]) acc[pick.round] = [];
+        acc[pick.round].push(pick);
+        return acc;
+      }, {});
+
+      return (
+        <div className="min-h-screen bg-black text-white">
+          <div className="bg-off-black border-b border-gold/20 px-2 md:px-4 py-1.5 md:py-3">
+            <div className="overflow-x-auto">
+              <div className="flex gap-2 items-center min-w-max justify-between">
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    placeholder="Username"
+                    value={sleeperUsername}
+                    onChange={(e) => setSleeperUsername(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleReload()}
+                    className="bg-charcoal border border-gold/30 rounded px-2 py-1 text-xs text-white w-20 md:w-32"
+                  />
+
+                  <label className="text-xs text-silver whitespace-nowrap">League Season:</label>
+                  <select
+                    value={leagueSeason}
+                    onChange={(e) => {
+                      const s = e.target.value;
+                      setLeagueSeason(s);
+                      if (sleeperUsername) fetchSleeperUser(sleeperUsername, s);
+                    }}
+                    className="bg-charcoal border border-gold/30 rounded px-2 py-1 text-xs text-white"
+                  >
+                    {['2026', '2025', '2024', '2023'].map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+
+                  <label className="text-xs text-silver whitespace-nowrap">Stats Season:</label>
+                  <select
+                    value={statsSeason}
+                    onChange={(e) => setStatsSeason(e.target.value)}
+                    className="bg-charcoal border border-gold/30 rounded px-2 py-1 text-xs text-white"
+                  >
+                    {['2025', '2024', '2023', '2022'].map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={selectedLeague?.id || ''}
+                    onChange={(e) => handleLeagueChange(e.target.value)}
+                    className="bg-charcoal border border-gold/30 rounded px-2 py-1 text-xs text-white max-w-[140px] md:min-w-[200px]"
+                    disabled={loading || userLeagues.length === 0}
+                  >
+                    {userLeagues.length === 0 ? (
+                      <option value="">No leagues</option>
+                    ) : (
+                      userLeagues.map(league => (
+                        <option key={league.id} value={league.id}>{league.name}</option>
+                      ))
+                    )}
+                  </select>
+
+                  <select
+                    value={draftYear || ''}
+                    onChange={(e) => handleDraftYearChange(e.target.value)}
+                    className="bg-charcoal border border-gold/30 rounded px-2 py-1 text-xs text-white"
+                    disabled={loading || availableDrafts.length === 0}
+                  >
+                    {availableDrafts.length === 0 ? (
+                      <option value="">No drafts</option>
+                    ) : (
+                      availableDrafts.map(draft => (
+                        <option key={draft.draft_id} value={draft.season}>
+                          {draft.season} {draft.status === 'complete' ? '✓' : draft.status === 'in_progress' ? '⏳' : ''}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div className="flex gap-2 items-center">
+                  <button
+                    onClick={() => setDraftPicks({})}
+                    className="px-2 py-1 bg-loss-red hover:bg-loss-red rounded text-xs font-bold text-white whitespace-nowrap"
+                  >
+                    Clear
+                  </button>
+
+                  <button
+                    onClick={handleReload}
+                    disabled={loading || !sleeperUsername}
+                    className="px-3 py-1 bg-gold hover:bg-dark-gold disabled:bg-charcoal disabled:cursor-not-allowed text-black rounded text-xs font-bold whitespace-nowrap"
+                  >
+                    {loading ? '...' : 'Reload'}
+                  </button>
+
+                  <button
+                    onClick={handleBackToDashboard}
+                    className="px-3 py-1 bg-charcoal hover:bg-charcoal text-white rounded text-xs font-bold whitespace-nowrap"
+                  >
+                    ← Back
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-1 text-[10px] text-silver truncate px-2">
+              {status}
+            </div>
+          </div>
+
+          <div className="flex flex-row-reverse gap-1 md:gap-4 p-1 md:p-4 h-[calc(100vh-80px)] md:h-[calc(100vh-100px)]">
+            <div className="w-1/2 bg-off-black border border-gold/20 rounded-lg overflow-hidden flex flex-col">
+              <div className="bg-charcoal px-2 md:px-4 py-2 md:py-3 border-b border-gold/20 flex-shrink-0">
+                <h2 className="font-bebas font-bold text-gold text-sm md:text-base tracking-wider">Draft Board</h2>
+              </div>
+
+              <div className="flex-1 p-1 md:p-4 space-y-2 md:space-y-6 overflow-y-auto scroll-container draft-board-container">
+                {Object.entries(picksByRound).map(([round, picks]) => (
+                  <div key={round}>
+                    <div className="sticky top-0 bg-off-black py-0.5 md:py-2 mb-1 md:mb-3 border-b-2 border-gold z-10">
+                      <h3 className="font-bebas font-bold text-gold text-xs md:text-lg tracking-wide">Round {round}</h3>
+                    </div>
+
+                    <div className="space-y-1 md:space-y-2">
+                      {picks.map(pick => {
+                        const pickData = draftPicks[pick.key];
+                        const isSelected = selectedPickSlot === pick.key;
+
+                        // Slot owner — current post-trade owner of this round+slot pick
+                        const slotOwner = draftSlotOwners[`${pick.round}_${pick.slot}`] || null;
+                        const isMySlot = slotOwner?.userId === sleeperUserId;
+
+                        let player = null;
+                        let displayName = 'Available';
+                        let displayDetails = null;
+                        let isMyPick = false;
+                        let playerRank = null;
+
+                        if (pickData) {
+                          // Check if it's historical Sleeper data
+                          if (typeof pickData === 'object' && pickData.playerId) {
+                            const sleeperPlayer = sleeperPlayers?.[pickData.playerId];
+                            if (sleeperPlayer) {
+                              displayName = sleeperPlayer.full_name || sleeperPlayer.first_name + ' ' + sleeperPlayer.last_name || 'Unknown Player';
+                              displayDetails = `${sleeperPlayer.position || ''} • ${sleeperPlayer.team || 'FA'}`;
+                            } else {
+                              displayName = pickData.metadata?.first_name && pickData.metadata?.last_name
+                                ? `${pickData.metadata.first_name} ${pickData.metadata.last_name}`
+                                : 'Unknown Player';
+                              displayDetails = pickData.metadata?.position || '';
+                            }
+                            // Check if logged-in user actually made this pick
+                            isMyPick = pickData.pickedBy === sleeperUserId;
+                          } else {
+                            // Mock player data (for manual drafting)
+                            player = players.find(p => p.id === pickData);
+                            if (player) {
+                              displayName = player.name;
+                              displayDetails = `${player.pos} • ${player.school}`;
+                              // Get the rank based on current ranking mode
+                              playerRank = rankingMode === 'fantasy' ? player.fantasyRank : player.rank;
+                            }
+                          }
+                        }
+
+                        return (
+                          <div
+                            key={pick.key}
+                            onClick={() => handlePickSlotClick(pick.key)}
+                            className={`draft-board-pick p-1 md:p-3 rounded border cursor-pointer transition-all flex items-center gap-1 md:gap-3 ${
+                              isSelected ? 'border-gold bg-gold bg-opacity-10' :
+                              isMySlot ? 'border-red-700 bg-red-950' :
+                              pickData ? 'border-gold/30 bg-charcoal' :
+                              'border-gold/30 bg-charcoal hover:border-gold/40'
+                            }`}
+                          >
+                            <div className="w-10 md:w-20 text-center flex-shrink-0">
+                              <div className="pick-number font-bold text-gold text-xs md:text-base">{pick.key}</div>
+                              {playerRank && (
+                                <div className="pick-overall text-silver text-[9px] md:text-xs mt-0.5">#{playerRank}</div>
+                              )}
+                            </div>
+
+                            {player && (
+                              <img
+                                src={player.photoUrl}
+                                alt={player.name}
+                                className="hidden md:block w-10 h-10 rounded-full object-cover flex-shrink-0 bg-charcoal"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=D4AF37&color=0A0A0A&size=128&bold=true`;
+                                }}
+                              />
+                            )}
+
+                            <div className="flex-1 min-w-0">
+                              <div className="pick-name font-bold truncate text-xs md:text-base">{displayName}</div>
+                              {displayDetails && (
+                                <div className="pick-details text-[9px] md:text-sm text-silver flex gap-0.5 md:gap-3 mt-0.5">
+                                  {displayDetails}
+                                </div>
+                              )}
+                              {/* Always show the slot owner subdued — helps all owners see their picks */}
+                              {slotOwner && (
+                                <div className="flex items-center gap-0.5 md:gap-1 mt-0.5">
+                                  {slotOwner.avatar && (
+                                    <img
+                                      src={`https://sleepercdn.com/avatars/thumbs/${slotOwner.avatar}`}
+                                      alt=""
+                                      className="w-2 h-2 md:w-3.5 md:h-3.5 rounded-full opacity-50"
+                                      onError={(e) => e.target.style.display = 'none'}
+                                    />
+                                  )}
+                                  <span className={`text-[8px] md:text-[10px] ${isMySlot ? 'text-red-300/70' : 'text-silver/40'}`}>
+                                    {slotOwner.displayName}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {player && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPlayerDetail(player);
+                                }}
+                                className="text-xs px-1.5 md:px-3 py-0.5 md:py-1.5 rounded bg-charcoal hover:bg-charcoal flex-shrink-0"
+                              >
+                                <span className="md:hidden">ℹ️</span>
+                                <span className="hidden md:inline">Details</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="w-1/2 bg-off-black border border-gold/20 rounded-lg overflow-hidden flex flex-col">
+              <div className="bg-charcoal px-2 md:px-4 py-1 md:py-3 border-b border-gold/20 flex-shrink-0">
+                <h2 className="hidden md:block font-bebas font-bold text-gold mb-3 text-base tracking-wider">Player Rankings</h2>
+
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input-mobile w-full bg-off-black border border-gold/30 rounded px-2 md:px-3 py-0.5 md:py-2 text-xs md:text-sm text-white mb-1 md:mb-3"
+                />
+
+                <div className="flex gap-0.5 md:gap-2 mb-1 md:mb-3">
+                  <button
+                    onClick={() => setRankingMode('fantasy')}
+                    className={`ranking-mode-btn flex-1 px-1 md:px-3 py-0 md:py-2 rounded text-xs md:text-sm font-semibold ${
+                      rankingMode === 'fantasy' ? 'bg-gold text-black' : 'bg-charcoal text-silver'
+                    }`}
+                  >
+                    🏈 Fantasy Rank
+                  </button>
+                  <button
+                    onClick={() => setRankingMode('consensus')}
+                    className={`ranking-mode-btn flex-1 px-1 md:px-3 py-0 md:py-2 rounded text-xs md:text-sm font-semibold ${
+                      rankingMode === 'consensus' ? 'bg-gold text-black' : 'bg-charcoal text-silver'
+                    }`}
+                  >
+                    📊 Consensus Rank
+                  </button>
+                  <button
+                    onClick={() => setShowPositionFilters(!showPositionFilters)}
+                    className={`px-1 md:px-3 py-0 md:py-2 rounded text-xs md:text-sm font-semibold ${
+                      showPositionFilters ? 'bg-gold text-black' : 'bg-charcoal text-silver'
+                    }`}
+                    title="Toggle position filters"
+                  >
+                    {showPositionFilters ? '▼' : '▶'} {selectedPos === 'ALL' ? 'Positions' : selectedPos}
+                  </button>
+                </div>
+
+                {showPositionFilters && (
+                  <div className="grid grid-cols-6 gap-1 md:gap-2 mb-1 md:mb-2">
+                    <button
+                      onClick={() => setSelectedPos('ALL')}
+                      className={`position-filter-btn flex items-center justify-center px-0.5 md:px-3 py-0.5 md:py-1 rounded text-[4px] md:text-xs font-bold ${
+                        selectedPos === 'ALL' ? 'bg-gold text-black' : 'bg-charcoal'
+                      }`}
+                    >
+                      ALL ({totalAvailable})
+                    </button>
+                    {positions.map(pos => (
+                      <button
+                        key={pos}
+                        onClick={() => setSelectedPos(pos)}
+                        className={`position-filter-btn flex items-center justify-center px-0.5 md:px-3 py-0.5 md:py-1 rounded text-[4px] md:text-xs font-bold ${
+                          selectedPos === pos ? 'bg-gold text-black' : 'bg-charcoal'
+                        }`}
+                      >
+                        {pos} ({positionCounts[pos] || 0})
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 overflow-y-auto scroll-container">
+                {filteredPlayers.map((player, displayIndex) => (
+                  <div
+                    key={player.id}
+                    className="player-card-mobile p-1 md:p-3 hover:bg-charcoal border-b border-gold/20"
+                  >
+                    <div className="flex items-center gap-0.5 md:gap-3">
+                      <div className="player-rank-number w-10 md:w-16 text-silver font-bold text-xs md:text-base text-center flex-shrink-0 flex items-center justify-center gap-0.5">
+                        <span>#{displayIndex + 1}</span>
+                        {rankingMode === 'consensus' && player.rankChange > 0 && (
+                          <span className="text-win-green text-[8px] md:text-xs" title={`Up ${player.rankChange} from #${player.previousRank}`}>▲</span>
+                        )}
+                        {rankingMode === 'consensus' && player.rankChange < 0 && (
+                          <span className="text-loss-red text-[8px] md:text-xs" title={`Down ${Math.abs(player.rankChange)} from #${player.previousRank}`}>▼</span>
+                        )}
+                      </div>
+                      <img
+                        src={player.photoUrl}
+                        alt={player.name}
+                        className="hidden md:block w-10 h-10 rounded-full object-cover flex-shrink-0 bg-charcoal"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=D4AF37&color=0A0A0A&size=128&bold=true`;
+                        }}
+                      />
+                      <div
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => setSelectedPlayerDetail(player)}
+                      >
+                        <div className="player-name font-bold text-xs md:text-base truncate flex items-center gap-1">
+                          {player.name}
+                        </div>
+                        <div className="player-details text-[9px] md:text-xs text-silver truncate">
+                          {player.pos} • {player.school} • {player.size} • {player.weight} lbs
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePlayerClick(player);
+                        }}
+                        className="text-xs px-1.5 md:px-3 py-0.5 md:py-1.5 rounded bg-dark-gold hover:bg-gold text-black font-bold flex-shrink-0"
+                      >
+                        <span className="md:hidden">+</span>
+                        <span className="hidden md:inline">DB</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Player Detail Modal */}
+          {selectedPlayerDetail && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+              onClick={() => setSelectedPlayerDetail(null)}
+            >
+              <div
+                className="bg-off-black rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gold/20"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="sticky top-0 bg-charcoal px-6 py-4 border-b border-gold/20 flex justify-between items-center">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={selectedPlayerDetail.photoUrl}
+                      alt={selectedPlayerDetail.name}
+                      className="w-16 h-16 rounded-full object-cover bg-charcoal"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedPlayerDetail.name)}&background=D4AF37&color=0A0A0A&size=128&bold=true`;
+                      }}
+                    />
+                    <div>
+                      <h2 className="font-bebas text-2xl font-bold text-gold tracking-wide">{selectedPlayerDetail.name}</h2>
+                      <div className="text-sm text-silver">{selectedPlayerDetail.school} • {selectedPlayerDetail.year}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedPlayerDetail(null)}
+                    className="text-silver hover:text-white text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="p-6">
+                  {/* Player Info Badges */}
+                  <div className="flex gap-3 mb-6 flex-wrap">
+                    <span className="px-3 py-1 bg-gold text-black rounded font-bold text-sm">
+                      {selectedPlayerDetail.pos}
+                    </span>
+                    <span className="px-3 py-1 bg-charcoal text-white rounded font-bold text-sm">
+                      {selectedPlayerDetail.school}
+                    </span>
+                    <span className="px-3 py-1 bg-charcoal text-white rounded font-bold text-sm">
+                      {selectedPlayerDetail.year}
+                    </span>
+                    <a
+                      href={selectedPlayerDetail.highlightUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1 bg-loss-red hover:bg-loss-red text-white rounded font-bold text-sm flex items-center gap-1"
+                    >
+                      ▶ Watch Highlights
+                    </a>
+                  </div>
+
+                  {/* Player Summary/Scouting Report */}
+                  {selectedPlayerDetail.summary && (
+                    <div className="bg-charcoal rounded-lg p-4 border border-gold/20 mb-6">
+                      <h3 className="font-bebas text-gold font-bold tracking-wide text-sm mb-2">Scouting Report</h3>
+                      <p className="text-silver text-sm leading-relaxed">{selectedPlayerDetail.summary}</p>
+                    </div>
+                  )}
+
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-4 gap-4 mb-6">
+                    <div className="bg-charcoal rounded-lg p-4 border border-gold/20">
+                      <div className="text-silver text-xs uppercase mb-1">Height</div>
+                      <div className="text-gold text-xl font-bold">{selectedPlayerDetail.size || 'N/A'}</div>
+                    </div>
+                    <div className="bg-charcoal rounded-lg p-4 border border-gold/20">
+                      <div className="text-silver text-xs uppercase mb-1">Weight</div>
+                      <div className="text-gold text-xl font-bold">{selectedPlayerDetail.weight ? selectedPlayerDetail.weight + ' lbs' : 'N/A'}</div>
+                    </div>
+                    <div className="bg-charcoal rounded-lg p-4 border border-gold/20">
+                      <div className="text-silver text-xs uppercase mb-1">40 Time</div>
+                      <div className="text-gold text-xl font-bold">{selectedPlayerDetail.speed ? selectedPlayerDetail.speed + 's' : 'N/A'}</div>
+                    </div>
+                    <div className="bg-charcoal rounded-lg p-4 border border-gold/20">
+                      <div className="text-silver text-xs uppercase mb-1">{rankingMode === 'fantasy' ? 'Fantasy' : 'Consensus'} Rank</div>
+                      {(() => {
+                        const displayRank = filteredPlayers.findIndex(p => p.id === selectedPlayerDetail.id) + 1;
+                        const change = selectedPlayerDetail.rankChange;
+                        const prevRank = selectedPlayerDetail.previousRank;
+                        const showArrows = rankingMode === 'consensus';
+                        return (
+                          <React.Fragment>
+                            <div className="text-gold text-xl font-bold flex items-center gap-1">
+                              #{displayRank || '—'}
+                              {showArrows && change > 0 && (
+                                <span className="text-win-green text-sm">▲{change}</span>
+                              )}
+                              {showArrows && change < 0 && (
+                                <span className="text-loss-red text-sm">▼{Math.abs(change)}</span>
+                              )}
+                            </div>
+                            {showArrows && prevRank && change !== 0 && (
+                              <div className="text-silver text-xs mt-1">Previously #{prevRank}</div>
+                            )}
+                          </React.Fragment>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Fantasy Scoring */}
+                  {selectedPlayerDetail.draftScore && (
+                    <div className="bg-gold/10 bg-opacity-30 rounded-lg p-4 border border-gold/40 mb-6">
+                      <h3 className="font-bebas text-gold font-bold tracking-wide text-sm mb-2 flex items-center gap-1">
+                        🏈 Fantasy Draft Score
+                        {selectedPlayerDetail.isGenerational && (
+                          <span className="text-gold text-xs">Generational</span>
+                        )}
+                      </h3>
+                      <div className="grid grid-cols-4 gap-2">
+                        <div>
+                          <div className="text-silver text-[10px] uppercase mb-0.5">Draft Score</div>
+                          <div className="text-gold text-base font-bold">{selectedPlayerDetail.draftScore}</div>
+                        </div>
+                        <div>
+                          <div className="text-silver text-[10px] uppercase mb-0.5">Fantasy Rank</div>
+                          <div className="text-gold text-base font-bold">#{filteredPlayers.findIndex(p => p.id === selectedPlayerDetail.id) + 1 || '—'}</div>
+                        </div>
+                        <div>
+                          <div className="text-silver text-[10px] uppercase mb-0.5">Grade</div>
+                          <div className="text-gold text-base font-bold">{selectedPlayerDetail.grade}/10</div>
+                        </div>
+                        <div>
+                          <div className="text-silver text-[10px] uppercase mb-0.5">Position Mult</div>
+                          <div className="text-gold text-base font-bold">{selectedPlayerDetail.fantasyMultiplier}x</div>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-[10px] text-silver">
+                        <div className="mt-0.5">
+                          Formula: Grade ({selectedPlayerDetail.grade}) × Multiplier ({selectedPlayerDetail.fantasyMultiplier})
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Source Rankings */}
+                  {selectedPlayerDetail.sources && selectedPlayerDetail.sources.length > 0 && (
+                    <div className="bg-charcoal rounded-lg p-4 border border-gold/20">
+                      <h3 className="font-bebas text-gold font-bold tracking-wide text-sm mb-3">Source Rankings</h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[...selectedPlayerDetail.sources]
+                          .sort((a, b) => a.rank - b.rank)
+                          .map((s, i) => (
+                            <div key={i} className="flex justify-between items-center py-1.5 px-3 bg-off-black rounded border border-gold/10">
+                              <span className="text-silver text-xs">{s.source}</span>
+                              <span className="text-gold font-bold text-xs">#{s.rank}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    ReactDOM.render(<DraftBoard />, document.getElementById('root'));
+  </script>
+
+</body>
+</html>
