@@ -1398,6 +1398,8 @@
         return _playersCache;
     }
 
+    const STATS_YEAR = '2025'; // Most recent completed season — used until Sleeper publishes projections
+
     let _statsCache = {};
     async function fetchSeasonStats(season) {
         if (_statsCache[season]) return _statsCache[season];
@@ -1861,7 +1863,7 @@
                     fetchAllPlayers(),
                     fetchSeasonStats(currentLeague.season),
                     fetchSeasonProjections(currentLeague.season),
-                    fetchSeasonStats(2025)
+                    fetchSeasonStats(STATS_YEAR)
                 ]);
                 setPlayersData(players);
                 setStatsData(stats);
@@ -1984,7 +1986,8 @@
 
         function getPlayerStats(playerId) {
             const player = playersData[playerId];
-            const s = statsData[playerId] || stats2025Data[playerId];
+            // Always show STATS_YEAR totals; fall back to current-season data for historical year views
+            const s = stats2025Data[playerId] || statsData[playerId];
             const p = projectionsData[playerId];
 
             // Years of experience
@@ -2003,10 +2006,9 @@
                 avg = (rawPts / s.gp).toFixed(1);
             }
 
-            // Projected points — fall back to 2025 season totals when unavailable
+            // Projected points — use Sleeper projections when available, otherwise 2025 season totals
             const rawProj = p ? (p.pts_half_ppr ?? p.pts_ppr ?? p.pts_std ?? null) : null;
-            const s2025 = stats2025Data[playerId];
-            const rawPts2025 = calcRawPts(s2025);
+            const rawPts2025 = calcRawPts(stats2025Data[playerId]);
             const proj = rawProj !== null ? Number(rawProj).toFixed(1) : (rawPts2025 !== null ? Number(rawPts2025).toFixed(1) : '-');
 
             return { yrs, pts, gp, avg, proj };
