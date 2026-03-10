@@ -1299,6 +1299,7 @@ function calcNflStarterSet(playersData, valueIndex, statsData, scoring) {
     for (const [id, p] of Object.entries(playersData)) {
         const pos = normPos(p.position);
         if (!pos || !(pos in NFL_STARTER_POOL)) continue;
+        if (!p.team) continue; // skip released/cut players — no active NFL team
         if (!byPos[pos]) byPos[pos] = [];
         const score = calcSeasonPts(id, statsData || {}, scoring || {});
         if (score > 0) byPos[pos].push({ id, score });
