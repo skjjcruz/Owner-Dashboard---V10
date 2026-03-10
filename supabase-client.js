@@ -405,6 +405,57 @@ window.OD.updatePassword = async function(username, newPassword) {
 };
 
 // ============================================================
+// AI ANALYSIS — hidden beta feature
+// Calls the Supabase Edge Function which proxies Claude API.
+// Enabled by setting localStorage key: od_ai_beta = 'true'
+// ============================================================
+
+window.OD.callAI = async function({ type, context }) {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-analyze`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON}`,
+            'apikey': SUPABASE_ANON,
+        },
+        body: JSON.stringify({ type, context }),
+    });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `AI call failed (${response.status})`);
+    }
+    return response.json(); // { analysis: string }
+};
+
+window.OD.saveAIAnalysis = async function(leagueId, type, contextSummary, analysis) {
+    const username = getCurrentUsername();
+    const db = getClient();
+    if (!db || !isConfigured() || !username) return;
+    await ensureUser(username);
+    const { error } = await db.from('ai_analysis').insert({
+        username, league_id: leagueId, type,
+        context_summary: contextSummary || '',
+        analysis,
+    });
+    if (error) console.warn('[OD] ai_analysis save error', error);
+};
+
+window.OD.loadAIHistory = async function(leagueId) {
+    const username = getCurrentUsername();
+    const db = getClient();
+    if (!db || !isConfigured() || !username) return [];
+    const { data, error } = await db
+        .from('ai_analysis')
+        .select('id, type, context_summary, analysis, created_at')
+        .eq('username', username)
+        .eq('league_id', leagueId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+    if (error) return [];
+    return data || [];
+};
+
+// ============================================================
 // STATUS INDICATOR (injected into page for easy debugging)
 // ============================================================
 window.OD.status = function() {

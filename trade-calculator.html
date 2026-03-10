@@ -501,6 +501,37 @@
         .explainer-text { font-size:0.65rem; color:var(--silver); opacity:0.78; line-height:1.55; }
         .explainer-row { display:flex; align-items:flex-start; gap:0.45rem; margin-bottom:0.3rem; }
         .explainer-icon { flex-shrink:0; width:1.1rem; text-align:center; }
+
+        /* ── AI Scout Panel (hidden beta) ────────────────────────────────────── */
+        .ai-scout-wrap { max-width:900px; margin:0 auto; }
+        .ai-mode-bar { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem; }
+        .ai-mode-btn { padding:0.42rem 0.9rem; border:1.5px solid rgba(212,175,55,0.3); background:transparent; color:rgba(255,255,255,0.45); font-family:'Oswald',sans-serif; font-size:0.7rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; border-radius:4px; cursor:pointer; transition:all 0.2s; }
+        .ai-mode-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(212,175,55,0.08); }
+        .ai-mode-btn:hover:not(.active) { border-color:rgba(212,175,55,0.5); color:rgba(212,175,55,0.7); }
+        .ai-controls { display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.75rem; }
+        .ai-team-select { background:var(--charcoal); border:1.5px solid rgba(212,175,55,0.3); color:var(--white); font-family:'Oswald',sans-serif; font-size:0.78rem; padding:0.42rem 0.65rem; border-radius:4px; cursor:pointer; }
+        .ai-team-select:focus { outline:none; border-color:var(--gold); }
+        .ai-chat-input { width:100%; background:var(--charcoal); border:1.5px solid rgba(212,175,55,0.3); color:var(--white); font-family:'Oswald',sans-serif; font-size:0.78rem; padding:0.6rem 0.8rem; border-radius:4px; margin-bottom:0.75rem; resize:vertical; min-height:72px; }
+        .ai-chat-input:focus { outline:none; border-color:var(--gold); }
+        .ai-analyze-btn { display:inline-flex; align-items:center; gap:0.45rem; padding:0.5rem 1.3rem; background:linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.07)); border:1.5px solid var(--gold); color:var(--gold); font-family:'Oswald',sans-serif; font-size:0.78rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; border-radius:5px; cursor:pointer; transition:all 0.2s; }
+        .ai-analyze-btn:hover:not(:disabled) { background:rgba(212,175,55,0.2); box-shadow:0 0 10px rgba(212,175,55,0.18); }
+        .ai-analyze-btn:disabled { opacity:0.38; cursor:not-allowed; }
+        .ai-spinner { display:inline-block; width:13px; height:13px; border:2px solid rgba(212,175,55,0.3); border-top-color:var(--gold); border-radius:50%; animation:ai-spin 0.75s linear infinite; }
+        @keyframes ai-spin { to { transform:rotate(360deg); } }
+        .ai-output { background:var(--off-black); border:1px solid rgba(212,175,55,0.2); border-radius:8px; padding:1.1rem 1.25rem; margin-top:0.75rem; }
+        .ai-output-inner { font-size:0.78rem; color:var(--silver); line-height:1.72; }
+        .ai-output-inner strong { color:var(--gold); font-weight:700; }
+        .ai-placeholder { text-align:center; padding:2.5rem 1rem; color:var(--silver); opacity:0.35; }
+        .ai-placeholder-icon { font-size:2.2rem; margin-bottom:0.6rem; }
+        .ai-placeholder-text { font-size:0.75rem; line-height:1.6; }
+        .ai-error { color:var(--loss-red); font-size:0.76rem; padding:0.7rem 0.9rem; background:rgba(231,76,60,0.07); border:1px solid rgba(231,76,60,0.25); border-radius:6px; margin-top:0.75rem; }
+        .ai-history-section { margin-top:1.5rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:1rem; }
+        .ai-history-label { font-size:0.6rem; font-weight:700; color:var(--silver); opacity:0.4; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.6rem; }
+        .ai-history-item { background:var(--charcoal); border:1px solid rgba(255,255,255,0.06); border-radius:5px; padding:0.6rem 0.75rem; margin-bottom:0.4rem; cursor:pointer; transition:border-color 0.15s; }
+        .ai-history-item:hover { border-color:rgba(212,175,55,0.3); }
+        .ai-history-meta { font-size:0.56rem; color:var(--silver); opacity:0.45; margin-bottom:0.22rem; text-transform:uppercase; letter-spacing:0.06em; }
+        .ai-history-preview { font-size:0.7rem; color:var(--silver); opacity:0.7; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ai-beta-tag { display:inline-block; font-size:0.5rem; font-weight:700; background:rgba(212,175,55,0.12); border:1px solid rgba(212,175,55,0.35); color:var(--gold); padding:0.08rem 0.32rem; border-radius:3px; letter-spacing:0.06em; text-transform:uppercase; vertical-align:middle; margin-left:0.4rem; }
     </style>
 </head>
 <body>
@@ -558,6 +589,11 @@ async function fetchSeasonStats(year) {
     }
     return _statsCache[year];
 }
+
+// ─── AI BETA FLAG ─────────────────────────────────────────────────────────────
+// To enable: open browser console and run:  localStorage.setItem('od_ai_beta','true')
+// To disable:                               localStorage.removeItem('od_ai_beta')
+const AI_BETA = localStorage.getItem('od_ai_beta') === 'true';
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 const SEASON           = '2026';
@@ -1624,6 +1660,15 @@ function TradeCalculator() {
     // Audit — expanded detail panel
     const [selectedAuditTeam, setSelectedAuditTeam] = useState(null); // rosterId
     const [showEliteModal, setShowEliteModal] = useState(false);
+
+    // AI Scout (hidden beta)
+    const [aiMode,          setAiMode]          = useState('league');   // league | team | partners | chat
+    const [aiAnalysis,      setAiAnalysis]       = useState(null);
+    const [aiLoading,       setAiLoading]        = useState(false);
+    const [aiError,         setAiError]          = useState(null);
+    const [aiSelectedTeam,  setAiSelectedTeam]   = useState(null);      // rosterId for team deep-dive
+    const [aiChatInput,     setAiChatInput]      = useState('');
+    const [aiHistory,       setAiHistory]        = useState([]);
 
     // Bootstrap — fetch user once, then leagues for the selected year
     useEffect(() => { boot(); }, []);
@@ -3521,6 +3566,206 @@ function TradeCalculator() {
         );
     }
 
+    // ── AI SCOUT TAB (hidden beta) ────────────────────────────────────────────
+    function renderAIScout() {
+        if (loading) return <div className="center-screen"><div className="load-title">LOADING DATA</div><div className="load-sub">Need roster data before AI analysis…</div></div>;
+        if (!assessments.length) return <div className="no-data-msg">Select a league to begin AI analysis.</div>;
+
+        // Simple markdown renderer — converts **bold** and headers to styled HTML
+        function renderMarkdown(text) {
+            if (!text) return '';
+            const escaped = text
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return escaped
+                .replace(/\*\*([^*\n]+)\*\*/g, '<strong style="color:var(--gold);font-weight:700">$1</strong>')
+                .replace(/^### (.+)$/gm, '<div style="font-family:Bebas Neue,cursive;font-size:0.95rem;color:var(--gold);margin:0.85rem 0 0.25rem;letter-spacing:0.08em">$1</div>')
+                .replace(/^## (.+)$/gm,  '<div style="font-family:Bebas Neue,cursive;font-size:1.05rem;color:var(--gold);margin:1rem 0 0.35rem;letter-spacing:0.1em">$1</div>')
+                .replace(/^# (.+)$/gm,   '<div style="font-family:Bebas Neue,cursive;font-size:1.2rem;color:var(--gold);margin:1rem 0 0.4rem;letter-spacing:0.12em">$1</div>')
+                .replace(/^- (.+)$/gm, '<div style="padding-left:0.8rem;margin:0.12rem 0">• $1</div>')
+                .replace(/\n\n/g, '<div style="margin:0.45rem 0"></div>')
+                .replace(/\n/g, '<br>');
+        }
+
+        // Build context payload for the Edge Function
+        function buildContext() {
+            const teamSummaries = assessments.map(a => ({
+                owner:       a.ownerName,
+                teamName:    a.teamName,
+                record:      `${a.wins}-${a.losses}`,
+                weeklyPts:   a.weeklyPts,
+                tier:        a.tier,
+                healthScore: a.healthScore,
+                panic:       a.panic,
+                posture:     calcOwnerPosture(a, ownerDna[a.ownerId] || 'NONE'),
+                needs:       a.needs.slice(0, 5),
+                strengths:   a.strengths.slice(0, 5),
+                dna:         ownerDna[a.ownerId] ? (DNA_TYPES[ownerDna[a.ownerId]]?.name || ownerDna[a.ownerId]) : 'Unknown',
+                isMyTeam:    a.rosterId === myRosterId,
+            }));
+
+            const base = { leagueName: leagueInfo?.name || 'Unknown League', season: leagueInfo?.season || SEASON, myOwner: myAssessment?.ownerName };
+
+            if (aiMode === 'league') {
+                return { ...base, teams: teamSummaries };
+            }
+
+            if (aiMode === 'team') {
+                const target = assessments.find(a => a.rosterId === aiSelectedTeam) || myAssessment;
+                if (!target) return { ...base, teams: teamSummaries };
+                const dnaKey = ownerDna[target.ownerId] || 'NONE';
+                const dnaDef = DNA_TYPES[dnaKey] || DNA_TYPES.NONE;
+                const roster = Object.values(target.posGroups || {}).flat().map(id => {
+                    const p = playersData[id];
+                    if (!p) return null;
+                    const v = getPlayerValue(id, valueIndex);
+                    return { name: `${p.first_name||''} ${p.last_name||''}`.trim(), pos: normPos(p.position), team: p.team || 'FA', value: v.value, isElite: elitePlayerSet.has(id) };
+                }).filter(Boolean).sort((a, b) => { const pd = (POS_ORDER[a.pos]||9) - (POS_ORDER[b.pos]||9); return pd !== 0 ? pd : b.value - a.value; });
+                return { ...base, team: { owner: target.ownerName, teamName: target.teamName, record: `${target.wins}-${target.losses}`, weeklyPts: target.weeklyPts, tier: target.tier, healthScore: target.healthScore, panic: target.panic, posture: calcOwnerPosture(target, dnaKey), needs: target.needs, strengths: target.strengths, dna: dnaDef.name || dnaKey, dnaDescription: dnaDef.desc || '', roster } };
+            }
+
+            if (aiMode === 'partners') {
+                if (!myAssessment) return { ...base, teams: teamSummaries };
+                const myDnaKey = ownerDna[myAssessment.ownerId] || 'NONE';
+                const partners = tradePartners.slice(0, 8).map(a => {
+                    const dnaKey = ownerDna[a.ownerId] || 'NONE';
+                    const dnaDef = DNA_TYPES[dnaKey] || DNA_TYPES.NONE;
+                    return { owner: a.ownerName, compatibility: Math.round((a.compat || 0) * 100), tier: a.tier, record: `${a.wins}-${a.losses}`, needs: a.needs.slice(0, 5), strengths: a.strengths.slice(0, 5), posture: calcOwnerPosture(a, dnaKey), dna: dnaDef.name || dnaKey, dnaDescription: dnaDef.desc || '', grudgeEntries: grudges.filter(g => g.withOwnerId === a.ownerId).length };
+                });
+                return { ...base, myTeam: { owner: myAssessment.ownerName, record: `${myAssessment.wins}-${myAssessment.losses}`, tier: myAssessment.tier, healthScore: myAssessment.healthScore, needs: myAssessment.needs, strengths: myAssessment.strengths, posture: calcOwnerPosture(myAssessment, myDnaKey) }, partners };
+            }
+
+            // chat
+            return { ...base, teams: teamSummaries, question: aiChatInput };
+        }
+
+        async function runAnalysis() {
+            setAiLoading(true);
+            setAiError(null);
+            setAiAnalysis(null);
+            try {
+                const ctx = buildContext();
+                const result = await window.OD.callAI({ type: aiMode, context: ctx });
+                setAiAnalysis(result.analysis);
+                // Persist to Supabase
+                const labels = { league: 'League Overview', team: (assessments.find(a => a.rosterId === aiSelectedTeam) || myAssessment)?.ownerName || 'Team', partners: 'Trade Partners', chat: aiChatInput.slice(0, 60) };
+                await window.OD.saveAIAnalysis(leagueId, aiMode, labels[aiMode] || aiMode, result.analysis);
+                // Refresh history
+                const hist = await window.OD.loadAIHistory(leagueId);
+                setAiHistory(hist);
+            } catch(e) {
+                setAiError(e.message || 'Analysis failed. Check that the Edge Function is deployed and ANTHROPIC_API_KEY is set.');
+            } finally {
+                setAiLoading(false);
+            }
+        }
+
+        // Load history on first render of this tab
+        React.useEffect(() => {
+            if (leagueId) {
+                window.OD.loadAIHistory(leagueId).then(h => setAiHistory(h || [])).catch(() => {});
+            }
+        }, [leagueId]);
+
+        const targetAssessment = assessments.find(a => a.rosterId === aiSelectedTeam) || myAssessment;
+        const canRun = !aiLoading && assessments.length > 0 && (aiMode !== 'chat' || aiChatInput.trim().length > 3);
+
+        const MODE_LABELS = { league: 'League Overview', team: 'Team Deep Dive', partners: 'Trade Partners', chat: 'Ask the AI' };
+        const MODE_DESCS  = {
+            league:   'Full competitive landscape — power rankings, storylines, championship contenders',
+            team:     'Comprehensive scouting report on any team with roster analysis and negotiation playbook',
+            partners: 'AI-ranked list of your best trading partners with specific assets to target and offer',
+            chat:     'Ask anything about your league — trades, free agency, strategy',
+        };
+
+        return (
+            <div className="ai-scout-wrap">
+                {/* Header */}
+                <div style={{ marginBottom:'1rem' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.3rem' }}>
+                        <div style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1.3rem', color:'var(--gold)', letterSpacing:'0.1em' }}>AI Scout</div>
+                        <span className="ai-beta-tag">Beta</span>
+                    </div>
+                    <div style={{ fontSize:'0.65rem', color:'var(--silver)', opacity:0.55, lineHeight:1.5 }}>
+                        Powered by Claude · Data from Sleeper + FantasyCalc · Private to your account
+                    </div>
+                </div>
+
+                {/* Mode selector */}
+                <div className="ai-mode-bar">
+                    {['league','team','partners','chat'].map(m => (
+                        <button key={m} className={`ai-mode-btn${aiMode===m?' active':''}`} onClick={() => { setAiMode(m); setAiAnalysis(null); setAiError(null); }}>
+                            {MODE_LABELS[m]}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Mode description */}
+                <div style={{ fontSize:'0.65rem', color:'var(--silver)', opacity:0.5, marginBottom:'0.9rem', lineHeight:1.5 }}>
+                    {MODE_DESCS[aiMode]}
+                </div>
+
+                {/* Controls */}
+                <div className="ai-controls">
+                    {aiMode === 'team' && (
+                        <select className="ai-team-select" value={aiSelectedTeam || ''} onChange={e => setAiSelectedTeam(e.target.value || null)}>
+                            <option value="">My Team ({myAssessment?.ownerName || '—'})</option>
+                            {assessments.filter(a => a.rosterId !== myRosterId).map(a => (
+                                <option key={a.rosterId} value={a.rosterId}>{a.ownerName}</option>
+                            ))}
+                        </select>
+                    )}
+                    {aiMode === 'chat' && (
+                        <textarea
+                            className="ai-chat-input"
+                            placeholder="Ask anything… e.g. 'Who should I target in free agency?' or 'Is Jaxson a good trade partner for my WR needs?'"
+                            value={aiChatInput}
+                            onChange={e => setAiChatInput(e.target.value)}
+                        />
+                    )}
+                    <button className="ai-analyze-btn" onClick={runAnalysis} disabled={!canRun}>
+                        {aiLoading ? <><span className="ai-spinner"></span> Analyzing…</> : `Run ${MODE_LABELS[aiMode]}`}
+                    </button>
+                </div>
+
+                {/* Error */}
+                {aiError && <div className="ai-error">⚠ {aiError}</div>}
+
+                {/* Output */}
+                {aiAnalysis ? (
+                    <div className="ai-output">
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.75rem' }}>
+                            <div style={{ fontSize:'0.6rem', color:'var(--silver)', opacity:0.4, textTransform:'uppercase', letterSpacing:'0.08em' }}>
+                                {leagueInfo?.name} · {MODE_LABELS[aiMode]}{aiMode==='team'?` · ${targetAssessment?.ownerName||''}`:''} · just now
+                            </div>
+                            <button style={{ background:'transparent', border:'none', color:'rgba(255,255,255,0.25)', fontSize:'0.72rem', cursor:'pointer', padding:'0.1rem 0.3rem' }} onClick={() => setAiAnalysis(null)}>✕</button>
+                        </div>
+                        <div className="ai-output-inner" dangerouslySetInnerHTML={{ __html: renderMarkdown(aiAnalysis) }} />
+                    </div>
+                ) : !aiLoading && (
+                    <div className="ai-output">
+                        <div className="ai-placeholder">
+                            <div className="ai-placeholder-icon">◈</div>
+                            <div className="ai-placeholder-text">Select a mode above and click Run to get AI analysis.<br/>Results are saved to your account history below.</div>
+                        </div>
+                    </div>
+                )}
+
+                {/* History */}
+                {aiHistory.length > 0 && (
+                    <div className="ai-history-section">
+                        <div className="ai-history-label">Recent Analyses</div>
+                        {aiHistory.slice(0, 8).map(h => (
+                            <div key={h.id} className="ai-history-item" onClick={() => setAiAnalysis(h.analysis)}>
+                                <div className="ai-history-meta">{h.type} · {new Date(h.created_at).toLocaleDateString()} {new Date(h.created_at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}</div>
+                                <div className="ai-history-preview">{h.context_summary} — {h.analysis.slice(0, 90)}…</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     // ── FULL RENDER ───────────────────────────────────────────────────────────
     return (
         <div style={{ display:'flex', flexDirection:'column', minHeight:'100vh' }}>
@@ -3554,6 +3799,7 @@ function TradeCalculator() {
                     { key:'audit',   label:'Roster Audit'  },
                     { key:'dna',     label:'Owner DNA'     },
                     { key:'analyzer',label:'Trade Analyzer'},
+                    ...(AI_BETA ? [{ key:'ai', label:'AI Scout' }] : []),
                 ].map(t => (
                     <button
                         key={t.key}
@@ -3571,6 +3817,7 @@ function TradeCalculator() {
                 {activeTab === 'audit'    && renderAudit()}
                 {activeTab === 'analyzer' && renderTradeAnalyzer()}
                 {activeTab === 'dna'      && renderOwnerDna()}
+                {activeTab === 'ai'       && AI_BETA && renderAIScout()}
             </div>
         </div>
     );

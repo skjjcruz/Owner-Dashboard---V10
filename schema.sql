@@ -103,6 +103,25 @@ create policy "messages_all" on public.messages for all using (true) with check 
 create index if not exists idx_messages_to   on public.messages (to_username);
 create index if not exists idx_messages_from on public.messages (from_username);
 
+-- ── AI ANALYSIS (hidden beta — stores AI scout sessions) ─────
+-- Visible only to the account that generated each analysis.
+-- Enabled by setting localStorage key od_ai_beta = 'true' in your browser.
+create table if not exists public.ai_analysis (
+    id              uuid primary key default gen_random_uuid(),
+    username        text not null references public.users(sleeper_username) on delete cascade,
+    league_id       text not null,
+    type            text not null,          -- 'league' | 'team' | 'partners' | 'chat'
+    context_summary text default '',        -- brief label, e.g. owner name or "League Overview"
+    analysis        text not null,          -- full AI response text
+    created_at      timestamptz default now()
+);
+
+drop policy if exists "ai_analysis_all" on public.ai_analysis;
+alter table public.ai_analysis enable row level security;
+create policy "ai_analysis_all" on public.ai_analysis for all using (true) with check (true);
+
+create index if not exists idx_ai_analysis_username on public.ai_analysis (username, league_id);
+
 -- ── DONE ──────────────────────────────────────────────────────
 -- After running this file, copy your project URL and anon key
 -- from Supabase → Settings → API and paste them into supabase-client.js
