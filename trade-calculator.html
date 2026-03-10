@@ -1666,6 +1666,13 @@ function TradeCalculator() {
     const [aiChatInput,     setAiChatInput]      = useState('');
     const [aiHistory,       setAiHistory]        = useState([]);
 
+    // Load AI history when league changes (must be at top level, not inside renderAIScout)
+    useEffect(() => {
+        if (leagueId) {
+            window.OD.loadAIHistory(leagueId).then(h => setAiHistory(h || [])).catch(() => {});
+        }
+    }, [leagueId]);
+
     // Bootstrap — fetch user once, then leagues for the selected year
     useEffect(() => { boot(); }, []);
     const userIdRef = useRef('');
@@ -3654,13 +3661,6 @@ function TradeCalculator() {
                 setAiLoading(false);
             }
         }
-
-        // Load history on first render of this tab
-        React.useEffect(() => {
-            if (leagueId) {
-                window.OD.loadAIHistory(leagueId).then(h => setAiHistory(h || [])).catch(() => {});
-            }
-        }, [leagueId]);
 
         const targetAssessment = assessments.find(a => a.rosterId === aiSelectedTeam) || myAssessment;
         const canRun = !aiLoading && assessments.length > 0 && (aiMode !== 'chat' || aiChatInput.trim().length > 3);
