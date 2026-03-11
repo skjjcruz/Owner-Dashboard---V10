@@ -135,6 +135,8 @@
     position: relative;
 }
 
+@keyframes ai-spin { to { transform: rotate(360deg); } }
+
   </style>
 </head>
 <body>
@@ -217,6 +219,14 @@
       // Refs: prevent auto-save from firing during initial load/restore
       const isRestoringRef = React.useRef(true);
       const autoSaveTimerRef = React.useRef(null);
+
+      // AI Scout state
+      const [rightTab,    setRightTab]    = useState('rankings'); // 'rankings' | 'ai'
+      const [aiMode,      setAiMode]      = useState('rookies');
+      const [aiAnalysis,  setAiAnalysis]  = useState(null);
+      const [aiLoading,   setAiLoading]   = useState(false);
+      const [aiError,     setAiError]     = useState(null);
+      const [aiChatInput, setAiChatInput] = useState('');
 
       // Auto-load on mount if we have URL params
       useEffect(() => {
@@ -571,6 +581,78 @@
         }
       };
 
+      // ---- AI Scout helpers -----------------------------------------------
+      function renderMarkdown(text) {
+        if (!text) return '';
+        const esc = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return esc
+          .replace(/\*\*([^*\n]+)\*\*/g, '<strong style="color:#D4AF37;font-weight:700">$1</strong>')
+          .replace(/^### (.+)$/gm, '<div style="font-family:Bebas Neue,cursive;font-size:0.88rem;color:#D4AF37;margin:0.75rem 0 0.2rem;letter-spacing:0.08em">$1</div>')
+          .replace(/^## (.+)$/gm,  '<div style="font-family:Bebas Neue,cursive;font-size:0.95rem;color:#D4AF37;margin:0.9rem 0 0.25rem;letter-spacing:0.1em">$1</div>')
+          .replace(/^# (.+)$/gm,   '<div style="font-family:Bebas Neue,cursive;font-size:1.05rem;color:#D4AF37;margin:1rem 0 0.3rem;letter-spacing:0.12em">$1</div>')
+          .replace(/\n\n/g, '<div style="margin:0.25rem 0"></div>');
+      }
+
+      function buildDraftContext() {
+        const myRosterObj = leagueRosters.find(r => r.owner_id === sleeperUserId);
+        const myRosterSummary = (myRosterObj?.players || []).map(id => {
+          const p = sleeperPlayers?.[id];
+          if (!p) return null;
+          return {
+            pos: p.position,
+            name: p.full_name || `${p.first_name||''} ${p.last_name||''}`.trim(),
+            team: p.team || 'FA',
+            yrsExp: p.years_exp ?? null,
+            isStarter: (myRosterObj.starters||[]).includes(id),
+            isTaxi: (myRosterObj.taxi||[]).includes(id),
+          };
+        }).filter(Boolean);
+
+        const availableRookies = players.slice(0, 80).map(p => ({
+          pos: p.pos,
+          name: p.name,
+          team: p.school || 'College',
+        }));
+
+        return {
+          leagueName: selectedLeague?.name || 'Fantasy League',
+          myOwner: sleeperUsername,
+          faabBudget: 0, startingBudget: 0,
+          myRoster: myRosterSummary,
+          rosterPositions: [],
+          topFreeAgents: [],
+          availableRookies,
+          question: aiChatInput,
+        };
+      }
+
+      async function runAIAnalysis() {
+        setAiLoading(true); setAiError(null); setAiAnalysis(null);
+        try {
+          const ctx = buildDraftContext();
+          const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-analyze`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'apikey': SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({ type: aiMode, context: ctx }),
+          });
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `AI call failed (${response.status})`);
+          }
+          const result = await response.json();
+          setAiAnalysis(result.analysis);
+        } catch(e) {
+          setAiError(e.message);
+        } finally {
+          setAiLoading(false);
+        }
+      }
+      // ---------------------------------------------------------------------
+
       const picksByRound = draftOrder.reduce((acc, pick) => {
         if (!acc[pick.round]) acc[pick.round] = [];
         acc[pick.round].push(pick);
@@ -815,119 +897,207 @@
 
             <div className="w-1/2 bg-off-black border border-gold/20 rounded-lg overflow-hidden flex flex-col">
               <div className="bg-charcoal px-2 md:px-4 py-1 md:py-3 border-b border-gold/20 flex-shrink-0">
-                <h2 className="hidden md:block font-bebas font-bold text-gold mb-3 text-base tracking-wider">Player Rankings</h2>
 
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="search-input-mobile w-full bg-off-black border border-gold/30 rounded px-2 md:px-3 py-0.5 md:py-2 text-xs md:text-sm text-white mb-1 md:mb-3"
-                />
-
-                <div className="flex gap-0.5 md:gap-2 mb-1 md:mb-3">
+                {/* Tab switcher */}
+                <div className="flex gap-1 mb-1 md:mb-3">
                   <button
-                    onClick={() => setRankingMode('fantasy')}
-                    className={`ranking-mode-btn flex-1 px-1 md:px-3 py-0 md:py-2 rounded text-xs md:text-sm font-semibold ${
-                      rankingMode === 'fantasy' ? 'bg-gold text-black' : 'bg-charcoal text-silver'
+                    onClick={() => setRightTab('rankings')}
+                    className={`flex-1 px-2 py-1 rounded text-xs font-bold font-oswald tracking-wide uppercase ${
+                      rightTab === 'rankings' ? 'bg-gold text-black' : 'bg-off-black text-silver border border-gold/30'
                     }`}
                   >
-                    🏈 Fantasy Rank
+                    Rankings
                   </button>
                   <button
-                    onClick={() => setRankingMode('consensus')}
-                    className={`ranking-mode-btn flex-1 px-1 md:px-3 py-0 md:py-2 rounded text-xs md:text-sm font-semibold ${
-                      rankingMode === 'consensus' ? 'bg-gold text-black' : 'bg-charcoal text-silver'
+                    onClick={() => setRightTab('ai')}
+                    className={`flex-1 px-2 py-1 rounded text-xs font-bold font-oswald tracking-wide uppercase flex items-center justify-center gap-1 ${
+                      rightTab === 'ai' ? 'bg-gold text-black' : 'bg-off-black text-silver border border-gold/30'
                     }`}
                   >
-                    📊 Consensus Rank
-                  </button>
-                  <button
-                    onClick={() => setShowPositionFilters(!showPositionFilters)}
-                    className={`px-1 md:px-3 py-0 md:py-2 rounded text-xs md:text-sm font-semibold ${
-                      showPositionFilters ? 'bg-gold text-black' : 'bg-charcoal text-silver'
-                    }`}
-                    title="Toggle position filters"
-                  >
-                    {showPositionFilters ? '▼' : '▶'} {selectedPos === 'ALL' ? 'Positions' : selectedPos}
+                    ✦ AI Scout
                   </button>
                 </div>
 
-                {showPositionFilters && (
-                  <div className="grid grid-cols-6 gap-1 md:gap-2 mb-1 md:mb-2">
-                    <button
-                      onClick={() => setSelectedPos('ALL')}
-                      className={`position-filter-btn flex items-center justify-center px-0.5 md:px-3 py-0.5 md:py-1 rounded text-[4px] md:text-xs font-bold ${
-                        selectedPos === 'ALL' ? 'bg-gold text-black' : 'bg-charcoal'
-                      }`}
-                    >
-                      ALL ({totalAvailable})
-                    </button>
-                    {positions.map(pos => (
+                {rightTab === 'rankings' && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="search-input-mobile w-full bg-off-black border border-gold/30 rounded px-2 md:px-3 py-0.5 md:py-2 text-xs md:text-sm text-white mb-1 md:mb-3"
+                    />
+
+                    <div className="flex gap-0.5 md:gap-2 mb-1 md:mb-3">
                       <button
-                        key={pos}
-                        onClick={() => setSelectedPos(pos)}
-                        className={`position-filter-btn flex items-center justify-center px-0.5 md:px-3 py-0.5 md:py-1 rounded text-[4px] md:text-xs font-bold ${
-                          selectedPos === pos ? 'bg-gold text-black' : 'bg-charcoal'
+                        onClick={() => setRankingMode('fantasy')}
+                        className={`ranking-mode-btn flex-1 px-1 md:px-3 py-0 md:py-2 rounded text-xs md:text-sm font-semibold ${
+                          rankingMode === 'fantasy' ? 'bg-gold text-black' : 'bg-charcoal text-silver'
                         }`}
                       >
-                        {pos} ({positionCounts[pos] || 0})
+                        🏈 Fantasy Rank
                       </button>
-                    ))}
+                      <button
+                        onClick={() => setRankingMode('consensus')}
+                        className={`ranking-mode-btn flex-1 px-1 md:px-3 py-0 md:py-2 rounded text-xs md:text-sm font-semibold ${
+                          rankingMode === 'consensus' ? 'bg-gold text-black' : 'bg-charcoal text-silver'
+                        }`}
+                      >
+                        📊 Consensus Rank
+                      </button>
+                      <button
+                        onClick={() => setShowPositionFilters(!showPositionFilters)}
+                        className={`px-1 md:px-3 py-0 md:py-2 rounded text-xs md:text-sm font-semibold ${
+                          showPositionFilters ? 'bg-gold text-black' : 'bg-charcoal text-silver'
+                        }`}
+                        title="Toggle position filters"
+                      >
+                        {showPositionFilters ? '▼' : '▶'} {selectedPos === 'ALL' ? 'Positions' : selectedPos}
+                      </button>
+                    </div>
+
+                    {showPositionFilters && (
+                      <div className="grid grid-cols-6 gap-1 md:gap-2 mb-1 md:mb-2">
+                        <button
+                          onClick={() => setSelectedPos('ALL')}
+                          className={`position-filter-btn flex items-center justify-center px-0.5 md:px-3 py-0.5 md:py-1 rounded text-[4px] md:text-xs font-bold ${
+                            selectedPos === 'ALL' ? 'bg-gold text-black' : 'bg-charcoal'
+                          }`}
+                        >
+                          ALL ({totalAvailable})
+                        </button>
+                        {positions.map(pos => (
+                          <button
+                            key={pos}
+                            onClick={() => setSelectedPos(pos)}
+                            className={`position-filter-btn flex items-center justify-center px-0.5 md:px-3 py-0.5 md:py-1 rounded text-[4px] md:text-xs font-bold ${
+                              selectedPos === pos ? 'bg-gold text-black' : 'bg-charcoal'
+                            }`}
+                          >
+                            {pos} ({positionCounts[pos] || 0})
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {rightTab === 'ai' && (
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setAiMode('rookies')}
+                      className={`flex-1 px-1 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs font-semibold font-oswald uppercase tracking-wide ${
+                        aiMode === 'rookies' ? 'border border-gold text-gold bg-gold/10' : 'border border-gold/30 text-silver'
+                      }`}
+                    >
+                      Rookie Targets
+                    </button>
+                    <button
+                      onClick={() => setAiMode('fa_chat')}
+                      className={`flex-1 px-1 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs font-semibold font-oswald uppercase tracking-wide ${
+                        aiMode === 'fa_chat' ? 'border border-gold text-gold bg-gold/10' : 'border border-gold/30 text-silver'
+                      }`}
+                    >
+                      Ask AI
+                    </button>
                   </div>
                 )}
               </div>
 
-              <div className="flex-1 overflow-y-auto scroll-container">
-                {filteredPlayers.map((player, displayIndex) => (
-                  <div
-                    key={player.id}
-                    className="player-card-mobile p-1 md:p-3 hover:bg-charcoal border-b border-gold/20"
-                  >
-                    <div className="flex items-center gap-0.5 md:gap-3">
-                      <div className="player-rank-number w-10 md:w-16 text-silver font-bold text-xs md:text-base text-center flex-shrink-0 flex items-center justify-center gap-0.5">
-                        <span>#{displayIndex + 1}</span>
-                        {rankingMode === 'consensus' && player.rankChange > 0 && (
-                          <span className="text-win-green text-[8px] md:text-xs" title={`Up ${player.rankChange} from #${player.previousRank}`}>▲</span>
-                        )}
-                        {rankingMode === 'consensus' && player.rankChange < 0 && (
-                          <span className="text-loss-red text-[8px] md:text-xs" title={`Down ${Math.abs(player.rankChange)} from #${player.previousRank}`}>▼</span>
-                        )}
-                      </div>
-                      <img
-                        src={player.photoUrl}
-                        alt={player.name}
-                        className="hidden md:block w-10 h-10 rounded-full object-cover flex-shrink-0 bg-charcoal"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=D4AF37&color=0A0A0A&size=128&bold=true`;
-                        }}
-                      />
-                      <div
-                        className="flex-1 min-w-0 cursor-pointer"
-                        onClick={() => setSelectedPlayerDetail(player)}
-                      >
-                        <div className="player-name font-bold text-xs md:text-base truncate flex items-center gap-1">
-                          {player.name}
+              {rightTab === 'rankings' ? (
+                <div className="flex-1 overflow-y-auto scroll-container">
+                  {filteredPlayers.map((player, displayIndex) => (
+                    <div
+                      key={player.id}
+                      className="player-card-mobile p-1 md:p-3 hover:bg-charcoal border-b border-gold/20"
+                    >
+                      <div className="flex items-center gap-0.5 md:gap-3">
+                        <div className="player-rank-number w-10 md:w-16 text-silver font-bold text-xs md:text-base text-center flex-shrink-0 flex items-center justify-center gap-0.5">
+                          <span>#{displayIndex + 1}</span>
+                          {rankingMode === 'consensus' && player.rankChange > 0 && (
+                            <span className="text-win-green text-[8px] md:text-xs" title={`Up ${player.rankChange} from #${player.previousRank}`}>▲</span>
+                          )}
+                          {rankingMode === 'consensus' && player.rankChange < 0 && (
+                            <span className="text-loss-red text-[8px] md:text-xs" title={`Down ${Math.abs(player.rankChange)} from #${player.previousRank}`}>▼</span>
+                          )}
                         </div>
-                        <div className="player-details text-[9px] md:text-xs text-silver truncate">
-                          {player.pos} • {player.school} • {player.size} • {player.weight} lbs
+                        <img
+                          src={player.photoUrl}
+                          alt={player.name}
+                          className="hidden md:block w-10 h-10 rounded-full object-cover flex-shrink-0 bg-charcoal"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=D4AF37&color=0A0A0A&size=128&bold=true`;
+                          }}
+                        />
+                        <div
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => setSelectedPlayerDetail(player)}
+                        >
+                          <div className="player-name font-bold text-xs md:text-base truncate flex items-center gap-1">
+                            {player.name}
+                          </div>
+                          <div className="player-details text-[9px] md:text-xs text-silver truncate">
+                            {player.pos} • {player.school} • {player.size} • {player.weight} lbs
+                          </div>
                         </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePlayerClick(player);
+                          }}
+                          className="text-xs px-1.5 md:px-3 py-0.5 md:py-1.5 rounded bg-dark-gold hover:bg-gold text-black font-bold flex-shrink-0"
+                        >
+                          <span className="md:hidden">+</span>
+                          <span className="hidden md:inline">DB</span>
+                        </button>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePlayerClick(player);
-                        }}
-                        className="text-xs px-1.5 md:px-3 py-0.5 md:py-1.5 rounded bg-dark-gold hover:bg-gold text-black font-bold flex-shrink-0"
-                      >
-                        <span className="md:hidden">+</span>
-                        <span className="hidden md:inline">DB</span>
-                      </button>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                /* AI Scout panel */
+                <div className="flex-1 overflow-y-auto scroll-container p-3 md:p-4">
+                  <p className="text-silver text-[10px] md:text-xs mb-3 opacity-60 leading-relaxed">
+                    {aiMode === 'rookies'
+                      ? 'Rookie draft targets ranked by fit with your roster needs and dynasty timeline'
+                      : 'Ask anything about the draft, player rankings, or dynasty strategy'}
+                  </p>
+                  {aiMode === 'fa_chat' && (
+                    <textarea
+                      value={aiChatInput}
+                      onChange={e => setAiChatInput(e.target.value)}
+                      placeholder="e.g. Should I take the best available RB or address my WR need at pick 3?"
+                      className="w-full bg-charcoal border border-gold/30 rounded p-2 text-xs text-white resize-none mb-3 focus:outline-none focus:border-gold"
+                      rows={3}
+                    />
+                  )}
+                  <button
+                    onClick={runAIAnalysis}
+                    disabled={aiLoading || (aiMode === 'fa_chat' && !aiChatInput.trim()) || players.length === 0}
+                    className="px-4 py-1.5 border border-gold text-gold bg-gold/10 hover:bg-gold/20 disabled:opacity-40 disabled:cursor-not-allowed rounded text-xs font-bold font-oswald tracking-widest uppercase flex items-center gap-2"
+                  >
+                    {aiLoading ? (
+                      <>
+                        <span style={{display:'inline-block',width:'10px',height:'10px',border:'2px solid rgba(212,175,55,0.3)',borderTopColor:'#D4AF37',borderRadius:'50%',animation:'ai-spin 0.75s linear infinite'}}/>
+                        Analyzing...
+                      </>
+                    ) : '✦ Run Analysis'}
+                  </button>
+                  {aiError && (
+                    <div className="mt-3 text-loss-red text-xs">⚠ {aiError}</div>
+                  )}
+                  {aiAnalysis && (
+                    <div className="mt-3 bg-gold/5 border border-gold/20 rounded-lg p-3 text-xs text-silver leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(aiAnalysis) }} />
+                  )}
+                  {!aiAnalysis && !aiLoading && !aiError && (
+                    <div className="mt-8 text-center text-silver opacity-25 text-xs">
+                      Select a mode and run analysis
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
