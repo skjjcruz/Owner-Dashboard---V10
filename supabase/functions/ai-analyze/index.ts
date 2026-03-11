@@ -237,7 +237,6 @@ Deno.serve(async (req) => {
             case 'league':     userPrompt = buildLeaguePrompt(context);    break;
             case 'team':       userPrompt = buildTeamPrompt(context);      break;
             case 'partners':   userPrompt = buildPartnersPrompt(context);  break;
-            case 'chat':       userPrompt = buildChatPrompt(context);      break;
             case 'fa_targets': userPrompt = buildFATargetsPrompt(context); break;
             case 'rookies':    userPrompt = buildRookiesPrompt(context);   break;
             case 'fa_chat':    userPrompt = buildFAChatPrompt(context);    break;

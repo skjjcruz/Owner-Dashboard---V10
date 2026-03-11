@@ -909,10 +909,10 @@
               <div className="bg-charcoal px-2 md:px-4 py-1 md:py-3 border-b border-gold/20 flex-shrink-0">
 
                 {/* Tab switcher */}
-                <div className="flex gap-1 mb-1 md:mb-3">
+                <div className="flex justify-between items-center mb-1 md:mb-3">
                   <button
                     onClick={() => setRightTab('rankings')}
-                    className={`flex-1 px-2 py-1 rounded text-xs font-bold font-oswald tracking-wide uppercase ${
+                    className={`px-3 py-1 rounded text-xs font-bold font-oswald tracking-wide uppercase ${
                       rightTab === 'rankings' ? 'bg-gold text-black' : 'bg-off-black text-silver border border-gold/30'
                     }`}
                   >
@@ -920,7 +920,7 @@
                   </button>
                   <button
                     onClick={() => setRightTab('ai')}
-                    className={`flex-1 px-2 py-1 rounded text-xs font-bold font-oswald tracking-wide uppercase flex items-center justify-center gap-1 ${
+                    className={`px-3 py-1 rounded text-xs font-bold font-oswald tracking-wide uppercase flex items-center gap-1 ${
                       rightTab === 'ai' ? 'bg-gold text-black' : 'bg-off-black text-silver border border-gold/30'
                     }`}
                   >
