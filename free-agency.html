@@ -563,7 +563,8 @@
         const SEASON         = '2026';
         const AVAILABLE_YEARS = ['2023', '2024', '2025', '2026'];
         const STATS_YEAR  = '2025';
-        const FA_KEY      = id => `od_fa_targets_v1_${id}`;
+        const FA_KEY        = id => `od_fa_targets_v1_${id}`;
+        const FA_LEAGUE_KEY = 'od_fa_league_id';
 
         const POS_COLORS = {
             QB:'#FF6B6B', RB:'#4ECDC4', WR:'#45B7D1', TE:'#F7DC6F',
@@ -660,7 +661,11 @@
                 if (!userIdRef.current) return;
                 fetchLeagues(userIdRef.current, selectedYear).then(lgs => {
                     setLeagues(lgs || []);
-                    if (lgs?.length) setLeagueId(lgs[0].league_id);
+                    if (lgs?.length) {
+                        const saved = localStorage.getItem(FA_LEAGUE_KEY);
+                        const match = saved && lgs.find(l => l.league_id === saved);
+                        setLeagueId(match ? saved : lgs[0].league_id);
+                    }
                 }).catch(() => {});
             }, [selectedYear]);
 
@@ -675,7 +680,11 @@
                     setNflWeek(Number(nflState?.week) || 1);
                     const lgs = await fetchLeagues(user.user_id, selectedYear);
                     setLeagues(lgs || []);
-                    if (lgs && lgs.length > 0) setLeagueId(lgs[0].league_id);
+                    if (lgs && lgs.length > 0) {
+                        const saved = localStorage.getItem(FA_LEAGUE_KEY);
+                        const match = saved && lgs.find(l => l.league_id === saved);
+                        setLeagueId(match ? saved : lgs[0].league_id);
+                    }
                     setPhase('ready');
                 } catch (e) {
                     setErrMsg('Failed to connect to Sleeper. Check your network and try again.');
@@ -757,6 +766,11 @@
                 if (!leagueId || targetsLoadedRef.current !== leagueId) return;
                 saveTargets(leagueId, { startingBudget, targets });
             }, [targets, startingBudget, leagueId]);
+
+            // Persist the selected leagueId so the correct league is restored after a page reload.
+            useEffect(() => {
+                if (leagueId) localStorage.setItem(FA_LEAGUE_KEY, leagueId);
+            }, [leagueId]);
 
             // ---- Helpers ----
 
@@ -1472,7 +1486,7 @@
                                                 value={aiChatInput}
                                                 onChange={e => setAiChatInput(e.target.value)} />
                                         )}
-                                        <button className="ai-analyze-btn" onClick={runFAAnalysis}
+                                        <button type="button" className="ai-analyze-btn" onClick={runFAAnalysis}
                                             disabled={aiLoading || (aiMode === 'fa_chat' && !aiChatInput.trim()) || !leagueId}>
                                             {aiLoading
                                                 ? <><span className="ai-spinner"/>&nbsp;Analyzing...</>

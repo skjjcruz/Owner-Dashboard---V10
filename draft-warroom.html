@@ -635,7 +635,7 @@
                                             value={aiChatInput}
                                             onChange={e => setAiChatInput(e.target.value)} />
                                     )}
-                                    <button className="ai-analyze-btn" onClick={runAnalysis}
+                                    <button type="button" className="ai-analyze-btn" onClick={runAnalysis}
                                         disabled={aiLoading || (aiMode==='fa_chat' && !aiChatInput.trim()) || !myRoster}>
                                         {aiLoading
                                             ? <><span className="ai-spinner"/>&nbsp;Analyzing...</>

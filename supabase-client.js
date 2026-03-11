@@ -260,7 +260,8 @@ window.OD.loadTargets = async function(leagueId) {
     if (isConfigured() && username) {
         const remote = await dbLoadTargets(username, leagueId);
         if (remote !== null) {
-            localStorage.setItem(FA_LS_KEY(leagueId), JSON.stringify(remote));
+            // Don't overwrite localStorage here — the caller may have fresher data
+            // (e.g. a target added just before an auto-reload). saveTargets() handles sync.
             return remote;
         }
     }
