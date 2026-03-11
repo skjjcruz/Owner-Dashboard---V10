@@ -181,9 +181,9 @@
     }
 
     const DraftBoard = () => {
-      const [numTeams] = useState(16);
-      const [numRounds] = useState(7);
-      const [draftType] = useState('linear');
+      const [numTeams, setNumTeams] = useState(16);
+      const [numRounds, setNumRounds] = useState(7);
+      const [draftType, setDraftType] = useState('linear');
       const [selectedPos, setSelectedPos] = useState('ALL');
       const [searchTerm, setSearchTerm] = useState('');
       const [rankingMode, setRankingMode] = useState('fantasy'); // 'consensus' or 'fantasy'
@@ -376,6 +376,16 @@
           const rosters = rostersOverride !== undefined ? rostersOverride : leagueRosters;
           const users = usersOverride !== undefined ? usersOverride : leagueUsers;
 
+          // Sync board config from the actual Sleeper draft settings
+          const sleeperRounds = draftDetails?.settings?.rounds;
+          const sleeperTeams  = draftDetails?.settings?.teams;
+          const sleeperType   = draftDetails?.type; // 'snake' | 'linear'
+          const effectiveRounds = sleeperRounds || numRounds;
+          const effectiveTeams  = sleeperTeams  || numTeams;
+          if (sleeperRounds) setNumRounds(sleeperRounds);
+          if (sleeperTeams)  setNumTeams(sleeperTeams);
+          if (sleeperType)   setDraftType(sleeperType);
+
           // Filter traded picks to this draft's season
           const tradedPicks = (tradedPicksRaw || []).filter(tp => String(tp.season) === String(draftSeason));
 
@@ -384,7 +394,7 @@
             // Key: "round_slot" so each round can have a different owner after trades
             Object.entries(slotToRosterId).forEach(([slot, originalRosterId]) => {
               const slotNum = parseInt(slot);
-              for (let round = 1; round <= numRounds; round++) {
+              for (let round = 1; round <= effectiveRounds; round++) {
                 // Check if this pick was traded — traded_picks uses roster_id (original team) to identify picks
                 const traded = tradedPicks.find(
                   tp => tp.roster_id === originalRosterId && parseInt(tp.round) === round
