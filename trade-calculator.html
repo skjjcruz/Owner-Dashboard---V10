@@ -3591,6 +3591,7 @@ function TradeCalculator() {
 
         // Build context payload for the Edge Function
         function buildContext() {
+            const needsToStrings = (needs) => (needs || []).map(n => n.urgency === 'deficit' ? `${n.pos}*` : n.pos);
             const teamSummaries = assessments.map(a => ({
                 owner:       a.ownerName,
                 teamName:    a.teamName,
@@ -3600,7 +3601,7 @@ function TradeCalculator() {
                 healthScore: a.healthScore,
                 panic:       a.panic,
                 posture:     calcOwnerPosture(a, ownerDna[a.ownerId] || 'NONE'),
-                needs:       a.needs.slice(0, 5),
+                needs:       needsToStrings(a.needs).slice(0, 5),
                 strengths:   a.strengths.slice(0, 5),
                 dna:         ownerDna[a.ownerId] ? (DNA_TYPES[ownerDna[a.ownerId]]?.name || ownerDna[a.ownerId]) : 'Unknown',
                 isMyTeam:    a.rosterId === myRosterId,
@@ -3623,7 +3624,7 @@ function TradeCalculator() {
                     const v = getPlayerValue(id, valueIndex);
                     return { name: `${p.first_name||''} ${p.last_name||''}`.trim(), pos: normPos(p.position), team: p.team || 'FA', value: v.value, isElite: elitePlayerSet.has(id) };
                 }).filter(Boolean).sort((a, b) => { const pd = (POS_ORDER[a.pos]||9) - (POS_ORDER[b.pos]||9); return pd !== 0 ? pd : b.value - a.value; });
-                return { ...base, team: { owner: target.ownerName, teamName: target.teamName, record: `${target.wins}-${target.losses}`, weeklyPts: target.weeklyPts, tier: target.tier, healthScore: target.healthScore, panic: target.panic, posture: calcOwnerPosture(target, dnaKey), needs: target.needs, strengths: target.strengths, dna: dnaDef.name || dnaKey, dnaDescription: dnaDef.desc || '', roster } };
+                return { ...base, team: { owner: target.ownerName, teamName: target.teamName, record: `${target.wins}-${target.losses}`, weeklyPts: target.weeklyPts, tier: target.tier, healthScore: target.healthScore, panic: target.panic, posture: calcOwnerPosture(target, dnaKey), needs: needsToStrings(target.needs), strengths: target.strengths, dna: dnaDef.name || dnaKey, dnaDescription: dnaDef.desc || '', roster } };
             }
 
             if (aiMode === 'partners') {
@@ -3632,9 +3633,9 @@ function TradeCalculator() {
                 const partners = tradePartners.slice(0, 8).map(a => {
                     const dnaKey = ownerDna[a.ownerId] || 'NONE';
                     const dnaDef = DNA_TYPES[dnaKey] || DNA_TYPES.NONE;
-                    return { owner: a.ownerName, compatibility: Math.round((a.compat || 0) * 100), tier: a.tier, record: `${a.wins}-${a.losses}`, needs: a.needs.slice(0, 5), strengths: a.strengths.slice(0, 5), posture: calcOwnerPosture(a, dnaKey), dna: dnaDef.name || dnaKey, dnaDescription: dnaDef.desc || '', grudgeEntries: grudges.filter(g => g.withOwnerId === a.ownerId).length };
+                    return { owner: a.ownerName, compatibility: Math.round((a.compat || 0) * 100), tier: a.tier, record: `${a.wins}-${a.losses}`, needs: needsToStrings(a.needs).slice(0, 5), strengths: a.strengths.slice(0, 5), posture: calcOwnerPosture(a, dnaKey), dna: dnaDef.name || dnaKey, dnaDescription: dnaDef.desc || '', grudgeEntries: grudges.filter(g => g.withOwnerId === a.ownerId).length };
                 });
-                return { ...base, myTeam: { owner: myAssessment.ownerName, record: `${myAssessment.wins}-${myAssessment.losses}`, tier: myAssessment.tier, healthScore: myAssessment.healthScore, needs: myAssessment.needs, strengths: myAssessment.strengths, posture: calcOwnerPosture(myAssessment, myDnaKey) }, partners };
+                return { ...base, myTeam: { owner: myAssessment.ownerName, record: `${myAssessment.wins}-${myAssessment.losses}`, tier: myAssessment.tier, healthScore: myAssessment.healthScore, needs: needsToStrings(myAssessment.needs), strengths: myAssessment.strengths, posture: calcOwnerPosture(myAssessment, myDnaKey) }, partners };
             }
 
             // chat

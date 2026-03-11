@@ -37,7 +37,7 @@ function formatTeamsForPrompt(teams: any[]): string {
         const flag = t.isMyTeam ? ' ← MY TEAM' : '';
         return `• ${t.owner} (${t.record}) | ${t.tier} | Health: ${t.healthScore}/100 | ${t.weeklyPts} pts/wk | DNA: ${t.dna || 'Unknown'} | Posture: ${t.posture || 'N/A'}${flag}
   Strengths: ${(t.strengths || []).join(', ') || 'none'}
-  Needs: ${(t.needs || []).join(', ') || 'none'}`;
+  Needs: ${(t.needs || []).join(', ') || 'none'} (positions marked * are critical deficits)`;
     }).join('\n');
 }
 
