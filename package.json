@@ -1,0 +1,25 @@
+{
+  "name": "fantasy-war-room",
+  "version": "1.0.0",
+  "description": "Fantasy football owner dashboard — draft war room, earnings tracking, free agent targets",
+  "main": "index.html",
+  "scripts": {
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npx cap open ios",
+    "cap:android": "npx cap open android",
+    "cap:build:android": "npx cap build android"
+  },
+  "keywords": [
+    "fantasy",
+    "football",
+    "dashboard"
+  ],
+  "author": "skjjcruz",
+  "license": "SEE LICENSE IN LICENSE",
+  "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/ios": "^8.2.0"
+  }
+}
