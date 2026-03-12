@@ -162,9 +162,30 @@ function buildRookiesPrompt(ctx: any): string {
 
     const rosterPositions = (ctx.rosterPositions || []).filter((p: string) => p !== 'BN' && p !== 'IR').join(', ');
 
+    // Build draft pick summary
+    const ownedPicks: any[] = ctx.myOwnedPicks || [];
+    const tradedPicks: any[] = ctx.myPicksTraded || [];
+
+    let pickSummary: string;
+    if (ownedPicks.length === 0 && tradedPicks.length === 0) {
+        pickSummary = 'No traded pick data available — assume this owner holds their own standard picks for current and future rounds.';
+    } else if (ownedPicks.length === 0 && tradedPicks.length > 0) {
+        const tradedStr = tradedPicks.map((p: any) => `${p.season} Rd${p.round}`).join(', ');
+        pickSummary = `⚠️ ZERO DRAFT PICKS — This owner has traded away ALL of their picks (${tradedStr}) and has NOT acquired any picks from other teams. They CANNOT draft any rookies this year or in traded seasons unless they make a trade to acquire picks.`;
+    } else {
+        const ownedStr = ownedPicks.map((p: any) => `${p.season} Rd${p.round} (from roster #${p.originalOwner})`).join(', ');
+        const tradedStr = tradedPicks.length > 0
+            ? `Picks traded away: ${tradedPicks.map((p: any) => `${p.season} Rd${p.round}`).join(', ')}`
+            : 'No own picks traded away.';
+        pickSummary = `Picks currently owned: ${ownedStr}\n${tradedStr}`;
+    }
+
     return `Provide a rookie draft strategy for **${ctx.myOwner}** in **${ctx.leagueName}**.
 
 **STARTING LINEUP SPOTS:** ${rosterPositions}
+
+**DRAFT PICK STATUS:**
+${pickSummary}
 
 **MY CURRENT ROSTER (with experience):**
 ${rosterStr || 'No roster data'}
@@ -172,14 +193,14 @@ ${rosterStr || 'No roster data'}
 **AVAILABLE ROOKIES (not on any roster):**
 ${rookieStr || 'No rookies available'}
 
+CRITICAL INSTRUCTION: Base your entire strategy on the draft pick status above. If the owner has zero picks, do NOT recommend specific draft picks — instead focus your advice entirely on how to acquire picks via trade (what assets to offer, which roster positions to sell high on) and which rookies are worth targeting in trades post-draft.
+
 Provide:
-**ROSTER NEEDS ANALYSIS** — Which positions are thin, aging, or lack upside on my team?
-**TOP ROOKIE TARGETS** — Top 6-8 rookies to prioritize, each with:
-  - Positional fit and why they address my roster need
-  - Dynasty upside and timeline (ready now vs. long-term hold)
-  - Suggested draft round/pick range
-**DRAFT STRATEGY** — Best Player Available vs. positional need? Specific positions to target early?
-**SLEEPER PICKS** — 1-2 overlooked rookies worth targeting late that most owners will miss`;
+**DRAFT PICK SITUATION** — Clearly state how many picks this owner has and what it means for their draft strategy.
+**ROSTER NEEDS ANALYSIS** — Which positions are thin, aging, or lack upside?
+**STRATEGY** — If they have picks: BPA vs. positional need advice. If they have NO picks: specific trade strategies to acquire picks or post-draft rookie values to target.
+**TARGET ROOKIES** — Top rookies that fit this team's needs (for drafting if picks exist, or for trade acquisition if not).
+**SLEEPER PICKS** — 1-2 overlooked rookies worth targeting (via draft or trade).`;
 }
 
 function buildFAChatPrompt(ctx: any): string {

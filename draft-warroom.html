@@ -155,8 +155,9 @@
         }
         const fetchUser       = u      => apiFetch(`${SLEEPER_BASE}/user/${encodeURIComponent(u)}`);
         const fetchLeagues    = (uid,yr)=> apiFetch(`${SLEEPER_BASE}/user/${uid}/leagues/nfl/${yr}`);
-        const fetchRosters    = id     => apiFetch(`${SLEEPER_BASE}/league/${id}/rosters`);
-        const fetchLeagueInfo = id     => apiFetch(`${SLEEPER_BASE}/league/${id}`);
+        const fetchRosters      = id => apiFetch(`${SLEEPER_BASE}/league/${id}/rosters`);
+        const fetchLeagueInfo   = id => apiFetch(`${SLEEPER_BASE}/league/${id}`);
+        const fetchTradedPicks  = id => apiFetch(`${SLEEPER_BASE}/league/${id}/traded_picks`);
 
         let _playersCache = null;
         async function fetchPlayers() {
@@ -223,6 +224,7 @@
             const [leagueInfo, setLeagueInfo]   = useState(null);
             const [myRoster, setMyRoster]       = useState(null);
             const [allRosters, setAllRosters]   = useState([]);
+            const [tradedPicks, setTradedPicks] = useState([]);
             const [playersData, setPlayersData] = useState({});
             const [statsData, setStatsData]     = useState({});
             const [leagueLoading, setLeagueLoading] = useState(false);
@@ -273,15 +275,17 @@
             async function loadLeague() {
                 setLeagueLoading(true);
                 setMyRoster(null); setAllRosters([]); setPlayersData({}); setStatsData({});
-                setAiAnalysis(null); setAiError(null);
+                setTradedPicks([]); setAiAnalysis(null); setAiError(null);
                 try {
-                    const [rosters, info, players, stats] = await Promise.all([
+                    const [rosters, info, players, stats, picks] = await Promise.all([
                         fetchRosters(leagueId), fetchLeagueInfo(leagueId),
-                        fetchPlayers(), fetchSeasonStats(STATS_YEAR)
+                        fetchPlayers(), fetchSeasonStats(STATS_YEAR),
+                        fetchTradedPicks(leagueId),
                     ]);
                     const myR = rosters.find(r => r.owner_id === userId) || null;
                     setMyRoster(myR); setAllRosters(rosters);
                     setLeagueInfo(info); setPlayersData(players); setStatsData(stats);
+                    setTradedPicks(Array.isArray(picks) ? picks : []);
                 } catch (e) {
                     console.error('League load failed:', e);
                 } finally {
@@ -409,12 +413,26 @@
                     pos: r.pos, name: r.name, team: r.team || 'UFA',
                 }));
 
+                // Draft pick calculation
+                const currentYear = new Date().getFullYear();
+                const myRosterId = myRoster?.roster_id;
+                // Picks I currently own: traded picks where owner_id matches my roster
+                const myOwnedPicks = tradedPicks.filter(p =>
+                    p.owner_id === myRosterId && Number(p.season) >= currentYear
+                ).map(p => ({ season: p.season, round: p.round, originalOwner: p.roster_id }));
+                // My own picks that I've traded away
+                const myPicksTraded = tradedPicks.filter(p =>
+                    p.roster_id === myRosterId && p.owner_id !== myRosterId && Number(p.season) >= currentYear
+                ).map(p => ({ season: p.season, round: p.round, currentOwner: p.owner_id }));
+
                 return {
                     leagueName: leagueInfo?.name || 'Fantasy League',
                     myOwner: sleeperUsername,
                     faabBudget: 0, startingBudget: 0,
                     myRoster: myRosterSummary, rosterPositions,
                     topFreeAgents: [], availableRookies,
+                    myOwnedPicks,
+                    myPicksTraded,
                     question: aiChatInput,
                 };
             }
