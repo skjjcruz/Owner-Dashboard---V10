@@ -316,7 +316,7 @@ Deno.serve(async (req) => {
         }
 
         const message = await anthropic.messages.create({
-            model: 'claude-opus-4-6',
+            model: 'claude-haiku-4-5-20251001', // dev mode — switch to claude-sonnet-4-6 pre-launch
             max_tokens: 1200,
             system: buildSystemPrompt(),
             messages: [{ role: 'user', content: userPrompt }],
