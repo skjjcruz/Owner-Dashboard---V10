@@ -71,6 +71,8 @@ function buildTeamPrompt(ctx: any): string {
 **OWNER DNA:** ${t.dna}${t.dnaDescription ? ` — ${t.dnaDescription}` : ''}
 **STATED NEEDS:** ${(t.needs || []).join(', ') || 'none identified'}
 **STATED STRENGTHS:** ${(t.strengths || []).join(', ') || 'none identified'}
+**DRAFT CAPITAL:** ${t.picksText || 'No pick data available'}
+**FAAB:** ${t.faabText || (t.waiverBudget > 0 ? `$${t.faabRemaining} of $${t.waiverBudget} remaining` : 'No FAAB system')}
 
 **ROSTER (by position, sorted by value):**
 ${rosterStr || 'No roster data available'}
@@ -81,6 +83,7 @@ Provide:
 **TEAM IDENTITY** — What type of contender/rebuilder/pretender is this? (2-3 sentences)
 **CORE STRENGTHS** — What does this team do well? Name the specific players driving it
 **CRITICAL WEAKNESSES** — Where are the real gaps? Be brutally honest
+**DRAFT CAPITAL & FAAB** — Assess their pick inventory and budget. How does it shape their options?
 **TRADE OUTLOOK** — Buyer, seller, or holding? What should they target vs. deal away?
 **TOP RECOMMENDED MOVES** — 2-3 specific trade targets with what to offer
 **NEGOTIATION PLAYBOOK** — Based on their ${t.dna} DNA profile, how would you approach dealing with this owner?`;

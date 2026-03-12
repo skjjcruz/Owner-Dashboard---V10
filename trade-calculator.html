@@ -3703,7 +3703,8 @@ function TradeCalculator() {
                     const v = getPlayerValue(id, valueIndex);
                     return { name: `${p.first_name||''} ${p.last_name||''}`.trim(), pos: normPos(p.position), team: p.team || 'FA', value: v.value, isElite: elitePlayerSet.has(id) };
                 }).filter(Boolean).sort((a, b) => { const pd = (POS_ORDER[a.pos]||9) - (POS_ORDER[b.pos]||9); return pd !== 0 ? pd : b.value - a.value; });
-                return { ...base, team: { owner: target.ownerName, teamName: target.teamName, record: `${target.wins}-${target.losses}`, weeklyPts: target.weeklyPts, tier: target.tier, healthScore: target.healthScore, panic: target.panic, posture: calcOwnerPosture(target, dnaKey), needs: needsToStrings(target.needs), strengths: target.strengths, dna: dnaDef.name || dnaKey, dnaDescription: dnaDef.desc || '', roster } };
+                const comm = teamCommentary(target, elitePlayerSet);
+                return { ...base, team: { owner: target.ownerName, teamName: target.teamName, record: `${target.wins}-${target.losses}`, weeklyPts: target.weeklyPts, tier: target.tier, healthScore: target.healthScore, panic: target.panic, posture: calcOwnerPosture(target, dnaKey), needs: needsToStrings(target.needs), strengths: target.strengths, dna: dnaDef.name || dnaKey, dnaDescription: dnaDef.desc || '', roster, picksText: comm.picksText, faabText: comm.faabText, faabRemaining: target.faabRemaining ?? 0, waiverBudget: target.waiverBudget ?? 0 } };
             }
 
             if (aiMode === 'partners') {
