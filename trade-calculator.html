@@ -847,14 +847,15 @@ async function fetchFantasyCalcValues() {
 }
 
 // Compute an internal value from stats as fallback for IDP/kickers.
-// IDP (DB/DL/LB): ranked by 2025 total season points → tiered values (Elite/T1/T2/T3/Fringe).
+// IDP (DB/DL/LB): ranked by 2025 total season points → tiered values (Elite/T1/T2/T3).
+// INT-tier IDP players (rank > 36) get a rank-based linear scale from the T3 boundary
+// (900) down to INT_FLOOR (50), so production differences within fringe players are
+// reflected rather than collapsing everyone to a single flat 150.
 // Non-IDP (kickers, etc.): linear percentile scale, capped at 200 in tradeSideValue.
-// fcValues is optional; when provided, INT-tier IDP players are valued via the FC
-// points-to-value calibration curve so they are commensurate with offensive players
-// that scored the same number of 2025 fantasy points.
-function buildInternalValues(playersData, statsData, scoring, fcValues) {
-    // Build calibration curve once if FC data is available
-    const ptsCurve = fcValues ? buildPtsCurve(fcValues, statsData, scoring) : [];
+function buildInternalValues(playersData, statsData, scoring) {
+    const INT_FLOOR   = 50;
+    const T3_BOUNDARY = IDP_TIERS.find(t => t.label === 'T3').maxRank; // 36
+    const T3_VALUE    = IDP_TIERS.find(t => t.label === 'T3').value;    // 900
 
     const byPos = {};
     for (const [id, p] of Object.entries(playersData)) {
@@ -869,16 +870,22 @@ function buildInternalValues(playersData, statsData, scoring, fcValues) {
     for (const [pos, players] of Object.entries(byPos)) {
         const sorted = players.sort((a, b) => b.pts - a.pts);
         const total  = sorted.length;
-        sorted.forEach(({ id, pts }, i) => {
+        sorted.forEach(({ id }, i) => {
             const rank = i + 1;
             if (IDP_POSITIONS.has(pos)) {
                 const tier = idpTier(rank);
-                // INT-tier IDP players: calibrate value against the FC points curve so
-                // a defender who scored the same points as an FC player gets equal value.
-                // Keep a floor of 150 for players with very low production.
-                const value = tier.label === 'INT' && ptsCurve.length
-                    ? Math.max(150, interpValue(pts, ptsCurve))
-                    : tier.value;
+                let value;
+                if (tier.label === 'INT') {
+                    // Smooth linear gradient within INT group:
+                    //   rank T3_BOUNDARY+1 (best INT) → near T3_VALUE
+                    //   last ranked player             → INT_FLOOR
+                    const intCount = total - T3_BOUNDARY;
+                    const posInInt = rank - T3_BOUNDARY - 1; // 0-indexed
+                    const frac = intCount > 1 ? posInInt / (intCount - 1) : 0;
+                    value = Math.round(T3_VALUE * (1 - frac) + INT_FLOOR * frac);
+                } else {
+                    value = tier.value;
+                }
                 idx[id] = { value, trend: 0, rank, posRank: rank, source: 'internal', tier: tier.label };
             } else {
                 // Linear scale for kickers / other non-IDP
@@ -929,34 +936,6 @@ const IDP_TIERS = [
 ];
 function idpTier(rank) {
     return IDP_TIERS.find(t => rank <= t.maxRank);
-}
-
-// ─── FC POINTS-TO-VALUE CALIBRATION CURVE ────────────────────────────────────
-// Builds a sorted [{pts, value}] array from all FantasyCalc players that also
-// have 2025 season stats. Used to give INT-tier IDP players a value that is
-// mathematically commensurate with offensive players by raw points scored.
-function buildPtsCurve(fcValues, statsData, scoring) {
-    const points = [];
-    for (const [id, v] of Object.entries(fcValues)) {
-        const p = calcSeasonPts(id, statsData, scoring);
-        if (p > 0 && v.value > 0) points.push({ pts: p, value: v.value });
-    }
-    points.sort((a, b) => a.pts - b.pts);
-    return points;
-}
-
-// Linear interpolation on the calibration curve: pts → equivalent FC trade value.
-function interpValue(pts, curve) {
-    if (!curve || curve.length === 0) return 150;
-    if (pts <= curve[0].pts) return curve[0].value;
-    if (pts >= curve[curve.length - 1].pts) return curve[curve.length - 1].value;
-    let lo = 0, hi = curve.length - 1;
-    while (lo < hi - 1) {
-        const mid = (lo + hi) >> 1;
-        if (curve[mid].pts <= pts) lo = mid; else hi = mid;
-    }
-    const t = (pts - curve[lo].pts) / (curve[hi].pts - curve[lo].pts);
-    return Math.round(curve[lo].value + t * (curve[hi].value - curve[lo].value));
 }
 
 // ─── UTILITIES ───────────────────────────────────────────────────────────────
@@ -1770,7 +1749,7 @@ function TradeCalculator() {
             setStatsData(resolvedStats);
             setTradedPicks(tPicks || []);
             setFcValues(fc);
-            setInternalVals(buildInternalValues(resolvedPlayers, resolvedStats, scoring, fc));
+            setInternalVals(buildInternalValues(resolvedPlayers, resolvedStats, scoring));
 
             // Find my roster
             const mine = (rosters || []).find(r => r.owner_id === userId);
