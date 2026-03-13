@@ -229,14 +229,12 @@
       const [aiChatInput, setAiChatInput] = useState('');
 
       // Mock Draft state
-      const [mockMySlot,    setMockMySlot]    = useState(1);
-      const [mockRounds,    setMockRounds]    = useState(3);
-      const [mockOwnerDNA,  setMockOwnerDNA]  = useState({});
-      const [mockResults,   setMockResults]   = useState(null);
+      const [mockMySlot,      setMockMySlot]      = useState(1);
+      const [mockResults,     setMockResults]     = useState(null);
       const [mockCurrentPick, setMockCurrentPick] = useState(0);
-      const [mockIsPlaying, setMockIsPlaying] = useState(false);
-      const [mockLoading,   setMockLoading]   = useState(false);
-      const [mockError,     setMockError]     = useState(null);
+      const [mockIsPlaying,   setMockIsPlaying]   = useState(false);
+      const [mockLoading,     setMockLoading]     = useState(false);
+      const [mockError,       setMockError]       = useState(null);
 
       // Auto-load on mount if we have URL params
       useEffect(() => {
@@ -670,25 +668,69 @@
         }
       }
       // ---- Mock Draft helpers ---------------------------------------------
+      // DNA key (trade-calculator) → mock draft archetype
+      const DNA_TO_ARCHETYPE = {
+        FLEECER:   'Aggressive',
+        DOMINATOR: 'Contrarian',
+        STALWART:  'Value Drafter',
+        ACCEPTOR:  'Rebuilder',
+        DESPERATE: 'Need Drafter',
+        NONE:      'Unknown',
+      };
+
       function buildMockContext() {
-        const numSlots = Object.keys(draftSlotOwners).length || leagueUsers.length || 12;
-        const draftSlots = Array.from({ length: numSlots }, (_, i) => {
-          const slot = i + 1;
-          const ownerInfo = draftSlotOwners[slot];
-          const leagueUser = leagueUsers[i];
-          const name = ownerInfo?.displayName || leagueUser?.display_name || `Team ${slot}`;
-          return { slot, name, dna: mockOwnerDNA[slot] || 'Unknown', needs: [] };
-        });
-        const topPlayers = players.slice(0, numSlots * mockRounds + 20).map(p => ({
+        const numTeamCount  = selectedLeague?.totalRosters || numTeams;
+        const roundCount    = selectedDraft?.settings?.rounds || 3;
+        const leagueId      = selectedLeague?.id;
+
+        // Load DNA from localStorage (same store as trade-calculator)
+        let ownerDnaMap = {};
+        try { ownerDnaMap = JSON.parse(localStorage.getItem(`od_owner_dna_v1_${leagueId}`) || '{}'); } catch(e) {}
+
+        // Build slot list + detect my slot
+        const draftSlots = [];
+        let detectedMySlot = 1;
+        for (let slot = 1; slot <= numTeamCount; slot++) {
+          const ownerInfo = draftSlotOwners[`1_${slot}`];
+          if (!ownerInfo) continue;
+          const dnaKey    = ownerDnaMap[ownerInfo.userId] || 'NONE';
+          const archetype = DNA_TO_ARCHETYPE[dnaKey] || 'Unknown';
+          draftSlots.push({ slot, name: ownerInfo.displayName, dna: archetype, needs: [] });
+          if (ownerInfo.userId === sleeperUserId) detectedMySlot = slot;
+        }
+
+        // Fallback: if draftSlotOwners not populated yet, use leagueUsers
+        if (!draftSlots.length) {
+          leagueUsers.forEach((u, i) => {
+            const slot      = i + 1;
+            const dnaKey    = ownerDnaMap[u.user_id] || 'NONE';
+            const archetype = DNA_TO_ARCHETYPE[dnaKey] || 'Unknown';
+            draftSlots.push({ slot, name: u.display_name || u.username, dna: archetype, needs: [] });
+            if (u.user_id === sleeperUserId) detectedMySlot = slot;
+          });
+        }
+
+        const topPlayers = players.slice(0, numTeamCount * roundCount + 20).map(p => ({
           name: p.name, pos: p.pos, tier: p.tier,
         }));
-        return { numTeams: numSlots, numRounds: mockRounds, draftType: 'snake', mySlot: mockMySlot, draftSlots, players: topPlayers, leagueName: selectedLeague?.name || 'Mock Draft' };
+
+        return {
+          numTeams:   draftSlots.length || numTeamCount,
+          numRounds:  roundCount,
+          draftType:  'snake',
+          mySlot:     detectedMySlot,
+          draftSlots,
+          players:    topPlayers,
+          leagueName: selectedLeague?.name || 'Mock Draft',
+          _mySlot:    detectedMySlot, // pass back so we can set state
+        };
       }
 
       async function runMockDraft() {
         setMockLoading(true); setMockError(null); setMockResults(null); setMockCurrentPick(0); setMockIsPlaying(false);
         try {
           const ctx = buildMockContext();
+          setMockMySlot(ctx._mySlot); // capture before async
           const resp = await fetch(`${SUPABASE_URL}/functions/v1/ai-analyze`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'apikey': SUPABASE_ANON_KEY },
@@ -1173,57 +1215,79 @@
                     );
                   }
 
+                  // Build preview from current state (no renders needed)
+                  const numTeamCount = selectedLeague?.totalRosters || numTeams;
+                  const roundCount   = selectedDraft?.settings?.rounds || 3;
+                  const leagueId     = selectedLeague?.id;
+                  let ownerDnaMap = {};
+                  try { ownerDnaMap = JSON.parse(localStorage.getItem(`od_owner_dna_v1_${leagueId}`) || '{}'); } catch(e) {}
+
+                  const previewSlots = [];
+                  for (let slot = 1; slot <= numTeamCount; slot++) {
+                    const ownerInfo = draftSlotOwners[`1_${slot}`];
+                    if (!ownerInfo) break;
+                    const dnaKey    = ownerDnaMap[ownerInfo.userId] || 'NONE';
+                    const archetype = DNA_TO_ARCHETYPE[dnaKey] || 'Unknown';
+                    previewSlots.push({ slot, name: ownerInfo.displayName, archetype, isMe: ownerInfo.userId === sleeperUserId });
+                  }
+                  // Fallback to leagueUsers if slot owners not ready
+                  if (!previewSlots.length && leagueUsers.length) {
+                    leagueUsers.forEach((u, i) => {
+                      const dnaKey    = ownerDnaMap[u.user_id] || 'NONE';
+                      previewSlots.push({ slot: i+1, name: u.display_name || u.username, archetype: DNA_TO_ARCHETYPE[dnaKey] || 'Unknown', isMe: u.user_id === sleeperUserId });
+                    });
+                  }
+
+                  const hasLeague = !!selectedLeague;
+
                   return (
-                    <div className="flex-1 overflow-y-auto scroll-container p-3 md:p-4">
-                      <p className="text-silver text-[10px] mb-3 opacity-60 leading-relaxed">
-                        AI simulates each owner's actual draft behavior based on their DNA — not just BPA.
-                      </p>
-                      {/* My slot */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-gold text-[10px] font-bold whitespace-nowrap">My Slot:</span>
-                        <select value={mockMySlot} onChange={e => setMockMySlot(+e.target.value)}
-                          className="flex-1 bg-charcoal border border-gold/30 rounded px-2 py-0.5 text-[10px] text-white">
-                          {slots.map(s => (
-                            <option key={s} value={s}>Slot {s} — {draftSlotOwners[s]?.displayName || leagueUsers[s-1]?.display_name || `Team ${s}`}</option>
-                          ))}
-                        </select>
-                      </div>
-                      {/* Rounds */}
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-gold text-[10px] font-bold whitespace-nowrap">Rounds:</span>
-                        <select value={mockRounds} onChange={e => setMockRounds(+e.target.value)}
-                          className="bg-charcoal border border-gold/30 rounded px-2 py-0.5 text-[10px] text-white">
-                          {[2, 3, 4, 5].map(r => <option key={r} value={r}>{r}</option>)}
-                        </select>
-                      </div>
-                      {/* Owner DNA setup */}
-                      <div className="text-[9px] text-silver mb-1 uppercase tracking-wider opacity-50 font-bold">Owner DNA</div>
-                      <div className="space-y-0.5 mb-4 max-h-52 overflow-y-auto scroll-container">
-                        {slots.map(slot => (
-                          <div key={slot} className={`flex items-center gap-1.5 py-1 px-1.5 rounded ${slot === mockMySlot ? 'bg-gold/10 border border-gold/30' : 'bg-charcoal/30'}`}>
-                            <span className="w-5 text-silver text-center text-[9px] font-mono flex-shrink-0">{slot}</span>
-                            <span className="flex-1 text-white text-[9px] truncate">
-                              {draftSlotOwners[slot]?.displayName || leagueUsers[slot-1]?.display_name || `Team ${slot}`}
-                              {slot === mockMySlot && <span className="text-gold ml-1 text-[8px]">★</span>}
-                            </span>
-                            <select value={mockOwnerDNA[slot] || 'Unknown'}
-                              onChange={e => setMockOwnerDNA(prev => ({...prev, [slot]: e.target.value}))}
-                              className="bg-off-black border border-gold/20 rounded px-1 py-0 text-[8px] text-white flex-shrink-0">
-                              {DNA_TYPES.map(d => <option key={d} value={d}>{d}</option>)}
-                            </select>
+                    <div className="flex-1 overflow-y-auto scroll-container p-3">
+                      {!hasLeague ? (
+                        <div className="text-center text-silver opacity-40 text-xs mt-8">Load a Sleeper league first.</div>
+                      ) : (
+                        <>
+                          {/* League info line */}
+                          <div className="flex items-center gap-2 mb-3 text-[10px] text-silver opacity-60">
+                            <span>{selectedLeague.name}</span>
+                            <span>·</span>
+                            <span>{numTeamCount} teams</span>
+                            <span>·</span>
+                            <span>{roundCount} rounds</span>
+                            <span>·</span>
+                            <span>Snake</span>
                           </div>
-                        ))}
-                      </div>
-                      <button onClick={runMockDraft} disabled={mockLoading}
-                        className="w-full px-4 py-2 border border-gold text-gold bg-gold/10 hover:bg-gold/20 disabled:opacity-40 disabled:cursor-not-allowed rounded text-xs font-bold font-oswald tracking-widest uppercase flex items-center justify-center gap-2">
-                        {mockLoading ? (
-                          <>
-                            <span style={{display:'inline-block',width:'10px',height:'10px',border:'2px solid rgba(212,175,55,0.3)',borderTopColor:'#D4AF37',borderRadius:'50%',animation:'ai-spin 0.75s linear infinite'}} />
-                            Simulating Draft...
-                          </>
-                        ) : '⚡ Run AI Mock Draft'}
-                      </button>
-                      {mockError && <div className="mt-3 text-loss-red text-xs">⚠ {mockError}</div>}
+
+                          {/* Owner DNA preview */}
+                          <div className="text-[9px] text-silver mb-1.5 uppercase tracking-wider opacity-40 font-bold">Owner DNA (from your profiles)</div>
+                          <div className="space-y-0.5 mb-4 max-h-56 overflow-y-auto scroll-container">
+                            {previewSlots.map(({ slot, name, archetype, isMe }) => (
+                              <div key={slot} className={`flex items-center gap-1.5 py-0.5 px-1.5 rounded text-[9px] ${isMe ? 'bg-gold/10 border border-gold/30' : ''}`}>
+                                <span className="w-5 text-silver opacity-40 font-mono text-center flex-shrink-0">{slot}</span>
+                                <span className={`flex-1 truncate ${isMe ? 'text-gold font-bold' : 'text-white'}`}>
+                                  {name}{isMe && ' ★'}
+                                </span>
+                                <span className={`text-[8px] px-1 py-0 rounded border flex-shrink-0 ${archetype === 'Unknown' ? 'border-gold/20 text-silver opacity-40' : 'border-gold/40 text-gold'}`}>
+                                  {archetype}
+                                </span>
+                              </div>
+                            ))}
+                            {!previewSlots.length && (
+                              <div className="text-silver opacity-40 text-[9px] py-2">Loading owners…</div>
+                            )}
+                          </div>
+
+                          <button onClick={runMockDraft} disabled={mockLoading}
+                            className="w-full px-4 py-2 border border-gold text-gold bg-gold/10 hover:bg-gold/20 disabled:opacity-40 disabled:cursor-not-allowed rounded text-xs font-bold font-oswald tracking-widest uppercase flex items-center justify-center gap-2">
+                            {mockLoading ? (
+                              <>
+                                <span style={{display:'inline-block',width:'10px',height:'10px',border:'2px solid rgba(212,175,55,0.3)',borderTopColor:'#D4AF37',borderRadius:'50%',animation:'ai-spin 0.75s linear infinite'}} />
+                                Simulating Draft...
+                              </>
+                            ) : '⚡ Run AI Mock Draft'}
+                          </button>
+                          {mockError && <div className="mt-3 text-loss-red text-xs">⚠ {mockError}</div>}
+                        </>
+                      )}
                     </div>
                   );
                 })()
