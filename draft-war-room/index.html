@@ -343,10 +343,13 @@
 
       const loadDraftsForLeague = async (leagueId) => {
         if (!leagueId) return;
-        
+
+        // Pre-load DNA from Supabase into localStorage so buildMockContext() reads fresh data
+        SupabaseDraftClient.preloadDNAFromSupabase(leagueId).catch(() => {});
+
         try {
           setStatus('Loading draft history…');
-          
+
           // Load league rosters and users for owner info
           const [draftsData, rostersData, usersData] = await Promise.all([
             fetchJSON(`https://api.sleeper.app/v1/league/${leagueId}/drafts`),

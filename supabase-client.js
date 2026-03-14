@@ -457,6 +457,62 @@ window.OD.loadAIHistory = async function(leagueId) {
 };
 
 // ============================================================
+// OWNER DNA PROFILES
+// Persists { ownerId: DNA_TYPE_KEY } maps to Supabase so they
+// survive cache clears.  Falls back to localStorage gracefully.
+// ============================================================
+const DNA_LS_KEY = id => `od_owner_dna_v1_${id}`;
+
+async function dbLoadDNA(username, leagueId) {
+    const db = getClient();
+    if (!db || !isConfigured() || !username) return null;
+    const { data, error } = await db
+        .from('owner_dna').select('dna_map')
+        .eq('username', username).eq('league_id', leagueId).maybeSingle();
+    if (error) { console.warn('[OD] dna load error', error); return null; }
+    return data ? (data.dna_map || {}) : null;
+}
+
+async function dbSaveDNA(username, leagueId, dnaMap) {
+    const db = getClient();
+    if (!db || !isConfigured() || !username) return;
+    await ensureUser(username);
+    const { error } = await db.from('owner_dna').upsert(
+        { username, league_id: leagueId, dna_map: dnaMap, updated_at: new Date().toISOString() },
+        { onConflict: 'username,league_id' }
+    );
+    if (error) console.warn('[OD] dna save error', error);
+}
+
+window.OD.loadDNA = async function(leagueId) {
+    let local = {};
+    try {
+        const raw = localStorage.getItem(DNA_LS_KEY(leagueId));
+        if (raw) local = JSON.parse(raw);
+    } catch {}
+
+    const username = getCurrentUsername();
+    if (isConfigured() && username) {
+        const remote = await dbLoadDNA(username, leagueId);
+        if (remote !== null) {
+            // Merge: remote is source of truth, but keep any local keys not yet synced
+            const merged = { ...local, ...remote };
+            localStorage.setItem(DNA_LS_KEY(leagueId), JSON.stringify(merged));
+            return merged;
+        }
+    }
+    return local;
+};
+
+window.OD.saveDNA = function(leagueId, dnaMap) {
+    localStorage.setItem(DNA_LS_KEY(leagueId), JSON.stringify(dnaMap));
+    const username = getCurrentUsername();
+    if (isConfigured() && username) {
+        dbSaveDNA(username, leagueId, dnaMap).catch(console.warn);
+    }
+};
+
+// ============================================================
 // STATUS INDICATOR (injected into page for easy debugging)
 // ============================================================
 window.OD.status = function() {

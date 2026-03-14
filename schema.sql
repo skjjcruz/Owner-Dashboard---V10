@@ -122,6 +122,24 @@ create policy "ai_analysis_all" on public.ai_analysis for all using (true) with 
 
 create index if not exists idx_ai_analysis_username on public.ai_analysis (username, league_id);
 
+-- ── OWNER DNA PROFILES ───────────────────────────────────────
+-- One row per (user, league). Stores the DNA type assigned to each
+-- league-mate: { ownerId: DNA_TYPE_KEY } as JSONB.
+create table if not exists public.owner_dna (
+    id         uuid primary key default gen_random_uuid(),
+    username   text not null references public.users(sleeper_username) on delete cascade,
+    league_id  text not null,
+    dna_map    jsonb default '{}'::jsonb,   -- { sleeper_owner_id: 'FLEECER' | 'DOMINATOR' | ... }
+    updated_at timestamptz default now(),
+    unique (username, league_id)
+);
+
+drop policy if exists "owner_dna_all" on public.owner_dna;
+alter table public.owner_dna enable row level security;
+create policy "owner_dna_all" on public.owner_dna for all using (true) with check (true);
+
+create index if not exists idx_owner_dna_username on public.owner_dna (username, league_id);
+
 -- ── DONE ──────────────────────────────────────────────────────
 -- After running this file, copy your project URL and anon key
 -- from Supabase → Settings → API and paste them into supabase-client.js
