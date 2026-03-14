@@ -276,6 +276,7 @@
               ...prev,
               [boardKey]: {
                 metadata: { first_name: parts[0] || pick.player, last_name: parts.slice(1).join(' ') || '', position: pick.pos },
+                reason: pick.reason || '',
                 isMock: true,
               },
             }));
@@ -948,9 +949,47 @@
 
           <div className="flex flex-row-reverse gap-1 md:gap-4 p-1 md:p-4 h-[calc(100vh-80px)] md:h-[calc(100vh-100px)]">
             <div className="w-1/2 bg-off-black border border-gold/20 rounded-lg overflow-hidden flex flex-col">
-              <div className="bg-charcoal px-2 md:px-4 py-2 md:py-3 border-b border-gold/20 flex-shrink-0 flex items-center gap-2">
+              <div className="bg-charcoal px-2 md:px-4 py-2 md:py-3 border-b border-gold/20 flex-shrink-0 flex items-center gap-2 flex-wrap">
                 <h2 className="font-bebas font-bold text-gold text-sm md:text-base tracking-wider">Draft Board</h2>
-                {mockResults && <span className="text-[8px] px-1.5 py-0.5 rounded border border-gold/40 text-gold font-bold font-oswald tracking-widest">MOCK</span>}
+                {mockResults && <>
+                  <span className="text-[8px] px-1.5 py-0.5 rounded border border-gold/40 text-gold font-bold font-oswald tracking-widest">MOCK</span>
+                  <span className="text-[9px] text-silver font-mono ml-1">Pick {Math.min(mockCurrentPick, mockResults.length)}/{mockResults.length}</span>
+                  <div className="flex-1" />
+                  <button onClick={() => setMockIsPlaying(p => !p)}
+                    className="text-gold text-[10px] px-2 py-0.5 border border-gold/40 rounded hover:bg-gold/10 font-oswald">
+                    {mockIsPlaying ? '⏸ Pause' : '▶ Play'}
+                  </button>
+                  <button onClick={() => {
+                      setMockIsPlaying(false);
+                      const allPicks = {};
+                      (mockResults || []).forEach(pick => {
+                        const parts = (pick.player || '').split(' ');
+                        allPicks[`${pick.round}.${String(pick.slot).padStart(2,'0')}`] = {
+                          metadata: { first_name: parts[0], last_name: parts.slice(1).join(' '), position: pick.pos },
+                          reason: pick.reason || '',
+                          isMock: true,
+                        };
+                      });
+                      setDraftPicks(prev => ({ ...prev, ...allPicks }));
+                      setMockCurrentPick(mockResults.length);
+                    }}
+                    className="text-silver text-[10px] px-1.5 py-0.5 border border-gold/20 rounded hover:bg-charcoal font-oswald">
+                    ⏭ All
+                  </button>
+                  <button onClick={() => {
+                      setMockResults(null); setMockCurrentPick(0); setMockIsPlaying(false);
+                      if (preMockPicksRef.current !== null) { setDraftPicks(preMockPicksRef.current); preMockPicksRef.current = null; }
+                    }}
+                    className="text-silver text-[10px] px-1.5 py-0.5 border border-gold/20 rounded hover:bg-charcoal font-oswald">
+                    ↺ Reset
+                  </button>
+                  {mockIsPlaying && mockCurrentPick < mockResults.length && (
+                    <span style={{display:'inline-block',width:'10px',height:'10px',border:'2px solid rgba(212,175,55,0.3)',borderTopColor:'#D4AF37',borderRadius:'50%',animation:'ai-spin 0.75s linear infinite'}} />
+                  )}
+                  {mockCurrentPick >= mockResults.length && (
+                    <span className="text-gold text-[9px] opacity-60 font-oswald tracking-widest">COMPLETE</span>
+                  )}
+                </>}
               </div>
 
               <div className="flex-1 p-1 md:p-4 space-y-2 md:space-y-6 overflow-y-auto scroll-container draft-board-container">
@@ -975,6 +1014,8 @@
                         let isMyPick = false;
                         let playerRank = null;
 
+                        const MOCK_POS_COLORS = { QB:'#EF4444', RB:'#22C55E', WR:'#3B82F6', TE:'#A855F7', EDGE:'#F97316', DL:'#6B7280', LB:'#84CC16', CB:'#06B6D4', S:'#14B8A6', K:'#9CA3AF' };
+
                         if (pickData) {
                           // Check if it's historical Sleeper data
                           if (typeof pickData === 'object' && pickData.playerId) {
@@ -990,8 +1031,20 @@
                             }
                             // Check if logged-in user actually made this pick
                             isMyPick = pickData.pickedBy === sleeperUserId;
+                          } else if (typeof pickData === 'object' && pickData.isMock) {
+                            // AI mock draft pick — render name + position badge + reason
+                            const m = pickData.metadata || {};
+                            displayName = `${m.first_name || ''} ${m.last_name || ''}`.trim() || 'Unknown';
+                            const pos = m.position || '';
+                            const posColor = MOCK_POS_COLORS[pos] || '#6B7280';
+                            displayDetails = (
+                              <span className="flex items-center gap-1 flex-wrap">
+                                {pos && <span className="px-1 rounded text-[8px] md:text-[10px] font-bold text-black flex-shrink-0" style={{ backgroundColor: posColor }}>{pos}</span>}
+                                {pickData.reason && <span className="text-silver/60 truncate text-[8px] md:text-[10px] italic">{pickData.reason}</span>}
+                              </span>
+                            );
                           } else {
-                            // Mock player data (for manual drafting)
+                            // Manual pick — pickData is a player ID string
                             player = players.find(p => p.id === pickData);
                             if (player) {
                               displayName = player.name;
@@ -1008,7 +1061,9 @@
                             onClick={() => handlePickSlotClick(pick.key)}
                             className={`draft-board-pick p-1 md:p-3 rounded border cursor-pointer transition-all flex items-center gap-1 md:gap-3 ${
                               isSelected ? 'border-gold bg-gold bg-opacity-10' :
+                              isMySlot && pickData?.isMock ? 'border-gold bg-gold/15' :
                               isMySlot ? 'border-red-700 bg-red-950' :
+                              pickData?.isMock ? 'border-indigo-500/40 bg-indigo-950/20' :
                               pickData ? 'border-gold/30 bg-charcoal' :
                               'border-gold/30 bg-charcoal hover:border-gold/40'
                             }`}
@@ -1244,73 +1299,6 @@
                   const slots = Array.from({ length: numSlots }, (_, i) => i + 1);
                   const DNA_TYPES = ['Unknown', 'Win Now', 'Rebuilder', 'Value Drafter', 'Need Drafter', 'Contrarian', 'Risk Averse', 'Aggressive'];
                   const POS_BG = { QB: '#EF4444', RB: '#22C55E', WR: '#3B82F6', TE: '#A855F7', EDGE: '#F97316', DL: '#6B7280', LB: '#84CC16', CB: '#06B6D4', S: '#14B8A6', K: '#9CA3AF' };
-
-                  if (mockResults) {
-                    const visible = mockResults.slice(0, mockCurrentPick);
-                    return (
-                      <div className="flex-1 overflow-y-auto scroll-container p-2 md:p-3">
-                        {/* Controls */}
-                        <div className="flex items-center gap-1.5 mb-2 pb-2 border-b border-gold/20">
-                          <span className="text-[9px] text-silver font-mono">Pick {Math.min(mockCurrentPick, mockResults.length)}/{mockResults.length}</span>
-                          <div className="flex-1" />
-                          <button onClick={() => setMockIsPlaying(p => !p)}
-                            className="text-gold text-[10px] px-2 py-0.5 border border-gold/40 rounded hover:bg-gold/10 font-oswald">
-                            {mockIsPlaying ? '⏸ Pause' : '▶ Play'}
-                          </button>
-                          <button onClick={() => {
-                              setMockIsPlaying(false);
-                              const allPicks = {};
-                              (mockResults || []).forEach(pick => {
-                                const parts = (pick.player || '').split(' ');
-                                allPicks[`${pick.round}.${String(pick.slot).padStart(2,'0')}`] = {
-                                  metadata: { first_name: parts[0], last_name: parts.slice(1).join(' '), position: pick.pos },
-                                  isMock: true,
-                                };
-                              });
-                              setDraftPicks(prev => ({ ...prev, ...allPicks }));
-                              setMockCurrentPick(mockResults.length);
-                            }}
-                            className="text-silver text-[10px] px-1.5 py-0.5 border border-gold/20 rounded hover:bg-charcoal font-oswald">
-                            ⏭ All
-                          </button>
-                          <button onClick={() => {
-                              setMockResults(null); setMockCurrentPick(0); setMockIsPlaying(false);
-                              if (preMockPicksRef.current !== null) { setDraftPicks(preMockPicksRef.current); preMockPicksRef.current = null; }
-                            }}
-                            className="text-silver text-[10px] px-1.5 py-0.5 border border-gold/20 rounded hover:bg-charcoal font-oswald">
-                            ↺
-                          </button>
-                        </div>
-                        {/* Pick cards */}
-                        <div className="space-y-1">
-                          {visible.map(pick => {
-                            const isMe = pick.slot === mockMySlot;
-                            return (
-                              <div key={pick.pick} className={`p-1.5 rounded border text-xs ${isMe ? 'border-gold bg-gold/10' : 'border-gold/15 bg-charcoal/40'}`}>
-                                <div className="flex items-center gap-1 mb-0.5">
-                                  <span className="text-silver opacity-40 font-mono text-[9px] w-7 flex-shrink-0">{pick.round}.{String(pick.slot).padStart(2,'0')}</span>
-                                  <span className="px-1 py-0 rounded text-[8px] font-bold text-black flex-shrink-0"
-                                    style={{ backgroundColor: POS_BG[pick.pos] || '#6B7280' }}>{pick.pos}</span>
-                                  {pick.tier <= 2 && <span className="text-gold text-[8px] flex-shrink-0">★T{pick.tier}</span>}
-                                  <span className="font-bold text-white flex-1 truncate text-[10px]">{pick.player}</span>
-                                  {isMe && <span className="text-gold text-[8px] font-bold flex-shrink-0">MY PICK</span>}
-                                </div>
-                                <div className="text-silver opacity-50 text-[9px] leading-tight truncate pl-7">{pick.owner} · {pick.reason}</div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {mockIsPlaying && mockCurrentPick < mockResults.length && (
-                          <div className="flex justify-center py-3">
-                            <span style={{display:'inline-block',width:'12px',height:'12px',border:'2px solid rgba(212,175,55,0.3)',borderTopColor:'#D4AF37',borderRadius:'50%',animation:'ai-spin 0.75s linear infinite'}} />
-                          </div>
-                        )}
-                        {mockCurrentPick >= mockResults.length && (
-                          <div className="text-center text-gold text-[10px] opacity-50 pt-3 font-oswald tracking-widest">— DRAFT COMPLETE —</div>
-                        )}
-                      </div>
-                    );
-                  }
 
                   // Build preview from current state (no renders needed)
                   const numTeamCount = selectedLeague?.totalRosters || numTeams;
