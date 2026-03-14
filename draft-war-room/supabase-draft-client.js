@@ -183,6 +183,40 @@ async function getMockDraftProspects({ position } = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Owner DNA — pre-load from Supabase so localStorage reads stay in sync.
+// Called when a league is selected; the existing sync localStorage reads in
+// buildMockContext() and the draft preview will automatically see fresh data.
+// ---------------------------------------------------------------------------
+
+function getCurrentUsername() {
+  try {
+    const raw = localStorage.getItem('od_auth_v1');
+    if (!raw) return null;
+    const auth = JSON.parse(raw);
+    return auth?.sleeperUsername || auth?.username || null;
+  } catch { return null; }
+}
+
+async function preloadDNAFromSupabase(leagueId) {
+  const db = getSupabaseClient();
+  const username = getCurrentUsername();
+  if (!db || !username || !leagueId) return;
+
+  const { data, error } = await db
+    .from('owner_dna').select('dna_map')
+    .eq('username', username).eq('league_id', leagueId).maybeSingle();
+
+  if (error || !data) return;
+  const dnaMap = data.dna_map || {};
+
+  // Merge remote into localStorage (remote wins for keys present in both)
+  let local = {};
+  try { local = JSON.parse(localStorage.getItem(`od_owner_dna_v1_${leagueId}`) || '{}'); } catch {}
+  const merged = { ...local, ...dnaMap };
+  localStorage.setItem(`od_owner_dna_v1_${leagueId}`, JSON.stringify(merged));
+}
+
+// ---------------------------------------------------------------------------
 // Exports (attached to window for use from inline Babel/React scripts)
 // ---------------------------------------------------------------------------
 
@@ -192,4 +226,5 @@ window.SupabaseDraftClient = {
   loadDraftBoardsByUsername,
   deleteDraftBoard,
   getMockDraftProspects,
+  preloadDNAFromSupabase,
 };

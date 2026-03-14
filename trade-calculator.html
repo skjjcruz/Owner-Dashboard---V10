@@ -1819,8 +1819,8 @@ function TradeCalculator() {
             const mine = (rosters || []).find(r => r.owner_id === userId);
             if (mine) setMyRosterId(mine.roster_id);
 
-            // Load saved DNA profiles + grudge log
-            setOwnerDna(loadDNA(leagueId));
+            // Load saved DNA profiles + grudge log (Supabase-backed, falls back to localStorage)
+            setOwnerDna(await window.OD.loadDNA(leagueId));
             setGrudges(loadGrudges(leagueId));
         } catch(e) {
             console.error(e);
@@ -1934,7 +1934,7 @@ function TradeCalculator() {
     function updateDna(ownerId, dnaKey) {
         const updated = { ...ownerDna, [ownerId]: dnaKey };
         setOwnerDna(updated);
-        saveDNA(leagueId, updated);
+        window.OD.saveDNA(leagueId, updated);
     }
 
     // Summary stats
