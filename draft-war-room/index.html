@@ -782,8 +782,11 @@
           const draftDna    = draftDnaMap[ownerInfo.userId] || null;
           draftSlots.push({
             slot, name: ownerInfo.displayName, dna: archetype,
-            draftDna: draftDna?.label || null,
-            draftTendency: draftDna?.tendency || null,
+            draftDna:       draftDna?.label || null,
+            draftTendency:  draftDna?.tendency || null,
+            roundProfile:   draftDna?.roundProfile || null,
+            earlyDefPct:    draftDna?.earlyDefPct ?? null,
+            overallDefPct:  draftDna?.overallDefPct ?? null,
             needs: computeNeeds(ownerInfo.userId),
           });
           if (ownerInfo.userId === sleeperUserId) detectedMySlot = slot;
@@ -800,16 +803,26 @@
             const draftDna   = draftDnaMap[u.user_id] || null;
             draftSlots.push({
               slot, name: u.display_name || u.username, dna: archetype,
-              draftDna: draftDna?.label || null,
-              draftTendency: draftDna?.tendency || null,
+              draftDna:       draftDna?.label || null,
+              draftTendency:  draftDna?.tendency || null,
+              roundProfile:   draftDna?.roundProfile || null,
+              earlyDefPct:    draftDna?.earlyDefPct ?? null,
+              overallDefPct:  draftDna?.overallDefPct ?? null,
               needs: computeNeeds(u.user_id),
             });
             if (u.user_id === sleeperUserId) detectedMySlot = slot;
           });
         }
 
-        const topPlayers = players.slice(0, numTeamCount * roundCount + 20).map(p => ({
-          name: p.name, pos: p.pos, tier: p.tier,
+        // Sort by fantasyRank so the AI sees skill positions first.
+        // fantasyRank = consensusRank / fantasyMultiplier, where QB=2.0, RB=1.90, WR=1.75, TE=1.5,
+        // EDGE=0.35, LB=0.30, CB/S=0.25 — so defenders naturally sink to the bottom of the pool.
+        const excludedPos = new Set(['OL', 'OT', 'IOL', 'T', 'G', 'C', 'OG', 'P', 'LS', 'K']);
+        const fantasyRankedPlayers = [...players]
+          .filter(p => !excludedPos.has(p.pos))
+          .sort((a, b) => (a.fantasyRank || 999) - (b.fantasyRank || 999));
+        const topPlayers = fantasyRankedPlayers.slice(0, numTeamCount * roundCount + 20).map((p, i) => ({
+          name: p.name, pos: p.pos, tier: p.tier, fantasyRank: i + 1,
         }));
 
         return {
