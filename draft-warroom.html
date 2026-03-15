@@ -339,17 +339,20 @@
                 setMyRoster(null); setAllRosters([]); setPlayersData({}); setStatsData({});
                 setTradedPicks([]); setAiAnalysis(null); setAiError(null);
                 try {
-                    const [rosters, info, players, stats, picks] = await Promise.all([
+                    const [rosters, info, stats, picks] = await Promise.all([
                         fetchRosters(leagueId), fetchLeagueInfo(leagueId),
-                        fetchPlayers(), fetchSeasonStats(STATS_YEAR),
-                        fetchTradedPicks(leagueId),
+                        fetchSeasonStats(STATS_YEAR), fetchTradedPicks(leagueId),
                     ]);
                     const myR = rosters.find(r => r.owner_id === userId) || null;
                     setMyRoster(myR); setAllRosters(rosters);
-                    setLeagueInfo(info); setPlayersData(players); setStatsData(stats);
+                    setLeagueInfo(info); setStatsData(stats);
                     setTradedPicks(Array.isArray(picks) ? picks : []);
+                    // Load player names in background — large payload, non-blocking
+                    fetchPlayers().then(p => setPlayersData(p)).catch(() => {});
                 } catch (e) {
                     console.error('League load failed:', e);
+                    setErrMsg('Failed to load league data. Check your connection and try again.');
+                    setPhase('error');
                 } finally {
                     setLeagueLoading(false);
                 }

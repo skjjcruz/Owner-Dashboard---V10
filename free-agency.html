@@ -707,17 +707,18 @@
                 setPosFilter('ALL');
                 setSearch('');
                 try {
-                    // Fetch rosters, league info, players, and 2025 season stats in parallel
-                    const [rosters, info, players, stats] = await Promise.all([
+                    // Fetch rosters, league info, and 2025 season stats in parallel
+                    const [rosters, info, stats] = await Promise.all([
                         fetchRosters(leagueId),
                         fetchLeagueInfo(leagueId),
-                        fetchPlayers(),
                         fetchSeasonStats(STATS_YEAR)
                     ]);
                     const myR = rosters.find(r => r.owner_id === userId) || null;
                     setMyRoster(myR);
                     setAllRosters(rosters);
                     setLeagueInfo(info);
+                    // Load player names in background — large payload, non-blocking
+                    fetchPlayers().then(p => setPlayersData(p)).catch(() => {});
                     setPlayersData(players);
                     setStatsData(stats);
 
@@ -756,6 +757,8 @@
                     });
                 } catch (e) {
                     console.error('League load failed:', e);
+                    setErrMsg('Failed to load league data. Check your connection and try again.');
+                    setPhase('error');
                 } finally {
                     setLeagueLoading(false);
                 }

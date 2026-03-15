@@ -1860,17 +1860,17 @@
 
                 setStandings(standingsData);
 
-                const [players, stats, projections, s2025] = await Promise.all([
-                    fetchAllPlayers(),
+                const [stats, projections, s2025] = await Promise.all([
                     fetchSeasonStats(currentLeague.season),
                     fetchSeasonProjections(currentLeague.season),
                     fetchSeasonStats(STATS_YEAR)
                 ]);
-                setPlayersData(players);
                 setStatsData(stats);
                 setProjectionsData(projections);
                 setStats2025Data(s2025);
                 setLoading(false);
+                // Load player names in background — large payload, non-blocking
+                fetchAllPlayers().then(p => setPlayersData(p)).catch(() => {});
             } catch (err) {
                 console.error('Failed to load league details:', err);
                 setError(err.message || 'Failed to load league details');
