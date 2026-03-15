@@ -81,7 +81,7 @@ async function loadPlayersFromCSV() {
       'OT': 1.25, 'T': 1.25,
       'WR': 1.2,
       'CB': 1.15,
-      'DT': .11, 'DL': 1.1, 'IDL': 1.1,
+      'DT': 1.1, 'DL': 1.1, 'IDL': 1.1,
       'LB': 1.05, 'ILB': 1.05, 'OLB': 1.05,
       'S': 1.0,
       'TE': 0.95,
