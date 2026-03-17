@@ -840,11 +840,16 @@
       try {
         const s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
         if (s?.token && s?.user) {
-          // Redirect to the appropriate app
-          const dest = (s.user.products || []).includes('dynast_hq')
-            ? 'dynast-hq/index.html'
-            : 'index.html';
-          window.location.href = dest;
+          // Check if onboarding is complete before routing to the app
+          const profile = JSON.parse(localStorage.getItem('od_profile_v1') || 'null');
+          if (!profile || !profile.onboardingComplete) {
+            window.location.href = 'onboarding.html';
+          } else {
+            const dest = (s.user.products || []).includes('dynast_hq')
+              ? 'dynast-hq/index.html'
+              : 'index.html';
+            window.location.href = dest;
+          }
         }
       } catch {}
     })();
@@ -921,8 +926,8 @@
         // Save session
         localStorage.setItem(SESSION_KEY, JSON.stringify(data));
 
-        showAlert('Signup', 'success', 'Account created! Redirecting…');
-        setTimeout(() => { window.location.href = 'index.html'; }, 1000);
+        showAlert('Signup', 'success', 'Account created! Setting up your War Room…');
+        setTimeout(() => { window.location.href = 'onboarding.html'; }, 1000);
 
       } catch (err) {
         showAlert('Signup', 'error', 'Network error: ' + (err?.message || String(err)));
@@ -962,7 +967,11 @@
 
         localStorage.setItem(SESSION_KEY, JSON.stringify(data));
         showAlert('Signin', 'success', 'Welcome back! Redirecting…');
-        setTimeout(() => { window.location.href = 'index.html'; }, 800);
+        const siProfile = JSON.parse(localStorage.getItem('od_profile_v1') || 'null');
+        const siDest = (!siProfile || !siProfile.onboardingComplete)
+          ? 'onboarding.html'
+          : ((data.user?.products || []).includes('dynast_hq') ? 'dynast-hq/index.html' : 'index.html');
+        setTimeout(() => { window.location.href = siDest; }, 800);
 
       } catch (err) {
         showAlert('Signin', 'error', 'Network error: ' + (err?.message || String(err)));

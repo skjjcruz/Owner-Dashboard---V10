@@ -1003,7 +1003,7 @@
     
     const authData = localStorage.getItem(AUTH_KEY);
     if (!authData) {
-        window.location.href = 'login.html';
+        window.location.href = 'landing.html';
     }
 
     let sleeperUsername = '';
@@ -1016,7 +1016,7 @@
         }
     } catch (e) {
         localStorage.removeItem(AUTH_KEY);
-        window.location.href = 'login.html';
+        window.location.href = 'landing.html';
     }
 
     const { useState, useEffect, useRef } = React;
@@ -1024,7 +1024,7 @@
     function handleLogout() {
         if (confirm('Are you sure you want to logout?')) {
             localStorage.removeItem(AUTH_KEY);
-            window.location.href = 'login.html';
+            window.location.href = 'landing.html';
         }
     }
 

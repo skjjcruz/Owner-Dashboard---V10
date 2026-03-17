@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fantasy Wars — Get Started</title>
+  <link rel="icon" href="icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@300;400;600;700&family=Crimson+Text:ital@1&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --gold:       #D4AF37;
+      --dark-gold:  #B8941E;
+      --light-gold: #F0D060;
+      --black:      #0A0A0A;
+      --off-black:  #1A1A1A;
+      --charcoal:   #2A2A2A;
+      --white:      #FFFFFF;
+      --silver:     #C0C0C0;
+      --muted:      rgba(255,255,255,0.45);
+      --green:      #27AE60;
+    }
+
+    html, body {
+      min-height: 100%;
+      font-family: 'Oswald', sans-serif;
+      background: var(--black);
+      color: var(--white);
+    }
+
+    /* ── Progress header ──────────────────────────────────── */
+    .progress-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(10,10,10,0.95);
+      backdrop-filter: blur(8px);
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid rgba(212,175,55,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+    }
+    .logo-area img {
+      width: 28px;
+      height: 28px;
+      filter: drop-shadow(0 0 5px rgba(212,175,55,0.4));
+    }
+    .logo-area span {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.1rem;
+      color: var(--gold);
+      letter-spacing: 0.1em;
+    }
+    .step-dots {
+      display: flex;
+      gap: 0.65rem;
+      align-items: center;
+    }
+    .step-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: rgba(212,175,55,0.18);
+      transition: all 0.3s;
+    }
+    .step-dot.active { background: var(--gold); transform: scale(1.4); box-shadow: 0 0 8px rgba(212,175,55,0.5); }
+    .step-dot.done   { background: rgba(212,175,55,0.45); }
+    .step-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-align: right;
+      min-width: 80px;
+    }
+
+    /* ── Page wrap ────────────────────────────────────────── */
+    .page-wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 5rem;
+    }
+
+    /* ── Step panels ──────────────────────────────────────── */
+    .step-panel { display: none; }
+    .step-panel.active { display: block; animation: fadeUp 0.35s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-eyebrow {
+      font-size: 0.68rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.5rem;
+    }
+    .step-heading {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(2.2rem, 6vw, 3.2rem);
+      letter-spacing: 0.1em;
+      color: var(--white);
+      line-height: 0.95;
+      margin-bottom: 0.75rem;
+    }
+    .step-sub {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-bottom: 2.5rem;
+      line-height: 1.65;
+      max-width: 520px;
+    }
+
+    /* ── Plan cards ────────────────────────────────────────── */
+    .plan-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 620px) { .plan-grid { grid-template-columns: 1fr; } }
+
+    .plan-card {
+      background: linear-gradient(135deg, var(--off-black) 0%, var(--charcoal) 100%);
+      border: 2px solid rgba(212,175,55,0.18);
+      border-radius: 14px;
+      padding: 1.5rem 1.25rem;
+      cursor: pointer;
+      transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+    .plan-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+    .plan-card:hover { border-color: rgba(212,175,55,0.42); transform: translateY(-2px); }
+    .plan-card.selected {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 1px var(--gold), 0 8px 32px rgba(212,175,55,0.18);
+    }
+    .plan-card.selected::before { opacity: 1; }
+
+    .plan-badge {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: var(--gold);
+      color: var(--black);
+      font-size: 0.56rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.55rem;
+      border-radius: 20px;
+    }
+    .plan-icon { font-size: 1.8rem; margin-bottom: 0.75rem; line-height: 1; }
+    .plan-name {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.35rem;
+      letter-spacing: 0.08em;
+      color: var(--white);
+      margin-bottom: 0.25rem;
+    }
+    .plan-price {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.55rem;
+      color: var(--gold);
+      margin-bottom: 0.85rem;
+    }
+    .plan-price span {
+      font-size: 0.72rem;
+      font-family: 'Oswald', sans-serif;
+      color: var(--muted);
+      font-weight: 300;
+    }
+    .plan-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .plan-features li {
+      font-size: 0.78rem;
+      color: var(--silver);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      line-height: 1.4;
+    }
+    .pf-check { color: var(--gold); font-size: 0.62rem; flex-shrink: 0; margin-top: 0.18rem; }
+
+    /* ── Payment step ─────────────────────────────────────── */
+    .payment-box {
+      background: linear-gradient(135deg, var(--off-black), var(--charcoal));
+      border: 2px solid rgba(212,175,55,0.3);
+      border-radius: 16px;
+      padding: 2.25rem 2rem;
+      text-align: center;
+      margin-bottom: 1.25rem;
+    }
+    .payment-icon { font-size: 2.75rem; margin-bottom: 1rem; }
+    .payment-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.7rem;
+      letter-spacing: 0.08em;
+      color: var(--white);
+      margin-bottom: 0.5rem;
+    }
+    .payment-sub {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 420px;
+      margin: 0 auto 1.5rem;
+    }
+    .payment-price {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 2.8rem;
+      color: var(--gold);
+      margin-bottom: 1.75rem;
+    }
+    .payment-price span {
+      font-size: 0.88rem;
+      font-family: 'Oswald', sans-serif;
+      color: var(--muted);
+      font-weight: 300;
+    }
+    .stripe-note {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 0.85rem;
+    }
+    .stripe-note a { color: var(--gold); text-decoration: none; }
+
+    /* ── Token step ───────────────────────────────────────── */
+    .token-card {
+      background: linear-gradient(135deg, var(--off-black), var(--charcoal));
+      border: 2px solid rgba(212,175,55,0.3);
+      border-radius: 14px;
+      padding: 1.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .token-perks {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .token-perk {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      font-size: 0.82rem;
+      color: var(--silver);
+      line-height: 1.4;
+    }
+    .token-perk-icon { font-size: 1rem; flex-shrink: 0; }
+    .form-label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      margin-bottom: 0.45rem;
+    }
+    .form-input {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      background: var(--black);
+      border: 2px solid rgba(212,175,55,0.18);
+      border-radius: 8px;
+      color: var(--white);
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.88rem;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(212,175,55,0.1);
+    }
+    .form-input::placeholder { color: rgba(255,255,255,0.2); }
+    .token-hint {
+      margin-top: 0.6rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .token-hint a { color: var(--gold); text-decoration: none; }
+    .token-hint a:hover { text-decoration: underline; }
+    .security-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+      background: rgba(39,174,96,0.06);
+      border: 1px solid rgba(39,174,96,0.2);
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
+      line-height: 1.5;
+    }
+
+    /* ── Platform grid ────────────────────────────────────── */
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 500px) { .platform-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .platform-card {
+      background: linear-gradient(135deg, var(--off-black), var(--charcoal));
+      border: 2px solid rgba(212,175,55,0.12);
+      border-radius: 12px;
+      padding: 1rem 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      position: relative;
+      user-select: none;
+    }
+    .platform-card:hover:not(.locked) { border-color: rgba(212,175,55,0.35); transform: translateY(-1px); }
+    .platform-card.selected {
+      border-color: var(--gold);
+      background: linear-gradient(135deg, rgba(212,175,55,0.07), rgba(212,175,55,0.03));
+    }
+    .platform-card.locked { opacity: 0.55; cursor: not-allowed; }
+
+    .platform-check {
+      position: absolute;
+      top: 0.45rem;
+      right: 0.45rem;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(212,175,55,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.58rem;
+      transition: all 0.2s;
+    }
+    .platform-card.selected .platform-check {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--black);
+      font-weight: 700;
+    }
+    .platform-icon { font-size: 1.45rem; margin-bottom: 0.4rem; line-height: 1; }
+    .platform-name { font-size: 0.76rem; font-weight: 600; color: var(--silver); letter-spacing: 0.03em; }
+    .platform-status { font-size: 0.62rem; color: var(--muted); margin-top: 0.2rem; }
+    .platform-status.live { color: #27AE60; }
+
+    /* ── Done step ────────────────────────────────────────── */
+    .done-icon {
+      font-size: 3.5rem;
+      text-align: center;
+      margin-bottom: 1.25rem;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.85rem;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 480px) { .summary-grid { grid-template-columns: 1fr; } }
+    .summary-card {
+      background: linear-gradient(135deg, var(--off-black), var(--charcoal));
+      border: 1px solid rgba(212,175,55,0.18);
+      border-radius: 12px;
+      padding: 1.1rem 1.25rem;
+    }
+    .summary-label {
+      font-size: 0.62rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.4rem;
+    }
+    .summary-value {
+      font-size: 0.9rem;
+      color: var(--white);
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .summary-value.muted { color: var(--muted); font-weight: 400; font-size: 0.8rem; }
+
+    /* ── Shared UI ────────────────────────────────────────── */
+    .cta-btn {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--gold), var(--dark-gold));
+      border: none;
+      border-radius: 10px;
+      color: var(--black);
+      font-family: 'Oswald', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: box-shadow 0.25s, transform 0.2s, opacity 0.2s;
+      box-shadow: 0 4px 14px rgba(212,175,55,0.3);
+    }
+    .cta-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(212,175,55,0.5); }
+    .cta-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .skip-link {
+      display: block;
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .skip-link:hover { color: var(--silver); }
+
+    .alert {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      margin-bottom: 1rem;
+      display: none;
+      line-height: 1.5;
+    }
+    .alert.show { display: block; }
+    .alert-error   { background: rgba(192,57,43,0.2);  border: 1px solid #C0392B; color: #E74C3C; }
+    .alert-success { background: rgba(39,174,96,0.12); border: 1px solid #27AE60;  color: #2ECC71; }
+    .alert-info    { background: rgba(212,175,55,0.08); border: 1px solid rgba(212,175,55,0.3); color: var(--gold); }
+
+    .divider {
+      width: 50px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 2rem 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Progress header -->
+  <header class="progress-header">
+    <a class="logo-area" href="landing.html">
+      <img src="icon-192.png" alt="Fantasy Wars">
+      <span>Fantasy Wars</span>
+    </a>
+    <div class="step-dots" id="stepDots">
+      <div class="step-dot active" data-step="1"></div>
+      <div class="step-dot" data-step="2"></div>
+      <div class="step-dot" data-step="3"></div>
+      <div class="step-dot" data-step="4"></div>
+    </div>
+    <div class="step-label" id="stepLabel">Step 1 of 4</div>
+  </header>
+
+  <main class="page-wrap">
+
+    <!-- ═══════════════════════════════════════════════════════
+         STEP 1 — CHOOSE YOUR PLAN
+    ═══════════════════════════════════════════════════════ -->
+    <div class="step-panel active" id="step1">
+      <p class="step-eyebrow">Step 1 of 4</p>
+      <h1 class="step-heading">Choose Your<br><span style="color:var(--gold)">Arsenal</span></h1>
+      <p class="step-sub">Pick the plan that fits how you play. You can upgrade anytime from your settings.</p>
+
+      <div class="plan-grid">
+
+        <!-- Free -->
+        <div class="plan-card" id="plan-free" onclick="selectPlan('free')">
+          <div class="plan-icon">⚔️</div>
+          <div class="plan-name">War Room Free</div>
+          <div class="plan-price">$0 <span>forever</span></div>
+          <ul class="plan-features">
+            <li><span class="pf-check">✦</span> League calendar &amp; scheduling</li>
+            <li><span class="pf-check">✦</span> Earnings &amp; payout tracker</li>
+            <li><span class="pf-check">✦</span> Free agency &amp; FAAB tool</li>
+            <li><span class="pf-check">✦</span> Draft board builder</li>
+            <li><span class="pf-check">✦</span> Multi-platform league view</li>
+          </ul>
+        </div>
+
+        <!-- Pro -->
+        <div class="plan-card" id="plan-pro" onclick="selectPlan('pro')">
+          <span class="plan-badge">Most Popular</span>
+          <div class="plan-icon">🏛️</div>
+          <div class="plan-name">Dynasty HQ Pro</div>
+          <div class="plan-price">$9.99 <span>/ month</span></div>
+          <ul class="plan-features">
+            <li><span class="pf-check">✦</span> Everything in Free</li>
+            <li><span class="pf-check">✦</span> AI league &amp; team analysis</li>
+            <li><span class="pf-check">✦</span> AI trade recommendations</li>
+            <li><span class="pf-check">✦</span> Owner DNA profiles</li>
+            <li><span class="pf-check">✦</span> Mock draft simulator</li>
+            <li><span class="pf-check">✦</span> Rookie draft strategy AI</li>
+          </ul>
+        </div>
+
+        <!-- Power -->
+        <div class="plan-card" id="plan-power" onclick="selectPlan('power')">
+          <div class="plan-icon">⚡</div>
+          <div class="plan-name">Dynasty HQ Power</div>
+          <div class="plan-price">$0 <span>bring your key</span></div>
+          <ul class="plan-features">
+            <li><span class="pf-check">✦</span> Everything in Pro</li>
+            <li><span class="pf-check">✦</span> Advanced AI decision engine</li>
+            <li><span class="pf-check">✦</span> Real-time matchup intelligence</li>
+            <li><span class="pf-check">✦</span> Predictive roster modeling</li>
+            <li><span class="pf-check">✦</span> AI trade negotiation assistant</li>
+            <li><span class="pf-check">✦</span> Your own Claude API key</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <button class="cta-btn" id="step1Btn" onclick="goStep2()" disabled>Continue →</button>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         STEP 2a — PAYMENT (Pro)
+    ═══════════════════════════════════════════════════════ -->
+    <div class="step-panel" id="step2pay">
+      <p class="step-eyebrow">Step 2 of 4</p>
+      <h1 class="step-heading">Unlock<br><span style="color:var(--gold)">Dynasty HQ Pro</span></h1>
+      <p class="step-sub">Full AI suite powered by Claude on our servers. No API key needed — we handle everything.</p>
+
+      <div class="payment-box">
+        <div class="payment-icon">🏛️</div>
+        <div class="payment-title">Dynasty HQ Pro</div>
+        <div class="payment-sub">
+          AI trade analysis, Owner DNA profiles, mock draft simulator, rookie draft strategy, and real-time matchup intelligence — all powered by Claude AI.
+        </div>
+        <div class="payment-price">$9.99 <span>/ month</span></div>
+        <button class="cta-btn" id="stripeBtn" onclick="goToStripe()">Proceed to Secure Checkout →</button>
+        <p class="stripe-note">Secured by <a href="https://stripe.com" target="_blank" rel="noopener">Stripe</a> &middot; Cancel anytime &middot; No hidden fees</p>
+      </div>
+
+      <div id="alertPayment" class="alert"></div>
+      <span class="skip-link" onclick="skipPayment()">Skip for now — continue with Free access</span>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         STEP 2b — CLAUDE API TOKEN (Power)
+    ═══════════════════════════════════════════════════════ -->
+    <div class="step-panel" id="step2token">
+      <p class="step-eyebrow">Step 2 of 4</p>
+      <h1 class="step-heading">Connect Your<br><span style="color:var(--gold)">AI Engine</span></h1>
+      <p class="step-sub">Dynasty HQ Power runs on your own Claude API key — giving you full control and zero subscription fees.</p>
+
+      <div class="token-card">
+        <div class="token-perks">
+          <div class="token-perk">
+            <span class="token-perk-icon">🧠</span>
+            <span><strong style="color:var(--white)">Advanced AI Decision Engine</strong> — get real-time analysis on every roster decision, trade, and draft pick.</span>
+          </div>
+          <div class="token-perk">
+            <span class="token-perk-icon">🔀</span>
+            <span><strong style="color:var(--white)">AI Trade Negotiation Assistant</strong> — Claude analyzes your league's scoring, your roster needs, and your opponent's tendencies.</span>
+          </div>
+          <div class="token-perk">
+            <span class="token-perk-icon">📡</span>
+            <span><strong style="color:var(--white)">Predictive Roster Modeling</strong> — cross-platform analytics with pro-grade scouting tools powered by the latest Claude models.</span>
+          </div>
+        </div>
+
+        <label class="form-label" for="claudeTokenInput">Your Anthropic API Key</label>
+        <input
+          class="form-input"
+          type="password"
+          id="claudeTokenInput"
+          placeholder="sk-ant-api03-..."
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <p class="token-hint">
+          Get your key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> &rarr; API Keys.<br>
+          Uses <strong>claude-sonnet-4-6</strong> by default (fastest &amp; most capable). You control usage &amp; billing directly with Anthropic.
+        </p>
+        <div class="security-note">
+          🔒 <span>Your API key is stored <strong>only on your device</strong> (localStorage). It is never sent to our servers — all AI calls go directly from your browser to Anthropic.</span>
+        </div>
+      </div>
+
+      <div id="alertToken" class="alert"></div>
+      <button class="cta-btn" onclick="saveToken()">Save Key &amp; Continue →</button>
+      <span class="skip-link" onclick="skipToken()">Skip — I'll add my key later in Settings</span>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         STEP 3 — FANTASY PLATFORMS
+    ═══════════════════════════════════════════════════════ -->
+    <div class="step-panel" id="step3">
+      <p class="step-eyebrow">Step 3 of 4</p>
+      <h1 class="step-heading">Your<br><span style="color:var(--gold)">Battlegrounds</span></h1>
+      <p class="step-sub">Which fantasy platforms do you play on? We'll prioritize pulling in your leagues from these sites.</p>
+
+      <div class="platform-grid">
+
+        <div class="platform-card selected locked" id="plat-sleeper">
+          <div class="platform-check">✓</div>
+          <div class="platform-icon">😴</div>
+          <div class="platform-name">Sleeper</div>
+          <div class="platform-status live">Primary · Live</div>
+        </div>
+
+        <div class="platform-card" id="plat-yahoo" onclick="togglePlatform('yahoo')">
+          <div class="platform-check"></div>
+          <div class="platform-icon">🔮</div>
+          <div class="platform-name">Yahoo Fantasy</div>
+          <div class="platform-status">Coming soon</div>
+        </div>
+
+        <div class="platform-card" id="plat-espn" onclick="togglePlatform('espn')">
+          <div class="platform-check"></div>
+          <div class="platform-icon">🏈</div>
+          <div class="platform-name">ESPN Fantasy</div>
+          <div class="platform-status">Coming soon</div>
+        </div>
+
+        <div class="platform-card" id="plat-draftkings" onclick="togglePlatform('draftkings')">
+          <div class="platform-check"></div>
+          <div class="platform-icon">👑</div>
+          <div class="platform-name">DraftKings</div>
+          <div class="platform-status">Coming soon</div>
+        </div>
+
+        <div class="platform-card" id="plat-mfl" onclick="togglePlatform('mfl')">
+          <div class="platform-check"></div>
+          <div class="platform-icon">🗺️</div>
+          <div class="platform-name">MFL</div>
+          <div class="platform-status">Coming soon</div>
+        </div>
+
+        <div class="platform-card" id="plat-fantrax" onclick="togglePlatform('fantrax')">
+          <div class="platform-check"></div>
+          <div class="platform-icon">🦅</div>
+          <div class="platform-name">Fantrax</div>
+          <div class="platform-status">Coming soon</div>
+        </div>
+
+        <div class="platform-card" id="plat-nfl" onclick="togglePlatform('nfl')">
+          <div class="platform-check"></div>
+          <div class="platform-icon">🏟️</div>
+          <div class="platform-name">NFL.com</div>
+          <div class="platform-status">Coming soon</div>
+        </div>
+
+        <div class="platform-card" id="plat-cbs" onclick="togglePlatform('cbs')">
+          <div class="platform-check"></div>
+          <div class="platform-icon">📺</div>
+          <div class="platform-name">CBS Fantasy</div>
+          <div class="platform-status">Coming soon</div>
+        </div>
+
+        <div class="platform-card" id="plat-underdog" onclick="togglePlatform('underdog')">
+          <div class="platform-check"></div>
+          <div class="platform-icon">🐕</div>
+          <div class="platform-name">Underdog</div>
+          <div class="platform-status">Coming soon</div>
+        </div>
+
+        <div class="platform-card" id="plat-prizepicks" onclick="togglePlatform('prizepicks')">
+          <div class="platform-check"></div>
+          <div class="platform-icon">🎯</div>
+          <div class="platform-name">PrizePicks</div>
+          <div class="platform-status">Coming soon</div>
+        </div>
+
+        <div class="platform-card" id="plat-fanduel" onclick="togglePlatform('fanduel')">
+          <div class="platform-check"></div>
+          <div class="platform-icon">🎲</div>
+          <div class="platform-name">FanDuel</div>
+          <div class="platform-status">Coming soon</div>
+        </div>
+
+        <div class="platform-card" id="plat-fleaflicker" onclick="togglePlatform('fleaflicker')">
+          <div class="platform-check"></div>
+          <div class="platform-icon">🦟</div>
+          <div class="platform-name">Fleaflicker</div>
+          <div class="platform-status">Coming soon</div>
+        </div>
+
+      </div>
+
+      <button class="cta-btn" onclick="goStep4()">Continue →</button>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         STEP 4 — ALL SET
+    ═══════════════════════════════════════════════════════ -->
+    <div class="step-panel" id="step4">
+      <p class="step-eyebrow">Step 4 of 4</p>
+      <div class="done-icon">⚔️</div>
+      <h1 class="step-heading">You're In<br><span style="color:var(--gold)">The War Room</span></h1>
+      <p class="step-sub">Your command center is ready. Here's your loadout — you can change everything anytime from Settings.</p>
+
+      <div class="divider"></div>
+
+      <div class="summary-grid" id="summaryGrid">
+        <!-- Populated by JS -->
+      </div>
+
+      <button class="cta-btn" id="enterBtn" onclick="enterApp()">Enter the War Room →</button>
+    </div>
+
+  </main>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="supabase-client.js"></script>
+  <script>
+    // ═══════════════════════════════════════════════════════
+    // CONFIG
+    // ─────────────────────────────────────────────────────
+    // To enable real Stripe payments:
+    //   1. Go to stripe.com → Products → create a $9.99/mo recurring price
+    //   2. Go to Payment Links → create a link for that price
+    //   3. Set the success URL to: https://YOUR_SITE/onboarding.html?payment=success
+    //   4. Replace the placeholder below with your Payment Link URL
+    // ═══════════════════════════════════════════════════════
+    const STRIPE_PAYMENT_LINK = 'YOUR_STRIPE_PAYMENT_LINK_HERE';
+
+    // ── State ──────────────────────────────────────────────
+    let selectedPlan = null;
+    const selectedPlatforms = new Set(['sleeper']);
+    const PROFILE_KEY = 'od_profile_v1';
+    const AUTH_KEY    = 'od_auth_v1';
+
+    // ── Boot ───────────────────────────────────────────────
+    (function init() {
+      // Must be logged in to reach this page
+      let auth = null;
+      try { auth = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); } catch {}
+      if (!auth || !auth.username) { window.location.href = 'landing.html'; return; }
+
+      // If onboarding already complete, skip to the app
+      try {
+        const p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
+        if (p && p.onboardingComplete) { window.location.href = 'index.html'; return; }
+      } catch {}
+
+      // Stripe payment return
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('payment') === 'success') {
+        selectedPlan = 'pro';
+        patchProfile({ tier: 'pro' });
+        showStep(3);
+        return;
+      }
+
+      // Restore any previously-saved partial progress
+      try {
+        const saved = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
+        if (saved && saved.tier) {
+          selectedPlan = saved.tier;
+          const card = document.getElementById('plan-' + saved.tier);
+          if (card) card.classList.add('selected');
+          document.getElementById('step1Btn').disabled = false;
+        }
+        if (saved && saved.platforms) {
+          saved.platforms.forEach(p => {
+            if (p === 'sleeper') return;
+            selectedPlatforms.add(p);
+            const card = document.getElementById('plat-' + p);
+            if (card) card.classList.add('selected');
+          });
+        }
+      } catch {}
+
+      showStep(1);
+    })();
+
+    // ── Step navigation ────────────────────────────────────
+    function showStep(n) {
+      document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+
+      if (n === 2) {
+        if (selectedPlan === 'pro') {
+          document.getElementById('step2pay').classList.add('active');
+        } else if (selectedPlan === 'power') {
+          document.getElementById('step2token').classList.add('active');
+        } else {
+          // Free — skip payment/token step
+          showStep(3);
+          return;
+        }
+      } else {
+        const panelMap = { 1: 'step1', 3: 'step3', 4: 'step4' };
+        const panel = panelMap[n];
+        if (panel) document.getElementById(panel).classList.add('active');
+      }
+
+      updateProgress(n);
+    }
+
+    function updateProgress(n) {
+      const dotIndex = (n === 2) ? 1 : (n - 1);
+      document.querySelectorAll('.step-dot').forEach((d, i) => {
+        d.classList.remove('active', 'done');
+        if (i < dotIndex)      d.classList.add('done');
+        else if (i === dotIndex) d.classList.add('active');
+      });
+      const labels = { 1: 'Step 1 of 4', 2: 'Step 2 of 4', 3: 'Step 3 of 4', 4: 'Step 4 of 4' };
+      document.getElementById('stepLabel').textContent = labels[n] || labels[1];
+    }
+
+    // ── Plan selection ─────────────────────────────────────
+    function selectPlan(plan) {
+      selectedPlan = plan;
+      document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+      document.getElementById('plan-' + plan).classList.add('selected');
+      document.getElementById('step1Btn').disabled = false;
+    }
+
+    function goStep2() {
+      if (!selectedPlan) return;
+      patchProfile({ tier: selectedPlan });
+      showStep(2);
+    }
+
+    // ── Payment (Pro) ──────────────────────────────────────
+    function goToStripe() {
+      const alertEl = document.getElementById('alertPayment');
+
+      if (STRIPE_PAYMENT_LINK === 'YOUR_STRIPE_PAYMENT_LINK_HERE') {
+        // Stripe not yet configured — grant beta access and move on
+        alertEl.className = 'alert alert-info show';
+        alertEl.textContent = '⚡ Payment gateway coming soon — your Dynasty HQ Pro access is activated in beta. Enjoy full access while we finalise billing.';
+        patchProfile({ tier: 'pro', betaAccess: true });
+        document.getElementById('stripeBtn').disabled = true;
+        setTimeout(() => showStep(3), 2200);
+        return;
+      }
+
+      // Redirect to Stripe Payment Link
+      const username = getUsername();
+      const returnUrl = encodeURIComponent(
+        window.location.origin + window.location.pathname + '?payment=success'
+      );
+      window.location.href =
+        `${STRIPE_PAYMENT_LINK}?client_reference_id=${encodeURIComponent(username)}&success_url=${returnUrl}`;
+    }
+
+    function skipPayment() {
+      patchProfile({ tier: 'free' });
+      selectedPlan = 'free';
+      showStep(3);
+    }
+
+    // ── Claude API Token (Power) ───────────────────────────
+    function saveToken() {
+      const token = document.getElementById('claudeTokenInput').value.trim();
+      const alertEl = document.getElementById('alertToken');
+
+      if (token && !token.startsWith('sk-ant-')) {
+        alertEl.className = 'alert alert-error show';
+        alertEl.textContent = 'That doesn\'t look like a valid Anthropic API key. It should start with sk-ant-';
+        return;
+      }
+
+      if (token) {
+        // Store locally only — never leaves the device
+        localStorage.setItem('od_claude_token', token);
+        patchProfile({ tier: 'power', hasClaudeToken: true });
+        alertEl.className = 'alert alert-success show';
+        alertEl.textContent = '✓ API key saved to your device.';
+        setTimeout(() => showStep(3), 800);
+      } else {
+        patchProfile({ tier: 'power', hasClaudeToken: false });
+        showStep(3);
+      }
+    }
+
+    function skipToken() {
+      patchProfile({ tier: 'power', hasClaudeToken: false });
+      showStep(3);
+    }
+
+    // ── Platform selection ─────────────────────────────────
+    function togglePlatform(id) {
+      const card = document.getElementById('plat-' + id);
+      if (!card || card.classList.contains('locked')) return;
+
+      if (selectedPlatforms.has(id)) {
+        selectedPlatforms.delete(id);
+        card.classList.remove('selected');
+        card.querySelector('.platform-check').textContent = '';
+      } else {
+        selectedPlatforms.add(id);
+        card.classList.add('selected');
+        card.querySelector('.platform-check').textContent = '✓';
+      }
+    }
+
+    function goStep4() {
+      patchProfile({ platforms: Array.from(selectedPlatforms) });
+      buildSummary();
+      showStep(4);
+    }
+
+    // ── Summary ────────────────────────────────────────────
+    function buildSummary() {
+      const profile = getProfile();
+      const username = getUsername();
+
+      const tierLabels = {
+        free:  'War Room Free',
+        pro:   'Dynasty HQ Pro',
+        power: 'Dynasty HQ Power',
+      };
+      const tierLabel = tierLabels[profile.tier] || 'Free';
+
+      const platformList = (profile.platforms || ['sleeper'])
+        .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+        .join(', ');
+
+      const tokenSaved = !!localStorage.getItem('od_claude_token');
+
+      let html = `
+        <div class="summary-card">
+          <div class="summary-label">Commander</div>
+          <div class="summary-value">${escHtml(username)}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Plan</div>
+          <div class="summary-value">${escHtml(tierLabel)}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Platforms Selected</div>
+          <div class="summary-value" style="font-size:0.82rem">${escHtml(platformList)}</div>
+        </div>
+      `;
+
+      if (profile.tier === 'power') {
+        html += `
+          <div class="summary-card">
+            <div class="summary-label">Claude API Key</div>
+            <div class="summary-value ${tokenSaved ? '' : 'muted'}">${tokenSaved ? 'Connected ✓' : 'Not set — add in Settings'}</div>
+          </div>
+        `;
+      }
+
+      if (profile.betaAccess) {
+        html += `
+          <div class="summary-card" style="grid-column:1/-1">
+            <div class="summary-label">Beta Access</div>
+            <div class="summary-value" style="color:var(--gold)">⚡ Pro features active in beta</div>
+          </div>
+        `;
+      }
+
+      document.getElementById('summaryGrid').innerHTML = html;
+    }
+
+    function enterApp() {
+      patchProfile({ onboardingComplete: true });
+
+      // Sync profile to Supabase in the background
+      const profile = getProfile();
+      if (window.OD && window.OD.saveProfile) {
+        window.OD.saveProfile(profile).catch(() => {});
+      }
+
+      window.location.href = 'index.html';
+    }
+
+    // ── Helpers ────────────────────────────────────────────
+    function getProfile() {
+      try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}'); }
+      catch { return {}; }
+    }
+
+    function patchProfile(patch) {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...getProfile(), ...patch }));
+    }
+
+    function getUsername() {
+      try {
+        const auth = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
+        return auth.username || 'Commander';
+      } catch { return 'Commander'; }
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
