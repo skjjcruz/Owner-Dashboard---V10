@@ -538,6 +538,45 @@ window.OD.saveDNA = function(leagueId, dnaMap) {
 };
 
 // ============================================================
+// USER PROFILE — tier, platforms, onboarding status
+//
+// Required Supabase SQL (run once in SQL editor):
+//   ALTER TABLE users ADD COLUMN IF NOT EXISTS tier text DEFAULT 'free';
+//   ALTER TABLE users ADD COLUMN IF NOT EXISTS fantasy_platforms jsonb DEFAULT '[]';
+//   ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_complete boolean DEFAULT false;
+// ============================================================
+
+window.OD.saveProfile = async function(profile) {
+    const username = getCurrentUsername();
+    const db = getClient();
+    if (!db || !isConfigured() || !username) return;
+    await ensureUser(username);
+    const { error } = await db.from('users').update({
+        tier:                profile.tier               || 'free',
+        fantasy_platforms:   profile.platforms          || ['sleeper'],
+        onboarding_complete: profile.onboardingComplete || false,
+    }).eq('sleeper_username', username);
+    if (error) console.warn('[OD] profile save error', error);
+};
+
+window.OD.loadProfile = async function() {
+    const username = getCurrentUsername();
+    const db = getClient();
+    if (!db || !isConfigured() || !username) return null;
+    const { data, error } = await db
+        .from('users')
+        .select('tier, fantasy_platforms, onboarding_complete')
+        .eq('sleeper_username', username)
+        .maybeSingle();
+    if (error || !data) return null;
+    return {
+        tier:               data.tier               || 'free',
+        platforms:          data.fantasy_platforms  || ['sleeper'],
+        onboardingComplete: data.onboarding_complete || false,
+    };
+};
+
+// ============================================================
 // STATUS INDICATOR
 // ============================================================
 window.OD.status = function() {
