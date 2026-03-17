@@ -749,15 +749,16 @@
     // ── State ──────────────────────────────────────────────
     let selectedPlan = null;
     const selectedPlatforms = new Set(['sleeper']);
-    const PROFILE_KEY = 'od_profile_v1';
-    const AUTH_KEY    = 'od_auth_v1';
+    const PROFILE_KEY  = 'od_profile_v1';
+    const SESSION_KEY  = 'fw_session_v1';   // new email-based auth (landing.html)
+    const LEGACY_KEY   = 'od_auth_v1';      // old Sleeper-username auth (login.html)
 
     // ── Boot ───────────────────────────────────────────────
     (function init() {
-      // Must be logged in to reach this page
-      let auth = null;
-      try { auth = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); } catch {}
-      if (!auth || !auth.username) { window.location.href = 'landing.html'; return; }
+      // Accept either auth system (fw_session_v1 from landing.html, or od_auth_v1 from login.html)
+      const hasNewSession  = !!JSON.parse(localStorage.getItem(SESSION_KEY)  || 'null')?.token;
+      const hasLegacyAuth  = !!JSON.parse(localStorage.getItem(LEGACY_KEY)   || 'null')?.username;
+      if (!hasNewSession && !hasLegacyAuth) { window.location.href = 'landing.html'; return; }
 
       // If onboarding already complete, skip to the app
       try {
@@ -1002,8 +1003,12 @@
 
     function getUsername() {
       try {
-        const auth = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}');
-        return auth.username || 'Commander';
+        // Try new session first (has display name or email)
+        const s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+        if (s?.user) return s.user.displayName || s.user.email?.split('@')[0] || 'Commander';
+        // Fall back to legacy Sleeper username
+        const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || 'null');
+        return legacy?.username || 'Commander';
       } catch { return 'Commander'; }
     }
 
