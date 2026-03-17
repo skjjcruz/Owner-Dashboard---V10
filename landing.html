@@ -831,8 +831,9 @@
   <!-- ── Scripts ─────────────────────────────────────────────── -->
   <script>
     // ── Config — update SUPABASE_URL when deploying ────────────
-    const FW_API_BASE = 'https://sxshiqyxhhifvtfqawbq.supabase.co/functions/v1';
-    const SESSION_KEY = 'fw_session_v1';
+    const FW_API_BASE  = 'https://sxshiqyxhhifvtfqawbq.supabase.co/functions/v1';
+    const FW_ANON_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4c2hpcXl4aGhpZnZ0ZnFhd2JxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTExMzAsImV4cCI6MjA4ODI4NzEzMH0.zJi9W986ZLaANiZN6pt6ReFwaQU6yPeidsERIWo2ibI';
+    const SESSION_KEY  = 'fw_session_v1';
 
     // ── Redirect if already signed in ─────────────────────────
     (function checkSession() {
@@ -905,7 +906,7 @@
       try {
         const res  = await fetch(`${FW_API_BASE}/fw-signup`, {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'apikey': FW_ANON_KEY, 'Authorization': `Bearer ${FW_ANON_KEY}` },
           body:    JSON.stringify({ email, password, displayName, productSlug: selectedProduct }),
         });
         const data = await res.json();
@@ -947,7 +948,7 @@
       try {
         const res  = await fetch(`${FW_API_BASE}/fw-signin`, {
           method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'apikey': FW_ANON_KEY, 'Authorization': `Bearer ${FW_ANON_KEY}` },
           body:    JSON.stringify({ email, password }),
         });
         const data = await res.json();
