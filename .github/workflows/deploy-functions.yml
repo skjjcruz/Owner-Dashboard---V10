@@ -5,6 +5,7 @@ on:
     branches: ["main", "claude/*"]
     paths:
       - "supabase/functions/**"
+      - "supabase/migrations/**"
   workflow_dispatch:
 
 jobs:
@@ -24,6 +25,11 @@ jobs:
         run: supabase secrets set SUPABASE_JWT_SECRET="$SUPABASE_JWT_SECRET" --project-ref sxshiqyxhhifvtfqawbq
         env:
           SUPABASE_JWT_SECRET: ${{ secrets.SUPABASE_JWT_SECRET }}
+
+      - name: Apply database migrations
+        run: supabase db push --project-ref sxshiqyxhhifvtfqawbq
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
       - name: Deploy get-session-token function
         run: supabase functions deploy get-session-token --project-ref sxshiqyxhhifvtfqawbq
