@@ -1325,10 +1325,9 @@
                                                         onError={e => { e.target.style.display='none'; }}
                                                         style={{ width:'28px', height:'28px', borderRadius:'50%', objectFit:'cover', flexShrink:0 }}
                                                     />
-                                                    <div style={{ display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
-                                                        <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{fa.name}</span>
-                                                        <span className="player-team" style={{ fontSize:'0.6rem', opacity:0.6 }}>{fa.team}</span>
-                                                    </div>
+                                                    <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                                        {fa.name} <span className="player-team" style={{ fontSize:'0.6rem', opacity:0.6 }}>{fa.team}</span>
+                                                    </span>
                                                 </a>
                                                 <span className="sc mob-hide" style={{ width:`${SW.yrs}px`, color:'var(--silver)', opacity:0.65 }}>{st.yrs}</span>
                                                 <span className="sc" style={{ width:`${SW.pts}px`, color:'var(--gold)' }}>{st.pts}</span>

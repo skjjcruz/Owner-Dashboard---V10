@@ -470,7 +470,6 @@ function buildPlayerCellEl(nameText, url, phoneLines = [], playerId = "", nflTea
   textCol.style.minWidth = "0";
 
   const a = document.createElement("a");
-  a.textContent = nameText || "";
   if (url) {
     a.href = url;
     a.target = "_blank";
@@ -482,16 +481,16 @@ function buildPlayerCellEl(nameText, url, phoneLines = [], playerId = "", nflTea
   a.style.overflow = "hidden";
   a.style.textOverflow = "ellipsis";
   a.style.whiteSpace = "nowrap";
-  textCol.appendChild(a);
-
+  a.textContent = (nameText || "") + (nflTeam ? " " : "");
   if (nflTeam) {
     const teamSpan = document.createElement("span");
     teamSpan.textContent = nflTeam;
     teamSpan.style.fontSize = "10px";
     teamSpan.style.opacity = "0.5";
-    textCol.appendChild(teamSpan);
+    teamSpan.style.fontWeight = "normal";
+    a.appendChild(teamSpan);
   }
-
+  textCol.appendChild(a);
   nameRow.appendChild(textCol);
   wrap.appendChild(nameRow);
 
@@ -929,16 +928,15 @@ function renderSingleRoster(tbody, roster, ownerId, placeholderText) {
             a.style.overflow = "hidden";
             a.style.textOverflow = "ellipsis";
             a.style.whiteSpace = "nowrap";
-            textWrap.appendChild(a);
-
             if (p.team) {
+              a.textContent = nameText + " ";
               const teamSpan = document.createElement("span");
               teamSpan.textContent = p.team;
               teamSpan.style.fontSize = "11px";
               teamSpan.style.opacity = "0.5";
-              textWrap.appendChild(teamSpan);
+              a.appendChild(teamSpan);
             }
-
+            textWrap.appendChild(a);
             wrap.appendChild(textWrap);
             return wrap;
           })();
