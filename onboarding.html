@@ -248,31 +248,6 @@
     .stripe-note a { color: var(--gold); text-decoration: none; }
 
     /* ── Token step ───────────────────────────────────────── */
-    .ai-provider-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.4rem;
-      padding: 0.6rem 0.5rem;
-      background: rgba(255,255,255,0.04);
-      border: 2px solid rgba(212,175,55,0.18);
-      border-radius: 8px;
-      color: var(--silver);
-      font-family: 'Oswald', sans-serif;
-      font-size: 0.82rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .ai-provider-btn:hover { border-color: rgba(212,175,55,0.4); color: var(--white); }
-    .ai-provider-btn.selected {
-      border-color: var(--gold);
-      background: rgba(212,175,55,0.1);
-      color: var(--gold);
-    }
-    .ai-prov-icon { font-size: 1rem; }
-
     .token-card {
       background: linear-gradient(135deg, var(--off-black), var(--charcoal));
       border: 2px solid rgba(212,175,55,0.3);
@@ -614,42 +589,60 @@
           </div>
         </div>
 
-        <!-- AI Provider selector -->
-        <p class="form-label" style="margin-bottom:0.6rem;">Select AI Provider</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1.25rem;" id="aiProviderGrid">
-          <button type="button" class="ai-provider-btn selected" id="prov-claude" onclick="selectAIProvider('claude')">
-            <span class="ai-prov-icon">🤖</span> Claude
-          </button>
-          <button type="button" class="ai-provider-btn" id="prov-chatgpt" onclick="selectAIProvider('chatgpt')">
-            <span class="ai-prov-icon">💬</span> ChatGPT
-          </button>
-          <button type="button" class="ai-provider-btn" id="prov-genesis" onclick="selectAIProvider('genesis')">
-            <span class="ai-prov-icon">⚡</span> Genesis
-          </button>
-          <button type="button" class="ai-provider-btn" id="prov-grok" onclick="selectAIProvider('grok')">
-            <span class="ai-prov-icon">𝕏</span> Grok
-          </button>
+        <!-- AI Provider selector — matches Dynasty HQ implementation -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem;">
+          <div>
+            <label class="form-label" style="margin-bottom:0.4rem;">Provider</label>
+            <select id="ai-provider-sel" class="form-input" style="padding:0.6rem 0.75rem;font-size:0.85rem;" onchange="updateProviderHint()">
+              <option value="anthropic">Claude (Anthropic)</option>
+              <option value="groq">Groq — Free (Llama 3.3)</option>
+              <option value="gemini">Gemini Flash — Free (Google)</option>
+              <option value="openai">GPT-4o (OpenAI)</option>
+              <option value="grok">Grok (xAI)</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" style="margin-bottom:0.4rem;">Model <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+            <input type="text" id="ai-model-in" class="form-input" placeholder="auto" style="padding:0.6rem 0.75rem;font-size:0.85rem;">
+          </div>
         </div>
 
-        <label class="form-label" id="aiKeyLabel" for="aiTokenInput">Your Claude API Key</label>
+        <p id="provider-hint" class="token-hint" style="margin-bottom:0.85rem;"></p>
+
+        <label class="form-label" for="api-key-in">API Key</label>
         <input
           class="form-input"
           type="password"
-          id="aiTokenInput"
-          placeholder="sk-ant-api03-..."
+          id="api-key-in"
+          placeholder="Paste API key..."
           autocomplete="off"
           spellcheck="false"
+          style="font-family:monospace;font-size:0.82rem;"
         >
-        <p class="token-hint" id="aiKeyHint">
-          Get your key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> → API Keys.
-        </p>
-        <div class="security-note">
-          🔒 <span>Your API key is stored <strong>only on your device</strong>. It is never sent to our servers.</span>
+
+        <!-- Optional xAI news key -->
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.06);">
+          <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.5rem;line-height:1.5;">
+            <strong style="color:var(--silver);">Real-time news (optional)</strong> — Add an xAI key to get live player news from X/Twitter via Grok.
+          </p>
+          <input
+            class="form-input"
+            type="password"
+            id="xai-key-in"
+            placeholder="xai-... (optional)"
+            autocomplete="off"
+            style="font-family:monospace;font-size:0.82rem;"
+          >
+          <div id="xai-key-status" class="token-hint" style="margin-top:0.35rem;"></div>
+        </div>
+
+        <div class="security-note" style="margin-top:1rem;">
+          🔒 <span>Keys stored <strong>only on your device</strong> (localStorage). Never sent to our servers — all AI calls go directly to your provider.</span>
         </div>
       </div>
 
-      <div id="alertToken" class="alert"></div>
-      <button class="cta-btn" onclick="saveToken()">Save Key &amp; Continue →</button>
+      <div id="key-status" class="alert" style="margin-top:0.75rem;"></div>
+      <button class="cta-btn" onclick="saveKey()">Save Key &amp; Continue →</button>
       <span class="skip-link" onclick="skipToken()">Skip — I'll use my included queries for now</span>
     </div>
 
@@ -843,7 +836,6 @@
     // ── State ──────────────────────────────────────────────
     let selectedPlan = null;
     let selectedStandardProduct = 'war_room'; // default for Standard tier
-    let selectedAIProvider = 'claude';
     const selectedPlatforms = new Set(['sleeper']);
     const PROFILE_KEY  = 'od_profile_v1';
     const SESSION_KEY  = 'fw_session_v1';   // new email-based auth (landing.html)
@@ -905,6 +897,7 @@
         document.getElementById('step2pay').classList.add('active');
       } else if (n === '2b') {
         document.getElementById('step2token').classList.add('active');
+        loadStoredAIKeys();
       } else if (n === 4) {
         document.getElementById('step4creds').classList.add('active');
       } else {
@@ -999,45 +992,69 @@
       showStep('2b');
     }
 
-    // ── BYO AI Key (all plans) ─────────────────────────────
-    const AI_PROVIDERS = {
-      claude:  { label: 'Claude API Key',    placeholder: 'sk-ant-api03-...',      hint: 'Get your key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> → API Keys.' },
-      chatgpt: { label: 'OpenAI API Key',    placeholder: 'sk-...',                hint: 'Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a> → API Keys.' },
-      genesis: { label: 'Genesis API Key',   placeholder: 'genesis-...',            hint: 'Get your key from your Genesis AI account dashboard.' },
-      grok:    { label: 'Grok API Key',      placeholder: 'xai-...',               hint: 'Get your key at <a href="https://console.x.ai" target="_blank" rel="noopener">console.x.ai</a> → API Keys.' },
-    };
-
-    function selectAIProvider(provider) {
-      selectedAIProvider = provider;
-      document.querySelectorAll('.ai-provider-btn').forEach(b => b.classList.remove('selected'));
-      document.getElementById('prov-' + provider).classList.add('selected');
-      const info = AI_PROVIDERS[provider];
-      document.getElementById('aiKeyLabel').textContent   = info.label;
-      document.getElementById('aiTokenInput').placeholder = info.placeholder;
-      document.getElementById('aiTokenInput').value       = '';
-      document.getElementById('aiKeyHint').innerHTML      = info.hint;
+    // ── BYO AI Key — Dynasty HQ implementation ─────────────
+    function updateProviderHint() {
+      const provider = document.getElementById('ai-provider-sel').value;
+      const hints = {
+        anthropic: 'Get your free API key at console.anthropic.com. Claude 3.5 Sonnet is recommended.',
+        groq:      'Free Llama 3.3 inference. Get your key at console.groq.com (no credit card needed).',
+        gemini:    'Free Google Gemini Flash. Get your key at ai.google.dev (includes generous free tier).',
+        openai:    'Paid GPT-4o access. Get your key at platform.openai.com (requires credit card).',
+        grok:      'Get your key at x.ai. Includes real-time X/Twitter data for news.',
+      };
+      document.getElementById('provider-hint').textContent = hints[provider] || '';
     }
 
-    function saveToken() {
-      const token   = document.getElementById('aiTokenInput').value.trim();
-      const alertEl = document.getElementById('alertToken');
+    function saveKey() {
+      const provider = document.getElementById('ai-provider-sel').value;
+      const key      = document.getElementById('api-key-in').value.trim();
+      const model    = document.getElementById('ai-model-in').value.trim() || '';
+      const statusEl = document.getElementById('key-status');
 
-      if (token) {
-        const storageKey = 'od_ai_key_' + selectedAIProvider;
-        localStorage.setItem(storageKey, token);
-        patchProfile({ byoAI: selectedAIProvider, hasBYOKey: true });
-        alertEl.className = 'alert alert-success show';
-        alertEl.textContent = '✓ API key saved to your device only.';
-        setTimeout(() => showStep(3), 800);
-      } else {
-        patchProfile({ hasBYOKey: false });
-        showStep(3);
+      if (!key) {
+        statusEl.className = 'alert alert-error show';
+        statusEl.textContent = 'Paste an API key first.';
+        return;
       }
+
+      try {
+        localStorage.setItem('dynastyhq_ai_provider', provider);
+        localStorage.setItem('dynastyhq_ai_key', key);
+        if (model) localStorage.setItem('dynastyhq_ai_model', model);
+
+        // Save optional xAI key
+        const xaiKey = document.getElementById('xai-key-in').value.trim();
+        if (xaiKey) localStorage.setItem('dynastyhq_xai_key', xaiKey);
+      } catch (e) {
+        statusEl.className = 'alert alert-error show';
+        statusEl.textContent = 'Storage error: ' + e.message;
+        return;
+      }
+
+      patchProfile({ byoAI: provider, hasBYOKey: true });
+      statusEl.className = 'alert alert-success show';
+      statusEl.textContent = '✓ API key saved to your device only.';
+      setTimeout(() => showStep(3), 900);
     }
 
     function skipToken() {
       patchProfile({ hasBYOKey: false });
       showStep(3);
+    }
+
+    // Load any previously saved keys into the form
+    function loadStoredAIKeys() {
+      try {
+        const p = localStorage.getItem('dynastyhq_ai_provider');
+        const k = localStorage.getItem('dynastyhq_ai_key');
+        const m = localStorage.getItem('dynastyhq_ai_model');
+        const x = localStorage.getItem('dynastyhq_xai_key');
+        if (p) document.getElementById('ai-provider-sel').value = p;
+        if (k) document.getElementById('api-key-in').value = k;
+        if (m) document.getElementById('ai-model-in').value = m;
+        if (x) document.getElementById('xai-key-in').value = x;
+        updateProviderHint();
+      } catch (e) {}
     }
 
     // ── Platform selection ─────────────────────────────────
