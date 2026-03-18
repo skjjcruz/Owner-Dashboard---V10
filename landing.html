@@ -225,10 +225,37 @@
       opacity: 1;
     }
     .product-card.coming-soon {
-      opacity: 0.55;
-      pointer-events: none;
-      filter: grayscale(30%);
+      opacity: 0.7;
+      filter: grayscale(20%);
     }
+
+    .product-cta {
+      display: inline-block;
+      margin-top: 0.5rem;
+      padding: 0.65rem 1.25rem;
+      background: linear-gradient(135deg, var(--gold), var(--dark-gold));
+      border: none;
+      border-radius: 8px;
+      color: var(--black);
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: box-shadow 0.25s, transform 0.2s;
+      box-shadow: 0 4px 12px rgba(212,175,55,0.3);
+      width: 100%;
+      text-align: center;
+    }
+    .product-cta:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,175,55,0.45); }
+    .product-cta.disabled-cta {
+      background: rgba(192,192,192,0.15);
+      color: var(--silver);
+      cursor: default;
+      box-shadow: none;
+    }
+    .product-cta.disabled-cta:hover { transform: none; }
 
     .product-badge {
       display: inline-flex;
@@ -576,7 +603,7 @@
         grid-template-columns: 1fr;
       }
       .product-card.coming-soon {
-        display: none; /* hide placeholder on small screens to keep it clean */
+        opacity: 0.65;
       }
       .brand-title {
         font-size: clamp(3rem, 16vw, 5rem);
@@ -618,36 +645,38 @@
         <div class="products-grid">
 
           <!-- Fantasy War Room -->
-          <div class="product-card">
+          <div class="product-card" onclick="scrollToSignup()">
             <span class="product-badge badge-active">&#9679; Live Now</span>
             <div class="product-icon">⚔️</div>
             <div class="product-name">Fantasy War Room</div>
-            <p class="product-tagline">Your multi-platform fantasy command center — pull in leagues from Sleeper, Yahoo, ESPN, DraftKings, MFL, and more. One dashboard, every league.</p>
+            <p class="product-tagline">The ultimate command center for the serious fantasy football owner. One or many leagues — every decision tool in one place, powered by AI.</p>
 
             <ul class="product-features">
-              <li><span class="feature-check">✦</span> League calendar & scheduling</li>
-              <li><span class="feature-check">✦</span> Earnings & payout tracker</li>
-              <li><span class="feature-check">✦</span> Free agency & FAAB tool</li>
-              <li><span class="feature-check">✦</span> Draft board builder</li>
-              <li><span class="feature-lock">🔒</span> <span class="feature-pro-text">AI trade analysis (Pro)</span></li>
-              <li><span class="feature-lock">🔒</span> <span class="feature-pro-text">Owner DNA profiles (Pro)</span></li>
-              <li><span class="feature-lock">🔒</span> <span class="feature-pro-text">Mock draft simulator (Pro)</span></li>
+              <li><span class="feature-check">✦</span> Team Comparison — stack rosters position by position</li>
+              <li><span class="feature-check">✦</span> Behavioral Trade Calculator — opponent DNA-driven trades</li>
+              <li><span class="feature-check">✦</span> Draft War Room — AI mock drafts & custom boards</li>
+              <li><span class="feature-check">✦</span> Free Agency Tracker — rank, budget & forecast</li>
+              <li><span class="feature-check">✦</span> Interactive Calendar — never miss a deadline</li>
+              <li><span class="feature-check">✦</span> LeagueSafe Integration — track your winnings</li>
+              <li><span class="feature-check">✦</span> Trophy Case — show off the hardware</li>
+              <li><span class="feature-check">✦</span> Direct Messaging — DM your leaguemates</li>
             </ul>
 
             <div class="product-pricing">
-              <p class="price-free">Free tier available — no card required</p>
+              <p class="price-free">Standard $9.95/mo &nbsp;·&nbsp; Pro Bundle $14.95/mo</p>
               <div class="price-pro">
-                <span class="price-amount">$9.99</span>
-                <span class="price-period">/ month for Pro</span>
+                <span class="price-amount">$9.95</span>
+                <span class="price-period">/ month · no contract</span>
               </div>
             </div>
+            <button class="product-cta">Get Started →</button>
           </div>
 
-          <!-- Dynast HQ — Coming Soon -->
+          <!-- Dynasty HQ — Coming Soon -->
           <div class="product-card coming-soon">
             <span class="product-badge badge-soon">Coming Soon</span>
             <div class="product-icon">🏛️</div>
-            <div class="product-name">Dynast HQ</div>
+            <div class="product-name">Dynasty HQ</div>
             <p class="product-tagline">Next-generation AI built for every player — from the casual weekend warrior to the hardened fantasy pro. Smarter decisions, every week.</p>
 
             <ul class="product-features">
@@ -660,12 +689,13 @@
             </ul>
 
             <div class="product-pricing">
-              <p class="price-free">Notify me when it launches</p>
+              <p class="price-free">Included with Pro Bundle · Standard coming soon</p>
               <div class="price-pro">
-                <span class="price-amount">TBA</span>
-                <span class="price-period">/ month</span>
+                <span class="price-amount">$14.95</span>
+                <span class="price-period">/ mo with Pro Bundle</span>
               </div>
             </div>
+            <button class="product-cta disabled-cta">Coming Soon</button>
           </div>
 
         </div>
@@ -674,7 +704,7 @@
       <!-- Sign Up / Sign In form -->
       <section class="signup-section" id="signup">
         <h2 class="signup-heading">Create Your Account</h2>
-        <p class="signup-sub">Start free. Upgrade to Pro anytime.</p>
+        <p class="signup-sub">Join the arena. Select your plan after signing up.</p>
 
         <div class="signup-card">
 
@@ -704,32 +734,13 @@
               <input class="form-input" type="password" id="su-password" placeholder="At least 8 characters" autocomplete="new-password" required>
             </div>
 
-            <!-- Product selection -->
-            <label class="form-label" style="margin-bottom:0.6rem;">Select Your Product</label>
-            <div class="product-picker">
-
-              <label class="product-option selected" id="optWarRoom" onclick="selectProduct('war_room')">
-                <input type="radio" name="product" value="war_room" checked>
-                <span class="opt-icon">⚔️</span>
-                <span class="opt-name">War Room</span>
-              </label>
-
-              <label class="product-option disabled-opt" id="optDynastHQ">
-                <input type="radio" name="product" value="dynast_hq" disabled>
-                <span class="opt-icon">🏛️</span>
-                <span class="opt-name">Dynast HQ</span>
-                <span class="opt-soon">Coming Soon</span>
-              </label>
-
-            </div>
-
             <button class="submit-btn" id="btnSignup" onclick="handleSignup()">
-              Create Free Account
+              Create Account
             </button>
 
             <p class="form-helper">
               By signing up you agree to our Terms of Service.<br>
-              Free accounts include core tools — no credit card required.
+              Select your product and plan once inside — no contract required.
             </p>
           </div>
 
@@ -760,61 +771,76 @@
         </div>
       </section>
 
-      <!-- Free vs Pro comparison -->
+      <!-- Standard vs Pro comparison -->
       <section class="compare-section">
-        <h2 class="compare-title">Free vs Pro</h2>
+        <h2 class="compare-title">Standard vs Pro</h2>
         <table class="compare-table">
           <thead>
             <tr>
               <th style="text-align:left;">Feature</th>
-              <th>Free</th>
-              <th>Pro — $9.99/mo</th>
+              <th>Standard — $9.95/mo</th>
+              <th>Pro — $14.95/mo</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>League calendar</td>
+              <td>Fantasy War Room</td>
               <td><span class="tick">✓</span></td>
               <td><span class="tick">✓</span></td>
             </tr>
             <tr>
-              <td>Earnings tracker</td>
+              <td>Dynasty HQ</td>
+              <td><span class="cross">— (choose one)</span></td>
+              <td><span class="tick">✓ (Coming Soon)</span></td>
+            </tr>
+            <tr>
+              <td>Team Comparison</td>
               <td><span class="tick">✓</span></td>
               <td><span class="tick">✓</span></td>
             </tr>
             <tr>
-              <td>Free agency & FAAB tool</td>
+              <td>Behavioral Trade Calculator</td>
               <td><span class="tick">✓</span></td>
               <td><span class="tick">✓</span></td>
             </tr>
             <tr>
-              <td>Draft board builder</td>
+              <td>Draft War Room + AI Mock Drafts</td>
               <td><span class="tick">✓</span></td>
               <td><span class="tick">✓</span></td>
             </tr>
             <tr>
-              <td>AI league & team analysis</td>
-              <td><span class="cross">—</span></td>
+              <td>Free Agency Tracker</td>
+              <td><span class="tick">✓</span></td>
               <td><span class="tick">✓</span></td>
             </tr>
             <tr>
-              <td>AI trade recommendations</td>
-              <td><span class="cross">—</span></td>
+              <td>Interactive Calendar</td>
+              <td><span class="tick">✓</span></td>
               <td><span class="tick">✓</span></td>
             </tr>
             <tr>
-              <td>Owner DNA profiles</td>
-              <td><span class="cross">—</span></td>
+              <td>Trophy Case & Earnings Tracker</td>
+              <td><span class="tick">✓</span></td>
               <td><span class="tick">✓</span></td>
             </tr>
             <tr>
-              <td>Mock draft simulator</td>
-              <td><span class="cross">—</span></td>
+              <td>Direct Messaging</td>
+              <td><span class="tick">✓</span></td>
               <td><span class="tick">✓</span></td>
             </tr>
             <tr>
-              <td>Rookie draft strategy AI</td>
-              <td><span class="cross">—</span></td>
+              <td>AI queries / month</td>
+              <td><span style="color:var(--silver)">20</span></td>
+              <td><span class="tick">200</span></td>
+            </tr>
+            <tr>
+              <td>BYO AI Key (Claude, Genesis, ChatGPT, Grok)</td>
+              <td><span class="tick">✓</span></td>
+              <td><span class="tick">✓</span></td>
+            </tr>
+            <tr>
+              <td>No Contract · Cancel Anytime</td>
+              <td><span class="tick">✓</span></td>
               <td><span class="tick">✓</span></td>
             </tr>
           </tbody>
@@ -873,12 +899,10 @@
       switchTab('signin');
     });
 
-    // ── Product picker ────────────────────────────────────────
-    let selectedProduct = 'war_room';
-    function selectProduct(slug) {
-      selectedProduct = slug;
-      document.getElementById('optWarRoom').classList.toggle('selected', slug === 'war_room');
-      document.getElementById('optDynastHQ').classList.toggle('selected', slug === 'dynast_hq');
+    // ── Product card → scroll to signup ──────────────────────
+    function scrollToSignup() {
+      document.getElementById('signup').scrollIntoView({ behavior: 'smooth' });
+      switchTab('signup');
     }
 
     // ── Alerts ────────────────────────────────────────────────

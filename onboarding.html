@@ -248,6 +248,31 @@
     .stripe-note a { color: var(--gold); text-decoration: none; }
 
     /* ── Token step ───────────────────────────────────────── */
+    .ai-provider-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.6rem 0.5rem;
+      background: rgba(255,255,255,0.04);
+      border: 2px solid rgba(212,175,55,0.18);
+      border-radius: 8px;
+      color: var(--silver);
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .ai-provider-btn:hover { border-color: rgba(212,175,55,0.4); color: var(--white); }
+    .ai-provider-btn.selected {
+      border-color: var(--gold);
+      background: rgba(212,175,55,0.1);
+      color: var(--gold);
+    }
+    .ai-prov-icon { font-size: 1rem; }
+
     .token-card {
       background: linear-gradient(135deg, var(--off-black), var(--charcoal));
       border: 2px solid rgba(212,175,55,0.3);
@@ -485,52 +510,53 @@
     <div class="step-panel active" id="step1">
       <p class="step-eyebrow">Step 1 of 5</p>
       <h1 class="step-heading">Choose Your<br><span style="color:var(--gold)">Arsenal</span></h1>
-      <p class="step-sub">Pick the plan that fits how you play. You can upgrade anytime from your settings.</p>
+      <p class="step-sub">Pick the plan that fits how you play. Upgrade anytime from settings. No contract required.</p>
 
-      <div class="plan-grid">
+      <div class="plan-grid" style="grid-template-columns: 1fr 1fr;">
 
-        <!-- Free -->
-        <div class="plan-card" id="plan-free" onclick="selectPlan('free')">
+        <!-- Standard -->
+        <div class="plan-card" id="plan-standard" onclick="selectPlan('standard')">
           <div class="plan-icon">⚔️</div>
-          <div class="plan-name">War Room Free</div>
-          <div class="plan-price">$0 <span>forever</span></div>
+          <div class="plan-name">Standard</div>
+          <div class="plan-price">$9.95 <span>/ month</span></div>
           <ul class="plan-features">
-            <li><span class="pf-check">✦</span> League calendar &amp; scheduling</li>
-            <li><span class="pf-check">✦</span> Earnings &amp; payout tracker</li>
-            <li><span class="pf-check">✦</span> Free agency &amp; FAAB tool</li>
-            <li><span class="pf-check">✦</span> Draft board builder</li>
-            <li><span class="pf-check">✦</span> Multi-platform league view</li>
+            <li><span class="pf-check">✦</span> Fantasy War Room <em style="color:var(--muted);font-size:0.7rem;">or Dynasty HQ</em></li>
+            <li><span class="pf-check">✦</span> All tools in your chosen product</li>
+            <li><span class="pf-check">✦</span> AI — 20 queries / month included</li>
+            <li><span class="pf-check">✦</span> BYO AI key (Claude, Genesis, ChatGPT, Grok)</li>
+            <li><span class="pf-check">✦</span> No contract · cancel anytime</li>
           </ul>
+
+          <!-- Product sub-selector (shown after selecting Standard) -->
+          <div id="standardProductPicker" style="display:none; margin-top:0.75rem; border-top:1px solid rgba(255,255,255,0.08); padding-top:0.75rem;">
+            <p style="font-size:0.68rem;color:var(--gold);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.5rem;">Choose Your Product</p>
+            <div style="display:flex;gap:0.5rem;">
+              <label id="spWarRoom" onclick="selectStandardProduct('war_room')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.25rem;padding:0.5rem 0.4rem;border:2px solid rgba(212,175,55,0.35);border-radius:8px;cursor:pointer;transition:all 0.2s;background:rgba(212,175,55,0.08);">
+                <span style="font-size:1.1rem;">⚔️</span>
+                <span style="font-size:0.68rem;font-weight:600;color:var(--white);">War Room</span>
+                <span style="font-size:0.58rem;color:var(--gold);">Live Now</span>
+              </label>
+              <label id="spDynastyHQ" onclick="selectStandardProduct('dynasty_hq')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.25rem;padding:0.5rem 0.4rem;border:2px solid rgba(192,192,192,0.15);border-radius:8px;cursor:not-allowed;opacity:0.45;">
+                <span style="font-size:1.1rem;">🏛️</span>
+                <span style="font-size:0.68rem;font-weight:600;color:var(--white);">Dynasty HQ</span>
+                <span style="font-size:0.58rem;color:var(--muted);">Coming Soon</span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <!-- Pro -->
         <div class="plan-card" id="plan-pro" onclick="selectPlan('pro')">
-          <span class="plan-badge">Most Popular</span>
-          <div class="plan-icon">🏛️</div>
-          <div class="plan-name">Dynasty HQ Pro</div>
-          <div class="plan-price">$9.99 <span>/ month</span></div>
+          <span class="plan-badge">Best Value</span>
+          <div class="plan-icon">🏆</div>
+          <div class="plan-name">Pro Bundle</div>
+          <div class="plan-price">$14.95 <span>/ month</span></div>
           <ul class="plan-features">
-            <li><span class="pf-check">✦</span> Everything in Free</li>
-            <li><span class="pf-check">✦</span> AI league &amp; team analysis</li>
-            <li><span class="pf-check">✦</span> AI trade recommendations</li>
-            <li><span class="pf-check">✦</span> Owner DNA profiles</li>
-            <li><span class="pf-check">✦</span> Mock draft simulator</li>
-            <li><span class="pf-check">✦</span> Rookie draft strategy AI</li>
-          </ul>
-        </div>
-
-        <!-- Power -->
-        <div class="plan-card" id="plan-power" onclick="selectPlan('power')">
-          <div class="plan-icon">⚡</div>
-          <div class="plan-name">Dynasty HQ Power</div>
-          <div class="plan-price">$0 <span>bring your key</span></div>
-          <ul class="plan-features">
-            <li><span class="pf-check">✦</span> Everything in Pro</li>
-            <li><span class="pf-check">✦</span> Advanced AI decision engine</li>
-            <li><span class="pf-check">✦</span> Real-time matchup intelligence</li>
-            <li><span class="pf-check">✦</span> Predictive roster modeling</li>
-            <li><span class="pf-check">✦</span> AI trade negotiation assistant</li>
-            <li><span class="pf-check">✦</span> Your own Claude API key</li>
+            <li><span class="pf-check">✦</span> Fantasy War Room + Dynasty HQ</li>
+            <li><span class="pf-check">✦</span> All tools across both products</li>
+            <li><span class="pf-check">✦</span> AI — 200 queries / month included</li>
+            <li><span class="pf-check">✦</span> BYO AI key (Claude, Genesis, ChatGPT, Grok)</li>
+            <li><span class="pf-check">✦</span> No contract · cancel anytime</li>
           </ul>
         </div>
 
@@ -541,74 +567,90 @@
 
 
     <!-- ═══════════════════════════════════════════════════════
-         STEP 2a — PAYMENT (Pro)
+         STEP 2a — PAYMENT
     ═══════════════════════════════════════════════════════ -->
     <div class="step-panel" id="step2pay">
       <p class="step-eyebrow">Step 2 of 5</p>
-      <h1 class="step-heading">Unlock<br><span style="color:var(--gold)">Dynasty HQ Pro</span></h1>
-      <p class="step-sub">Full AI suite powered by Claude on our servers. No API key needed — we handle everything.</p>
+      <h1 class="step-heading" id="payHeading">Activate Your<br><span style="color:var(--gold)">Plan</span></h1>
+      <p class="step-sub" id="paySubtitle">All features unlocked. AI included. No contract required.</p>
 
       <div class="payment-box">
-        <div class="payment-icon">🏛️</div>
-        <div class="payment-title">Dynasty HQ Pro</div>
-        <div class="payment-sub">
-          AI trade analysis, Owner DNA profiles, mock draft simulator, rookie draft strategy, and real-time matchup intelligence — all powered by Claude AI.
+        <div class="payment-icon" id="payIcon">⚔️</div>
+        <div class="payment-title" id="payTitle">Fantasy War Room — Standard</div>
+        <div class="payment-sub" id="paySub">
+          Full access to all War Room tools — Team Comparison, Behavioral Trade Calculator, Draft War Room, Free Agency Tracker, Calendar, Trophy Case, and Direct Messaging. AI included (20 queries/mo).
         </div>
-        <div class="payment-price">$9.99 <span>/ month</span></div>
+        <div class="payment-price" id="payPrice">$9.95 <span>/ month</span></div>
         <button class="cta-btn" id="stripeBtn" onclick="goToStripe()">Proceed to Secure Checkout →</button>
         <p class="stripe-note">Secured by <a href="https://stripe.com" target="_blank" rel="noopener">Stripe</a> &middot; Cancel anytime &middot; No hidden fees</p>
       </div>
 
       <div id="alertPayment" class="alert"></div>
-      <span class="skip-link" onclick="skipPayment()">Skip for now — continue with Free access</span>
+      <span class="skip-link" onclick="skipToAI()">Skip payment — I'll subscribe later in Settings</span>
     </div>
 
 
     <!-- ═══════════════════════════════════════════════════════
-         STEP 2b — CLAUDE API TOKEN (Power)
+         STEP 2b — BYO AI KEY (Optional — available on all plans)
     ═══════════════════════════════════════════════════════ -->
     <div class="step-panel" id="step2token">
       <p class="step-eyebrow">Step 2 of 5</p>
-      <h1 class="step-heading">Connect Your<br><span style="color:var(--gold)">AI Engine</span></h1>
-      <p class="step-sub">Dynasty HQ Power runs on your own Claude API key — giving you full control and zero subscription fees.</p>
+      <h1 class="step-heading">Bring Your<br><span style="color:var(--gold)">AI to the Fight</span></h1>
+      <p class="step-sub">Your plan includes AI queries every month. Want unlimited? Connect your own AI key and take full control.</p>
 
       <div class="token-card">
         <div class="token-perks">
           <div class="token-perk">
             <span class="token-perk-icon">🧠</span>
-            <span><strong style="color:var(--white)">Advanced AI Decision Engine</strong> — get real-time analysis on every roster decision, trade, and draft pick.</span>
+            <span><strong style="color:var(--white)">Your AI, Your Rules</strong> — connect Claude, Genesis, ChatGPT, or Grok. You control usage and billing directly with your provider.</span>
           </div>
           <div class="token-perk">
-            <span class="token-perk-icon">🔀</span>
-            <span><strong style="color:var(--white)">AI Trade Negotiation Assistant</strong> — Claude analyzes your league's scoring, your roster needs, and your opponent's tendencies.</span>
+            <span class="token-perk-icon">⚡</span>
+            <span><strong style="color:var(--white)">Unlimited Queries</strong> — no monthly cap. Your BYO key bypasses the included query limit entirely.</span>
           </div>
           <div class="token-perk">
-            <span class="token-perk-icon">📡</span>
-            <span><strong style="color:var(--white)">Predictive Roster Modeling</strong> — cross-platform analytics with pro-grade scouting tools powered by the latest Claude models.</span>
+            <span class="token-perk-icon">🔒</span>
+            <span><strong style="color:var(--white)">Stored on Device Only</strong> — your key never touches our servers. All AI calls go directly from your browser to your provider.</span>
           </div>
         </div>
 
-        <label class="form-label" for="claudeTokenInput">Your Anthropic API Key</label>
+        <!-- AI Provider selector -->
+        <p class="form-label" style="margin-bottom:0.6rem;">Select AI Provider</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1.25rem;" id="aiProviderGrid">
+          <button type="button" class="ai-provider-btn selected" id="prov-claude" onclick="selectAIProvider('claude')">
+            <span class="ai-prov-icon">🤖</span> Claude
+          </button>
+          <button type="button" class="ai-provider-btn" id="prov-chatgpt" onclick="selectAIProvider('chatgpt')">
+            <span class="ai-prov-icon">💬</span> ChatGPT
+          </button>
+          <button type="button" class="ai-provider-btn" id="prov-genesis" onclick="selectAIProvider('genesis')">
+            <span class="ai-prov-icon">⚡</span> Genesis
+          </button>
+          <button type="button" class="ai-provider-btn" id="prov-grok" onclick="selectAIProvider('grok')">
+            <span class="ai-prov-icon">𝕏</span> Grok
+          </button>
+        </div>
+
+        <label class="form-label" id="aiKeyLabel" for="aiTokenInput">Your Claude API Key</label>
         <input
           class="form-input"
           type="password"
-          id="claudeTokenInput"
+          id="aiTokenInput"
           placeholder="sk-ant-api03-..."
           autocomplete="off"
           spellcheck="false"
         >
-        <p class="token-hint">
-          Get your key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> &rarr; API Keys.<br>
-          Uses <strong>claude-sonnet-4-6</strong> by default (fastest &amp; most capable). You control usage &amp; billing directly with Anthropic.
+        <p class="token-hint" id="aiKeyHint">
+          Get your key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> → API Keys.
         </p>
         <div class="security-note">
-          🔒 <span>Your API key is stored <strong>only on your device</strong> (localStorage). It is never sent to our servers — all AI calls go directly from your browser to Anthropic.</span>
+          🔒 <span>Your API key is stored <strong>only on your device</strong>. It is never sent to our servers.</span>
         </div>
       </div>
 
       <div id="alertToken" class="alert"></div>
       <button class="cta-btn" onclick="saveToken()">Save Key &amp; Continue →</button>
-      <span class="skip-link" onclick="skipToken()">Skip — I'll add my key later in Settings</span>
+      <span class="skip-link" onclick="skipToken()">Skip — I'll use my included queries for now</span>
     </div>
 
 
@@ -788,15 +830,20 @@
     // CONFIG
     // ─────────────────────────────────────────────────────
     // To enable real Stripe payments:
-    //   1. Go to stripe.com → Products → create a $9.99/mo recurring price
-    //   2. Go to Payment Links → create a link for that price
+    //   1. Go to stripe.com → Products → create recurring prices:
+    //        Standard: $9.95/mo  →  STRIPE_STANDARD_LINK
+    //        Pro:     $14.95/mo  →  STRIPE_PRO_LINK
+    //   2. Go to Payment Links → create a link for each price
     //   3. Set the success URL to: https://YOUR_SITE/onboarding.html?payment=success
-    //   4. Replace the placeholder below with your Payment Link URL
+    //   4. Replace the placeholders below with your Payment Link URLs
     // ═══════════════════════════════════════════════════════
-    const STRIPE_PAYMENT_LINK = 'YOUR_STRIPE_PAYMENT_LINK_HERE';
+    const STRIPE_STANDARD_LINK = 'YOUR_STRIPE_STANDARD_LINK_HERE';
+    const STRIPE_PRO_LINK      = 'YOUR_STRIPE_PRO_LINK_HERE';
 
     // ── State ──────────────────────────────────────────────
     let selectedPlan = null;
+    let selectedStandardProduct = 'war_room'; // default for Standard tier
+    let selectedAIProvider = 'claude';
     const selectedPlatforms = new Set(['sleeper']);
     const PROFILE_KEY  = 'od_profile_v1';
     const SESSION_KEY  = 'fw_session_v1';   // new email-based auth (landing.html)
@@ -818,9 +865,10 @@
         if (!isManaging && p && p.onboardingComplete) { window.location.href = 'index.html'; return; }
       } catch {}
       if (params.get('payment') === 'success') {
-        selectedPlan = 'pro';
-        patchProfile({ tier: 'pro' });
-        showStep(3);
+        const savedPlan = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null')?.tier || 'standard';
+        selectedPlan = savedPlan;
+        patchProfile({ tier: savedPlan });
+        showStep('2b'); // optional AI key step after payment
         return;
       }
 
@@ -831,6 +879,7 @@
           selectedPlan = saved.tier;
           const card = document.getElementById('plan-' + saved.tier);
           if (card) card.classList.add('selected');
+          if (saved.tier === 'standard') document.getElementById('standardProductPicker').style.display = 'block';
           document.getElementById('step1Btn').disabled = false;
         }
         if (saved && saved.platforms) {
@@ -850,16 +899,12 @@
     function showStep(n) {
       document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
 
-      if (n === 2) {
-        if (selectedPlan === 'pro') {
-          document.getElementById('step2pay').classList.add('active');
-        } else if (selectedPlan === 'power') {
-          document.getElementById('step2token').classList.add('active');
-        } else {
-          // Free — skip payment/token step
-          showStep(3);
-          return;
-        }
+      if (n === 2 || n === '2a') {
+        // Payment step — update UI to reflect selected plan
+        updatePaymentUI();
+        document.getElementById('step2pay').classList.add('active');
+      } else if (n === '2b') {
+        document.getElementById('step2token').classList.add('active');
       } else if (n === 4) {
         document.getElementById('step4creds').classList.add('active');
       } else {
@@ -868,7 +913,21 @@
         if (panel) document.getElementById(panel).classList.add('active');
       }
 
-      updateProgress(n);
+      updateProgress(typeof n === 'number' ? n : 2);
+    }
+
+    function updatePaymentUI() {
+      const isPro = selectedPlan === 'pro';
+      document.getElementById('payIcon').textContent   = isPro ? '🏆' : '⚔️';
+      document.getElementById('payTitle').textContent  = isPro
+        ? 'Pro Bundle — Fantasy War Room + Dynasty HQ'
+        : 'Standard — Fantasy War Room';
+      document.getElementById('paySub').textContent    = isPro
+        ? 'Both products unlocked. All tools. 200 AI queries/mo. BYO AI key supported. No contract.'
+        : 'All War Room tools unlocked. 20 AI queries/mo. BYO AI key supported. No contract.';
+      document.getElementById('payPrice').innerHTML    = isPro
+        ? '$14.95 <span>/ month</span>'
+        : '$9.95 <span>/ month</span>';
     }
 
     function updateProgress(n) {
@@ -888,25 +947,40 @@
       document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
       document.getElementById('plan-' + plan).classList.add('selected');
       document.getElementById('step1Btn').disabled = false;
+
+      // Show/hide product sub-picker for Standard
+      const picker = document.getElementById('standardProductPicker');
+      picker.style.display = plan === 'standard' ? 'block' : 'none';
+    }
+
+    function selectStandardProduct(product) {
+      if (product === 'dynasty_hq') return; // Coming Soon — not selectable
+      selectedStandardProduct = product;
+      document.getElementById('spWarRoom').style.borderColor = product === 'war_room' ? 'var(--gold)' : 'rgba(212,175,55,0.35)';
+      document.getElementById('spWarRoom').style.background  = product === 'war_room' ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.06)';
     }
 
     function goStep2() {
       if (!selectedPlan) return;
-      patchProfile({ tier: selectedPlan });
+      const profileData = { tier: selectedPlan };
+      if (selectedPlan === 'standard') profileData.product = selectedStandardProduct;
+      patchProfile(profileData);
       showStep(2);
     }
 
-    // ── Payment (Pro) ──────────────────────────────────────
+    // ── Payment ────────────────────────────────────────────
     function goToStripe() {
       const alertEl = document.getElementById('alertPayment');
+      const link = selectedPlan === 'pro' ? STRIPE_PRO_LINK : STRIPE_STANDARD_LINK;
+      const isConfigured = link && !link.includes('YOUR_STRIPE');
 
-      if (STRIPE_PAYMENT_LINK === 'YOUR_STRIPE_PAYMENT_LINK_HERE') {
+      if (!isConfigured) {
         // Stripe not yet configured — grant beta access and move on
         alertEl.className = 'alert alert-info show';
-        alertEl.textContent = '⚡ Payment gateway coming soon — your Dynasty HQ Pro access is activated in beta. Enjoy full access while we finalise billing.';
-        patchProfile({ tier: 'pro', betaAccess: true });
+        alertEl.textContent = '⚡ Payment gateway coming soon — your access is activated in beta. Enjoy full access while we finalise billing.';
+        patchProfile({ tier: selectedPlan, betaAccess: true });
         document.getElementById('stripeBtn').disabled = true;
-        setTimeout(() => showStep(3), 2200);
+        setTimeout(() => showStep('2b'), 2200);
         return;
       }
 
@@ -916,41 +990,53 @@
         window.location.origin + window.location.pathname + '?payment=success'
       );
       window.location.href =
-        `${STRIPE_PAYMENT_LINK}?client_reference_id=${encodeURIComponent(username)}&success_url=${returnUrl}`;
+        `${link}?client_reference_id=${encodeURIComponent(username)}&success_url=${returnUrl}`;
     }
 
-    function skipPayment() {
-      patchProfile({ tier: 'free' });
-      selectedPlan = 'free';
-      showStep(3);
+    function skipToAI() {
+      // Allow proceeding without payment — limited access until subscribed
+      patchProfile({ tier: selectedPlan, betaAccess: false, subscribed: false });
+      showStep('2b');
     }
 
-    // ── Claude API Token (Power) ───────────────────────────
+    // ── BYO AI Key (all plans) ─────────────────────────────
+    const AI_PROVIDERS = {
+      claude:  { label: 'Claude API Key',    placeholder: 'sk-ant-api03-...',      hint: 'Get your key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> → API Keys.' },
+      chatgpt: { label: 'OpenAI API Key',    placeholder: 'sk-...',                hint: 'Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a> → API Keys.' },
+      genesis: { label: 'Genesis API Key',   placeholder: 'genesis-...',            hint: 'Get your key from your Genesis AI account dashboard.' },
+      grok:    { label: 'Grok API Key',      placeholder: 'xai-...',               hint: 'Get your key at <a href="https://console.x.ai" target="_blank" rel="noopener">console.x.ai</a> → API Keys.' },
+    };
+
+    function selectAIProvider(provider) {
+      selectedAIProvider = provider;
+      document.querySelectorAll('.ai-provider-btn').forEach(b => b.classList.remove('selected'));
+      document.getElementById('prov-' + provider).classList.add('selected');
+      const info = AI_PROVIDERS[provider];
+      document.getElementById('aiKeyLabel').textContent   = info.label;
+      document.getElementById('aiTokenInput').placeholder = info.placeholder;
+      document.getElementById('aiTokenInput').value       = '';
+      document.getElementById('aiKeyHint').innerHTML      = info.hint;
+    }
+
     function saveToken() {
-      const token = document.getElementById('claudeTokenInput').value.trim();
+      const token   = document.getElementById('aiTokenInput').value.trim();
       const alertEl = document.getElementById('alertToken');
 
-      if (token && !token.startsWith('sk-ant-')) {
-        alertEl.className = 'alert alert-error show';
-        alertEl.textContent = 'That doesn\'t look like a valid Anthropic API key. It should start with sk-ant-';
-        return;
-      }
-
       if (token) {
-        // Store locally only — never leaves the device
-        localStorage.setItem('od_claude_token', token);
-        patchProfile({ tier: 'power', hasClaudeToken: true });
+        const storageKey = 'od_ai_key_' + selectedAIProvider;
+        localStorage.setItem(storageKey, token);
+        patchProfile({ byoAI: selectedAIProvider, hasBYOKey: true });
         alertEl.className = 'alert alert-success show';
-        alertEl.textContent = '✓ API key saved to your device.';
+        alertEl.textContent = '✓ API key saved to your device only.';
         setTimeout(() => showStep(3), 800);
       } else {
-        patchProfile({ tier: 'power', hasClaudeToken: false });
+        patchProfile({ hasBYOKey: false });
         showStep(3);
       }
     }
 
     function skipToken() {
-      patchProfile({ tier: 'power', hasClaudeToken: false });
+      patchProfile({ hasBYOKey: false });
       showStep(3);
     }
 
@@ -1042,11 +1128,10 @@
       const username = getUsername();
 
       const tierLabels = {
-        free:  'War Room Free',
-        pro:   'Dynasty HQ Pro',
-        power: 'Dynasty HQ Power',
+        standard: 'Standard — $9.95/mo',
+        pro:      'Pro Bundle — $14.95/mo',
       };
-      const tierLabel = tierLabels[profile.tier] || 'Free';
+      const tierLabel = tierLabels[profile.tier] || profile.tier || 'Standard';
 
       const platformList = (profile.platforms || ['sleeper'])
         .map(p => p.charAt(0).toUpperCase() + p.slice(1))
