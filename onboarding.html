@@ -472,9 +472,8 @@
       <div class="step-dot" data-step="2"></div>
       <div class="step-dot" data-step="3"></div>
       <div class="step-dot" data-step="4"></div>
-      <div class="step-dot" data-step="5"></div>
     </div>
-    <div class="step-label" id="stepLabel">Step 1 of 5</div>
+    <div class="step-label" id="stepLabel">Step 1 of 4</div>
   </header>
 
   <main class="page-wrap">
@@ -483,7 +482,7 @@
          STEP 1 — CHOOSE YOUR PLAN
     ═══════════════════════════════════════════════════════ -->
     <div class="step-panel active" id="step1">
-      <p class="step-eyebrow">Step 1 of 5</p>
+      <p class="step-eyebrow">Step 1 of 4</p>
       <h1 class="step-heading">Choose Your<br><span style="color:var(--gold)">Arsenal</span></h1>
       <p class="step-sub">Pick the plan that fits how you play. Upgrade anytime from settings. No contract required.</p>
 
@@ -545,7 +544,7 @@
          STEP 2a — PAYMENT
     ═══════════════════════════════════════════════════════ -->
     <div class="step-panel" id="step2pay">
-      <p class="step-eyebrow">Step 2 of 5</p>
+      <p class="step-eyebrow">Step 2 of 4</p>
       <h1 class="step-heading" id="payHeading">Activate Your<br><span style="color:var(--gold)">Plan</span></h1>
       <p class="step-sub" id="paySubtitle">All features unlocked. AI included. No contract required.</p>
 
@@ -569,7 +568,7 @@
          STEP 2b — BYO AI KEY (Optional — available on all plans)
     ═══════════════════════════════════════════════════════ -->
     <div class="step-panel" id="step2token">
-      <p class="step-eyebrow">Step 2 of 5</p>
+      <p class="step-eyebrow">Step 2 of 4</p>
       <h1 class="step-heading">Bring Your<br><span style="color:var(--gold)">AI to the Fight</span></h1>
       <p class="step-sub">Your plan includes AI queries every month. Want unlimited? Connect your own AI key and take full control.</p>
 
@@ -651,7 +650,7 @@
          STEP 3 — FANTASY PLATFORMS
     ═══════════════════════════════════════════════════════ -->
     <div class="step-panel" id="step3">
-      <p class="step-eyebrow">Step 3 of 5</p>
+      <p class="step-eyebrow">Step 3 of 4</p>
       <h1 class="step-heading">Your<br><span style="color:var(--gold)">Battlegrounds</span></h1>
       <p class="step-sub">Which fantasy platforms do you play on? We'll prioritize pulling in your leagues from these sites.</p>
 
@@ -751,7 +750,7 @@
          STEP 4 — SLEEPER CREDENTIALS
     ═══════════════════════════════════════════════════════ -->
     <div class="step-panel" id="step4creds">
-      <p class="step-eyebrow">Step 4 of 5</p>
+      <p class="step-eyebrow">Step 4 of 4</p>
       <h1 class="step-heading">Connect<br><span style="color:var(--gold)">Sleeper</span></h1>
       <p class="step-sub">Enter your Sleeper username so we can pull in your leagues and historical data.</p>
 
@@ -795,23 +794,6 @@
     </div>
 
 
-    <!-- ═══════════════════════════════════════════════════════
-         STEP 5 — ALL SET
-    ═══════════════════════════════════════════════════════ -->
-    <div class="step-panel" id="step4">
-      <p class="step-eyebrow">Step 5 of 5</p>
-      <div class="done-icon">⚔️</div>
-      <h1 class="step-heading">You're In<br><span style="color:var(--gold)">The War Room</span></h1>
-      <p class="step-sub">Your command center is ready. Here's your loadout — you can change everything anytime from Settings.</p>
-
-      <div class="divider"></div>
-
-      <div class="summary-grid" id="summaryGrid">
-        <!-- Populated by JS -->
-      </div>
-
-      <button class="cta-btn" id="enterBtn" onclick="enterApp()">Enter the War Room →</button>
-    </div>
 
   </main>
 
@@ -901,7 +883,7 @@
       } else if (n === 4) {
         document.getElementById('step4creds').classList.add('active');
       } else {
-        const panelMap = { 1: 'step1', 3: 'step3', 5: 'step4' };
+        const panelMap = { 1: 'step1', 3: 'step3' };
         const panel = panelMap[n];
         if (panel) document.getElementById(panel).classList.add('active');
       }
@@ -930,7 +912,7 @@
         if (i < dotIndex)        d.classList.add('done');
         else if (i === dotIndex) d.classList.add('active');
       });
-      const labels = { 1: 'Step 1 of 5', 2: 'Step 2 of 5', 3: 'Step 3 of 5', 4: 'Step 4 of 5', 5: 'Step 5 of 5' };
+      const labels = { 1: 'Step 1 of 4', 2: 'Step 2 of 4', 3: 'Step 3 of 4', 4: 'Step 4 of 4' };
       document.getElementById('stepLabel').textContent = labels[n] || labels[1];
     }
 
@@ -1135,8 +1117,7 @@
     }
 
     function goStep5() {
-      buildSummary();
-      showStep(5);
+      enterApp();
     }
 
     // ── Summary ────────────────────────────────────────────
