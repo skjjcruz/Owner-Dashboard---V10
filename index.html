@@ -2795,7 +2795,7 @@
         const AVAILABLE_YEARS = ['2023', '2024', '2025', '2026'];
 
         useEffect(() => {
-            loadSleeperData();
+            if (sleeperUsername) loadSleeperData();
         }, [selectedYear]);
 
         useEffect(() => {
@@ -2930,7 +2930,11 @@
                     <div className="header-title">FANTASY FOOTBALL WAR ROOM</div>
                     <h1 className="owner-name">
                         <img src="icon-192.png" alt="OD Logo" className="owner-logo-small" />
-                        {sleeperUser ? (customDisplayName || sleeperUser.display_name || sleeperUser.username || sleeperUsername).toUpperCase() + ' FOOTBALL CLUB' : 'LOADING...'}
+                        {sleeperUser
+                            ? (customDisplayName || sleeperUser.display_name || sleeperUser.username || sleeperUsername).toUpperCase() + ' FOOTBALL CLUB'
+                            : sleeperUsername
+                                ? 'LOADING...'
+                                : (customDisplayName || newSession?.user?.displayName || newSession?.user?.email?.split('@')[0] || 'COMMANDER').toUpperCase() + ' FOOTBALL CLUB'}
                         <img src="icon-192.png" alt="OD Logo" className="owner-logo-small" />
                     </h1>
                     <div className="quote">
@@ -3048,7 +3052,13 @@
                             </div>
 
                             <div className="league-window-scroll">
-                                {loading ? (
+                                {!sleeperUsername ? (
+                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--silver)', fontSize: '0.85rem' }}>
+                                        <div style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>🔗</div>
+                                        No Sleeper account connected.<br />
+                                        <span style={{ fontSize: '0.78rem', opacity: 0.7 }}>Sleeper integration coming soon for email accounts.</span>
+                                    </div>
+                                ) : loading ? (
                                     <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gold)' }}>
                                         Loading leagues...
                                     </div>
