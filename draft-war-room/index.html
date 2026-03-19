@@ -951,7 +951,9 @@
         setMockLoading(true); setMockError(null); setMockResults(null); setMockCurrentPick(0); setMockIsPlaying(false);
         try {
           // Load shared league intelligence so mock draft knows AI-assessed needs/tier/posture
-          const leagueIntel = await window.OD.loadLeagueIntelligence(leagueId).catch(() => []);
+          const leagueIntel = typeof window.OD?.loadLeagueIntelligence === 'function'
+            ? await window.OD.loadLeagueIntelligence(leagueId).catch(() => [])
+            : [];
           const ctx = buildMockContext(leagueIntel);
           if (!ctx.draftSlots.length) throw new Error('No league owners found — load your Sleeper league first.');
           setMockMySlot(ctx._mySlot);

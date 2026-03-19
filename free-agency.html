@@ -1089,7 +1089,7 @@
                 setAiLoading(true); setAiError(null); setAiAnalysis(null);
                 try {
                     // Pull shared league intelligence so FA analysis knows team tiers/postures
-                    const leagueIntel = leagueId
+                    const leagueIntel = leagueId && typeof window.OD?.loadLeagueIntelligence === 'function'
                         ? await window.OD.loadLeagueIntelligence(leagueId).catch(() => [])
                         : [];
                     const myIntel = leagueIntel.find(row => row.owner_name === sleeperUsername) || null;

@@ -3856,7 +3856,9 @@ function TradeCalculator() {
                     record:      `${a.wins}-${a.losses}`,
                     dna:         ownerDna[a.ownerId] ? (DNA_TYPES[ownerDna[a.ownerId]]?.name || ownerDna[a.ownerId]) : 'Unknown',
                 }));
-                window.OD.saveLeagueIntelligence(leagueId, intelRows).catch(console.warn);
+                if (typeof window.OD?.saveLeagueIntelligence === 'function') {
+                    window.OD.saveLeagueIntelligence(leagueId, intelRows).catch(console.warn);
+                }
 
                 const result = await window.OD.callAI({
                     type: aiMode, context: ctx,
