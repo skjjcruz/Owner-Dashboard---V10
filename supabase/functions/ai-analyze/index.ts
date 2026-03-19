@@ -621,25 +621,69 @@ Deno.serve(async (req) => {
         // stream and parses the JSON array once the stream closes.
         // DEPLOYED: 2026-03-19 streaming fix — replaced blocking create() with stream()
         if (isMockDraft) {
-            const stream = await anthropic.messages.stream({
-                model: 'claude-opus-4-6',
-                max_tokens: 8192,
-                system: 'You are a dynasty fantasy football draft simulator. Output ONLY a raw JSON array. No markdown, no code fences, no backticks, no prose before or after. Start your response with [ and end with ]. Never repeat a player. Track all prior picks carefully so each player is selected at most once.',
-                messages: [{ role: 'user', content: userPrompt }],
+            console.log('[mock_draft] v2026-03-19b: starting — slots:', context?.draftSlots?.length, 'players:', context?.players?.length);
+
+            // Use native fetch → Anthropic SSE directly, bypassing the SDK's
+            // Node.js streaming layer which can stall in Deno edge environments.
+            const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'content-type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'claude-opus-4-6',
+                    max_tokens: 8192,
+                    stream: true,
+                    system: 'You are a dynasty fantasy football draft simulator. Output ONLY a raw JSON array. No markdown, no code fences, no backticks, no prose before or after. Start your response with [ and end with ]. Never repeat a player. Track all prior picks carefully so each player is selected at most once.',
+                    messages: [{ role: 'user', content: userPrompt }],
+                }),
             });
 
+            if (!anthropicResp.ok) {
+                const errText = await anthropicResp.text().catch(() => '');
+                console.error('[mock_draft] Anthropic error:', anthropicResp.status, errText.slice(0, 300));
+                return new Response(
+                    JSON.stringify({ error: `Anthropic API error ${anthropicResp.status}: ${errText.slice(0, 200)}` }),
+                    { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+                );
+            }
+
+            console.log('[mock_draft] Anthropic connected — streaming SSE to client');
+
+            // Parse SSE and forward only text delta content to the client.
             const encoder = new TextEncoder();
             const readable = new ReadableStream({
                 async start(controller) {
                     try {
-                        for await (const chunk of stream) {
-                            if (
-                                chunk.type === 'content_block_delta' &&
-                                chunk.delta.type === 'text_delta'
-                            ) {
-                                controller.enqueue(encoder.encode(chunk.delta.text));
+                        const reader = anthropicResp.body!.getReader();
+                        const dec = new TextDecoder();
+                        let buf = '';
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            buf += dec.decode(value, { stream: true });
+                            const lines = buf.split('\n');
+                            buf = lines.pop() ?? '';
+                            for (const line of lines) {
+                                if (!line.startsWith('data: ')) continue;
+                                const payload = line.slice(6).trim();
+                                if (payload === '[DONE]') continue;
+                                try {
+                                    const evt = JSON.parse(payload);
+                                    if (
+                                        evt.type === 'content_block_delta' &&
+                                        evt.delta?.type === 'text_delta' &&
+                                        evt.delta?.text
+                                    ) {
+                                        controller.enqueue(encoder.encode(evt.delta.text));
+                                    }
+                                } catch { /* ignore malformed SSE lines */ }
                             }
                         }
+                    } catch (err) {
+                        console.error('[mock_draft] stream read error:', err);
                     } finally {
                         controller.close();
                     }
