@@ -17,6 +17,16 @@ let _supabase = null;
 let _supabaseToken = null;
 
 function getSessionToken() {
+  // New Fantasy Wars email session (fw-signup / fw-signin via landing.html)
+  try {
+    const raw = localStorage.getItem('fw_session_v1');
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s?.token) return s.token;
+    }
+  } catch {}
+
+  // Legacy Sleeper session (login.html → get-session-token)
   try {
     const raw = localStorage.getItem('od_session_v1');
     if (!raw) return null;
@@ -234,6 +244,33 @@ async function preloadDNAFromSupabase(leagueId) {
 }
 
 // ---------------------------------------------------------------------------
+// League Intelligence — read AI-assessed team state saved by trade-calculator
+// ---------------------------------------------------------------------------
+
+/**
+ * Load all league intelligence rows for a given league.
+ * Populated by trade-calculator.html whenever any AI analysis runs.
+ * Used by buildMockContext() so mock draft knows each team's real QB count,
+ * tier, posture, and AI-assessed needs.
+ *
+ * Requires an authenticated session (RLS policy: "authenticated" only).
+ * Falls back to [] when unauthenticated or on any error.
+ *
+ * @param {string} leagueId
+ * @returns {Promise<object[]>}
+ */
+async function loadLeagueIntelligence(leagueId) {
+  const db = getSupabaseClient();
+  if (!db || !leagueId) return [];
+  const { data, error } = await db
+    .from('league_intelligence')
+    .select('*')
+    .eq('league_id', leagueId);
+  if (error) { console.warn('[SupabaseDraftClient] league_intelligence load error', error); return []; }
+  return data || [];
+}
+
+// ---------------------------------------------------------------------------
 // Exports (attached to window for use from inline Babel/React scripts)
 // ---------------------------------------------------------------------------
 
@@ -244,4 +281,12 @@ window.SupabaseDraftClient = {
   deleteDraftBoard,
   getMockDraftProspects,
   preloadDNAFromSupabase,
+  loadLeagueIntelligence,
 };
+
+// Shim: expose loadLeagueIntelligence via window.OD so that code in
+// draft-war-room/index.html using window.OD?.loadLeagueIntelligence()
+// resolves correctly without loading supabase-client.js (which would
+// conflict with supabase-config.js due to a duplicate const SUPABASE_URL).
+window.OD = window.OD || {};
+window.OD.loadLeagueIntelligence = loadLeagueIntelligence;

@@ -865,12 +865,15 @@
           {
             const intel    = intelByOwner[ownerInfo.userId];
             const rawQb    = userPosCounts[ownerInfo.userId]?.QB ?? null;
+            // Prefer DB value (from AI-run team deep dive); fall back to live roster count
             const qbCount  = intel?.qb_count ?? rawQb;
-            // AI-assessed needs (e.g. ["QB*","WR","RB"]) take priority over counted defaults.
-            // If QB* is present and qbCount is 0, escalate to CRITICAL annotation.
             const aiNeeds  = intel?.needs?.length > 0 ? intel.needs : null;
+            // Escalate QB → QB(CRITICAL-0) when:
+            //   a) qbCount is definitively 0, OR
+            //   b) qbCount unknown but aiNeeds marks QB as a deficit (QB*)
+            const hasQbDeficit = qbCount === 0 || (qbCount === null && aiNeeds?.some(n => n === 'QB*'));
             const needs    = aiNeeds
-              ? aiNeeds.map(n => (n === 'QB' || n === 'QB*') && qbCount === 0 ? 'QB(CRITICAL-0)' : n)
+              ? aiNeeds.map(n => (n === 'QB' || n === 'QB*') && hasQbDeficit ? 'QB(CRITICAL-0)' : n)
               : computeNeeds(ownerInfo.userId);
             draftSlots.push({
               slot, name: ownerInfo.displayName, dna: archetype,
@@ -903,8 +906,9 @@
               const rawQb   = userPosCounts[u.user_id]?.QB ?? null;
               const qbCount = intel?.qb_count ?? rawQb;
               const aiNeeds = intel?.needs?.length > 0 ? intel.needs : null;
+              const hasQbDeficit = qbCount === 0 || (qbCount === null && aiNeeds?.some(n => n === 'QB*'));
               const needs   = aiNeeds
-                ? aiNeeds.map(n => (n === 'QB' || n === 'QB*') && qbCount === 0 ? 'QB(CRITICAL-0)' : n)
+                ? aiNeeds.map(n => (n === 'QB' || n === 'QB*') && hasQbDeficit ? 'QB(CRITICAL-0)' : n)
                 : computeNeeds(u.user_id);
               draftSlots.push({
                 slot, name: u.display_name || u.username, dna: archetype,
