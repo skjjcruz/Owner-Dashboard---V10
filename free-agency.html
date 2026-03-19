@@ -1088,7 +1088,18 @@
             async function runFAAnalysis() {
                 setAiLoading(true); setAiError(null); setAiAnalysis(null);
                 try {
+                    // Pull shared league intelligence so FA analysis knows team tiers/postures
+                    const leagueIntel = leagueId
+                        ? await window.OD.loadLeagueIntelligence(leagueId).catch(() => [])
+                        : [];
+                    const myIntel = leagueIntel.find(row => row.owner_name === sleeperUsername) || null;
                     const ctx = buildFAContext();
+                    // Enrich context with AI-assessed team state if available
+                    if (myIntel) {
+                        ctx.myTier    = myIntel.tier    || null;
+                        ctx.myPosture = myIntel.posture || null;
+                        ctx.myAiNeeds = myIntel.needs   || [];
+                    }
                     await window.OD.callAI({
                         type: aiMode, context: ctx,
                         onChunk: text => setAiAnalysis(text),
