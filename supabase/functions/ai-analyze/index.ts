@@ -227,7 +227,14 @@ function buildRookiesPrompt(ctx: any): string {
         pickSummary = `${statusNote}\n${pickLines}`;
     }
 
+    // #1 Overall Pick + QB Need Rule — enforced when the owner holds the first
+    // overall pick and has fewer than 2 QBs on their current roster.
+    const firstPickRule = ctx.mustPickTopQB
+        ? `\n⚡ MANDATORY RULE — #1 OVERALL PICK: This owner holds the #1 overall pick and has an identified QB need (fewer than 2 QBs on their roster). The #1 pick MUST be used on a quarterback with a top-5 fantasy ranking. This is a non-negotiable league rule for this mock draft. Do not recommend any other position with pick #1. If a top-5 fantasy QB is not available (all taken in a previous mock), flag that as a crisis and advise on the best available alternative.`
+        : '';
+
     return `Provide a rookie draft strategy for **${ctx.myOwner}** in **${ctx.leagueName}**.
+${firstPickRule}
 
 **STARTING LINEUP SPOTS:** ${rosterPositions}
 
@@ -240,7 +247,7 @@ ${rosterStr || 'No roster data'}
 **AVAILABLE ROOKIES (not on any roster):**
 ${rookieStr || 'No rookies available'}
 
-CRITICAL INSTRUCTION: Base your entire strategy on the draft pick status above. If the owner has zero picks, do NOT recommend specific draft picks — instead focus your advice entirely on how to acquire picks via trade (what assets to offer, which roster positions to sell high on) and which rookies are worth targeting in trades post-draft.
+CRITICAL INSTRUCTION: Base your entire strategy on the draft pick status above. If the owner has zero picks, do NOT recommend specific draft picks — instead focus your advice entirely on how to acquire picks via trade (what assets to offer, which roster positions to sell high on) and which rookies are worth targeting in trades post-draft.${ctx.mustPickTopQB ? ' The #1 pick rule above overrides BPA — the first pick is locked to a top-5 fantasy QB.' : ''}
 
 Provide:
 **DRAFT PICK SITUATION** — Clearly state how many picks this owner has and what it means for their draft strategy.
