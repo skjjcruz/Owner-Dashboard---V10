@@ -160,18 +160,69 @@
         const fetchLeagueInfo   = id => apiFetch(`${SLEEPER_BASE}/league/${id}`);
         const fetchTradedPicks  = id => apiFetch(`${SLEEPER_BASE}/league/${id}/traded_picks`);
 
+        // ── Persistent caching for large Sleeper payloads ────────────────────
+        // Players DB (~5-10 MB full, ~300 KB slimmed) — cached 24h in localStorage.
+        // Stats (~2-4 MB) — cached 6h in localStorage.
+        const _PLAYERS_LS_KEY = 'od_sleeper_players_v1';
+        const _STATS_LS_KEY   = 'od_sleeper_stats_v1_';
+        const _PLAYERS_TTL    = 24 * 60 * 60 * 1000; // 24 hours
+        const _STATS_TTL      =  6 * 60 * 60 * 1000; //  6 hours
+
         let _playersCache = null;
         async function fetchPlayers() {
             if (_playersCache) return _playersCache;
-            _playersCache = await apiFetch(`${SLEEPER_BASE}/players/nfl`);
+            // Check localStorage first
+            try {
+                const raw = localStorage.getItem(_PLAYERS_LS_KEY);
+                if (raw) {
+                    const { ts, data } = JSON.parse(raw);
+                    if (Date.now() - ts < _PLAYERS_TTL) {
+                        _playersCache = data;
+                        return _playersCache;
+                    }
+                }
+            } catch(e) {}
+            // Fetch full DB, slim down to only what the draft room needs
+            const full = await apiFetch(`${SLEEPER_BASE}/players/nfl`);
+            const slim = {};
+            for (const [id, p] of Object.entries(full || {})) {
+                if (!p || !p.position) continue;
+                slim[id] = {
+                    position:   p.position,
+                    full_name:  p.full_name  || `${p.first_name||''} ${p.last_name||''}`.trim(),
+                    first_name: p.first_name || '',
+                    last_name:  p.last_name  || '',
+                    team:       p.team       || null,
+                    years_exp:  p.years_exp  ?? null,
+                };
+            }
+            try {
+                localStorage.setItem(_PLAYERS_LS_KEY, JSON.stringify({ ts: Date.now(), data: slim }));
+            } catch(e) { console.warn('[cache] Players write failed (quota?)'); }
+            _playersCache = slim;
             return _playersCache;
         }
 
         let _statsCache = {};
         async function fetchSeasonStats(season) {
             if (_statsCache[season]) return _statsCache[season];
-            try { _statsCache[season] = await apiFetch(`${SLEEPER_BASE}/stats/nfl/regular/${season}`); }
-            catch (e) { _statsCache[season] = {}; }
+            // Check localStorage first
+            try {
+                const raw = localStorage.getItem(_STATS_LS_KEY + season);
+                if (raw) {
+                    const { ts, data } = JSON.parse(raw);
+                    if (Date.now() - ts < _STATS_TTL) {
+                        _statsCache[season] = data;
+                        return _statsCache[season];
+                    }
+                }
+            } catch(e) {}
+            try {
+                _statsCache[season] = await apiFetch(`${SLEEPER_BASE}/stats/nfl/regular/${season}`);
+                try {
+                    localStorage.setItem(_STATS_LS_KEY + season, JSON.stringify({ ts: Date.now(), data: _statsCache[season] }));
+                } catch(e) { console.warn('[cache] Stats write failed (quota?)'); }
+            } catch (e) { _statsCache[season] = {}; }
             return _statsCache[season];
         }
 
@@ -485,6 +536,39 @@
                 // Standard pick count = DRAFT_ROUNDS * PICK_HORIZON if no trades happened
                 const standardTotal = DRAFT_ROUNDS * PICK_HORIZON;
 
+                // ── Per-owner draft needs for mock draft context ──────────────
+                // Sorted worst-to-best record: worst team picks first overall.
+                const sortedByRecord = [...allRosters].sort((a, b) =>
+                    (a.settings?.wins ?? 0) - (b.settings?.wins ?? 0)
+                );
+                const firstPickOwnerId = String(sortedByRecord[0]?.owner_id || '');
+
+                const allOwnersDraftNeeds = allRosters.map(r => {
+                    const oid = String(r.owner_id);
+                    const rPlayers = r.players || [];
+                    const qbCount = rPlayers.filter(id => playersData[id]?.position === 'QB').length;
+                    const ownerPicks = picksByOwner[oid] || [];
+                    const firstRoundPicks = ownerPicks.filter(p => p.round === 1).map(p => String(p.year)).join(', ');
+                    const hasFirstOverall = oid === firstPickOwnerId;
+                    const wins = r.settings?.wins ?? 0;
+                    const losses = r.settings?.losses ?? 0;
+                    return {
+                        ownerId: oid,
+                        isMe: oid === String(userId),
+                        record: `${wins}-${losses}`,
+                        qbCount,
+                        needsQB: qbCount < 2,
+                        hasFirstOverall,
+                        mustPickQB: hasFirstOverall && qbCount < 2,
+                        firstRoundPicks: firstRoundPicks || 'none',
+                        totalPicks: ownerPicks.length,
+                    };
+                });
+
+                // mustPickTopQB for the logged-in user specifically
+                const myDraftNeeds = allOwnersDraftNeeds.find(o => o.isMe);
+                const mustPickTopQB = !!(myDraftNeeds?.mustPickQB);
+
                 return {
                     leagueName: leagueInfo?.name || 'Fantasy League',
                     myOwner: sleeperUsername,
@@ -493,6 +577,8 @@
                     topFreeAgents: [], availableRookies,
                     myDraftPicks: myPicks,
                     standardPickTotal: standardTotal,
+                    mustPickTopQB,
+                    allOwnersDraftNeeds,
                     question: aiChatInput,
                 };
             }
@@ -501,8 +587,11 @@
                 setAiLoading(true); setAiError(null); setAiAnalysis(null);
                 try {
                     const ctx = buildContext();
-                    const result = await window.OD.callAI({ type: aiMode, context: ctx });
-                    setAiAnalysis(result.analysis);
+                    await window.OD.callAI({
+                        type: aiMode,
+                        context: ctx,
+                        onChunk: text => setAiAnalysis(text),
+                    });
                 } catch(e) {
                     setAiError(e.message);
                 } finally {

@@ -3840,8 +3840,10 @@ function TradeCalculator() {
             setAiAnalysis(null);
             try {
                 const ctx = buildContext();
-                const result = await window.OD.callAI({ type: aiMode, context: ctx });
-                setAiAnalysis(result.analysis);
+                const result = await window.OD.callAI({
+                    type: aiMode, context: ctx,
+                    onChunk: text => setAiAnalysis(text),
+                });
                 // Persist to Supabase
                 const labels = { league: 'League Overview', team: (assessments.find(a => a.rosterId === aiSelectedTeam) || myAssessment)?.ownerName || 'Team', partners: 'Trade Partners', chat: aiChatInput.slice(0, 60) };
                 await window.OD.saveAIAnalysis(leagueId, aiMode, labels[aiMode] || aiMode, result.analysis);

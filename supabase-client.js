@@ -480,7 +480,10 @@ window.OD.updatePassword = async function(username, newPassword) {
 // AI ANALYSIS
 // ============================================================
 
-window.OD.callAI = async function({ type, context }) {
+// onChunk(partialText) is called progressively as tokens stream in.
+// mock_draft type returns JSON and does not stream — onChunk is ignored for it.
+// The returned { analysis } contains the full completed text.
+window.OD.callAI = async function({ type, context, onChunk }) {
     const token = getSessionToken();
     const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-analyze`, {
         method: 'POST',
@@ -495,7 +498,19 @@ window.OD.callAI = async function({ type, context }) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `AI call failed (${response.status})`);
     }
-    return response.json();
+    // mock_draft returns structured JSON — parse it directly, no streaming
+    if (type === 'mock_draft') return response.json();
+    // All other types stream plain text tokens
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let analysis = '';
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        analysis += decoder.decode(value, { stream: true });
+        if (onChunk) onChunk(analysis);
+    }
+    return { analysis };
 };
 
 window.OD.saveAIAnalysis = async function(leagueId, type, contextSummary, analysis) {
