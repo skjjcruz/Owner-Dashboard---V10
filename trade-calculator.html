@@ -119,6 +119,24 @@
         .chip { font-size: 0.55rem; font-weight: 700; letter-spacing: 0.05em; padding: 0.1rem 0.35rem; border-radius: 3px; text-transform: uppercase; }
         .chip-strength { background: rgba(46,204,113,0.15); border: 1px solid rgba(46,204,113,0.4); color: #2ECC71; }
         .chip-need { background: rgba(231,76,60,0.15); border: 1px solid rgba(231,76,60,0.4); color: #E74C3C; }
+        .first-pick-qb-rule {
+            background: linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(231,76,60,0.12) 100%);
+            border: 1.5px solid rgba(212,175,55,0.6);
+            border-radius: 5px;
+            padding: 0.45rem 0.6rem;
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 0.04em;
+            line-height: 1.4;
+        }
+        .first-pick-qb-rule .rule-title {
+            display: flex; align-items: center; gap: 0.35rem;
+            font-size: 0.65rem; margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.07em;
+        }
+        .first-pick-qb-rule .rule-body {
+            color: rgba(255,255,255,0.75); font-weight: 400; font-size: 0.6rem; text-transform: none; letter-spacing: 0;
+        }
         .chip-thin { background: rgba(240,165,0,0.15); border: 1px solid rgba(240,165,0,0.4); color: #F0A500; }
         .chip-window { background: rgba(93,173,226,0.12); border: 1px solid rgba(93,173,226,0.3); color: #5DADE2; }
         .chip-dna { background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.3); color: var(--gold); }
@@ -1173,7 +1191,7 @@ function buildPicksByOwner(rosters, tradedPicks, leagueSeason) {
     return picksByOwner;
 }
 
-function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarterSet = {}, ownerPicks = []) {
+function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarterSet = {}, ownerPicks = [], allRosters = []) {
     const scoring   = leagueInfo?.scoring_settings;
     const rosterPos = leagueInfo?.roster_positions || [];
     const user      = users.find(u => u.user_id === roster.owner_id);
@@ -1395,9 +1413,33 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
         .filter(([,v]) => v.status === 'surplus')
         .map(([pos]) => pos);
 
+    // ── #1 Overall Pick + QB Need Rule ───────────────────────────────────────
+    // If this owner holds the #1 overall pick (round 1, originating from the
+    // roster with waiver_position 1 = worst team = first draft slot) AND their
+    // roster assessment shows a QB need, they must draft a top-5 fantasy QB.
+    let hasFirstOverallPick = false;
+    if (allRosters.length > 0 && ownerPicks.length > 0) {
+        // waiver_position 1 = worst team = picks first overall
+        const firstPickRoster = allRosters.reduce((best, r) => {
+            const wp = r.settings?.waiver_position ?? 999;
+            const bestWp = best?.settings?.waiver_position ?? 999;
+            return wp < bestWp ? r : best;
+        }, null);
+        if (firstPickRoster) {
+            const firstPickFromId = String(firstPickRoster.roster_id);
+            hasFirstOverallPick = ownerPicks.some(
+                p => p.round === 1 && String(p.fromRosterId) === firstPickFromId
+            );
+        }
+    }
+    const qbStatus    = posAssessment.QB?.status;
+    const needsQB     = qbStatus === 'deficit' || qbStatus === 'thin';
+    // Rule fires when: owner holds #1 overall pick AND has a QB need
+    const mustPickTopQB = hasFirstOverallPick && needsQB;
+
     return { rosterId:roster.roster_id, ownerId:roster.owner_id, teamName, ownerName, avatar, wins, losses, ties, pf,
              posGroups, posAssessment, picksAssessment, weeklyPts, healthScore, tier, tierColor, tierBg, panic, window, needs, strengths,
-             faabRemaining, waiverBudget };
+             faabRemaining, waiverBudget, hasFirstOverallPick, mustPickTopQB };
 }
 
 // Build per-position "NFL starter sets" using a hybrid score:
@@ -1455,7 +1497,7 @@ function countElite(assessment, eliteSet) {
 // Generate narrative commentary for a team
 function teamCommentary(assessment, eliteSet) {
     const { weeklyPts, tier, needs, strengths, posAssessment, picksAssessment, panic,
-            faabRemaining = 0, waiverBudget = 1000 } = assessment;
+            faabRemaining = 0, waiverBudget = 1000, mustPickTopQB = false } = assessment;
     const eliteCount = countElite(assessment, eliteSet);
     const diff = weeklyPts - WEEKLY_TARGET;
 
@@ -1534,7 +1576,12 @@ function teamCommentary(assessment, eliteSet) {
         faabText = `$${faabRemaining.toLocaleString()} of $${waiverBudget.toLocaleString()} FAAB remaining (${Math.round(faabPct*100)}%). Budget is running thin — prioritize high-impact pickups only.`;
     }
 
-    return { scoring, elite, strengthText, needsText, picksText, faabText, faabRemaining, waiverBudget, identity: identities[tier] || '', eliteCount };
+    // #1 Overall Pick + QB Need Rule
+    const firstPickQBRuleText = mustPickTopQB
+        ? `DRAFT RULE — #1 Overall Pick: This owner holds the first overall pick and has an identified QB need. In mock drafts, this pick must be used on a quarterback ranked in the top 5 by fantasy scoring. Do not trade away the #1 pick without securing an equivalent top-5 QB in return.`
+        : null;
+
+    return { scoring, elite, strengthText, needsText, picksText, faabText, faabRemaining, waiverBudget, identity: identities[tier] || '', eliteCount, firstPickQBRuleText };
 }
 
 function calcComplementarity(mine, theirs) {
@@ -1604,7 +1651,7 @@ function PanicMeter({ level }) {
 function TeamCard({ assessment, isMyTeam, ownerDna }) {
     const { teamName, ownerName, wins, losses, ties, pf, weeklyPts, healthScore, tier, tierColor, tierBg,
             posAssessment, picksAssessment, panic, window: tradeWindow, needs, strengths,
-            faabRemaining = 0, waiverBudget = 1000 } = assessment;
+            faabRemaining = 0, waiverBudget = 1000, mustPickTopQB = false } = assessment;
 
     const dna   = DNA_TYPES[ownerDna] || DNA_TYPES.NONE;
     const pct   = Math.round((weeklyPts / WEEKLY_TARGET) * 100);
@@ -1687,6 +1734,15 @@ function TeamCard({ assessment, isMyTeam, ownerDna }) {
                         <span className="chip chip-strength">
                             ${faabRemaining.toLocaleString()} FAAB
                         </span>
+                    </div>
+                )}
+                {mustPickTopQB && (
+                    <div className="first-pick-qb-rule">
+                        <div className="rule-title">🏈 #1 Overall Pick Rule</div>
+                        <div className="rule-body">
+                            This owner holds the #1 overall pick and has a QB need.
+                            Mock draft strategy requires selecting a <strong style={{ color:'var(--gold)' }}>top-5 fantasy-ranked QB</strong> with this pick.
+                        </div>
                     </div>
                 )}
             </div>
@@ -1846,7 +1902,7 @@ function TradeCalculator() {
         const picksByOwner  = buildPicksByOwner(allRosters, tradedPicks, leagueSeason);
         return allRosters.map(r => {
             const ownerPicks = picksByOwner[String(r.owner_id)] || [];
-            return assessTeam(r, playersData, statsData, leagueInfo, leagueUsers, nflStarterSet, ownerPicks);
+            return assessTeam(r, playersData, statsData, leagueInfo, leagueUsers, nflStarterSet, ownerPicks, allRosters);
         });
     }, [allRosters, playersData, statsData, leagueInfo, leagueUsers, valueIndex, tradedPicks]);
 
@@ -2222,6 +2278,14 @@ function TradeCalculator() {
                             );
                         })()}
                     </div>
+                    {commentary.firstPickQBRuleText && (
+                        <div className="commentary-card" style={{ borderColor:'rgba(212,175,55,0.6)', background:'linear-gradient(135deg,rgba(212,175,55,0.08) 0%,rgba(231,76,60,0.08) 100%)' }}>
+                            <div className="commentary-card-title" style={{ color:'var(--gold)', display:'flex', alignItems:'center', gap:'0.4rem' }}>
+                                🏈 #1 Overall Pick — Draft Rule
+                            </div>
+                            <div className="commentary-card-text">{commentary.firstPickQBRuleText}</div>
+                        </div>
+                    )}
                 </div>
             );
         }
