@@ -419,19 +419,26 @@ DNA DRAFT BEHAVIOR (apply AFTER positional rules above):
 • Unknown       → Balanced BPA among offensive players with mild positional awareness.
 
 CRITICAL SIMULATION RULES:
-1. Each player can only be selected ONCE — track every pick and never repeat a player name
-2. Process picks in the correct draft order based on DRAFT TYPE above
-3. EVERY pick must reflect that specific owner's DNA and round-split profile
-4. Round 1: ONLY QB, RB, or WR — no TE, no defenders, in a standard league
-5. Round 2: QB, RB, WR, or TE only — still no defenders in standard leagues
-6. Use each owner's "Round splits" data as the primary guide for when they take each position type
-7. The "reason" field must be 10-15 words referencing DNA behavior, positional need, or roster fit
-8. ZERO-QB EMERGENCY RULE (highest priority, overrides everything):
-   If an owner has QB in their Needs AND the #1 or #2 ranked available player is a QB, that owner
-   MUST take the QB — no exceptions, no DNA override, no "but they're WR-First". An owner with
-   zero QBs who skips the top available QB when it's sitting at #1 or #2 is a simulation error.
-   QB NEED RULE: If an owner's Needs include QB AND a QB is ranked in the top 5 of the available
-   player pool, that owner WILL take the QB with their next pick. DNA is secondary to critical need.
+1. ★ QB EMERGENCY OVERRIDE — evaluated BEFORE every single pick, overrides ALL other rules:
+   Step 1: Does this owner have QB listed in their Needs?
+   Step 2: If YES → scan the top 5 available players. Is any of them a QB?
+   Step 3: If YES → the owner MUST select that QB, EVEN IF a higher-ranked RB or WR is available.
+
+   EXACT SCENARIO THIS RULE COVERS (simulate this correctly):
+     Owner picking #1 overall has 0 QBs. Available pool: #1 Ashton Jeanty (RB), #2 Shedeur Sanders (QB).
+     ✅ CORRECT: Owner takes Shedeur Sanders (QB) — takes the #2 player over the #1 ranked RB.
+     ❌ WRONG:   Owner takes Ashton Jeanty (RB) — skipping the top QB is a catastrophic dynasty mistake.
+   The #1 ranked player being a non-QB does NOT exempt the owner from this rule.
+   DNA labels like "RB-Heavy" or "WR-First" do NOT override this rule when QB is a critical Need.
+   An owner with 0 QBs who passes on a top-5 QB is making a franchise-destroying error — simulate smart owners.
+
+2. Each player can only be selected ONCE — track every pick and never repeat a player name
+3. Process picks in the correct draft order based on DRAFT TYPE above
+4. EVERY pick must reflect that specific owner's DNA and round-split profile
+5. Round 1: ONLY QB, RB, or WR — no TE, no defenders, in a standard league
+6. Round 2: QB, RB, WR, or TE only — still no defenders in standard leagues
+7. Use each owner's "Round splits" data as the primary guide for when they take each position type
+8. The "reason" field must be 10-15 words referencing DNA behavior, positional need, or roster fit
 
 Output ONLY a valid JSON array with no extra text, no markdown, no backticks:
 [{"pick":1,"round":1,"slot":1,"owner":"Name","player":"Exact Player Name","pos":"WR","tier":1,"reason":"DNA-driven reason in exactly 10-15 words"},...]`;
@@ -586,7 +593,7 @@ Deno.serve(async (req) => {
         // All other types stream tokens so the UI can render progressively.
         if (isMockDraft) {
             const message = await anthropic.messages.create({
-                model: 'claude-sonnet-4-6',
+                model: 'claude-opus-4-6',
                 max_tokens: 16000,
                 system: 'You are a dynasty fantasy football draft simulator. Output ONLY a raw JSON array. No markdown, no code fences, no backticks, no prose before or after. Start your response with [ and end with ]. Never repeat a player. Track all prior picks carefully so each player is selected at most once.',
                 messages: [{ role: 'user', content: userPrompt }],
