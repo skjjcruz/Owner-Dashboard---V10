@@ -209,8 +209,12 @@ function buildFATargetsPrompt(ctx: any): string {
 
     const rosterPositions = (ctx.rosterPositions || []).filter((p: string) => p !== 'BN' && p !== 'IR').join(', ');
 
-    return `Build a free agency action plan for **${ctx.myOwner}** in **${ctx.leagueName}**.
+    const teamCtx = (ctx.myTier || ctx.myPosture || (ctx.myAiNeeds || []).length > 0)
+        ? `\n**TEAM INTELLIGENCE (from AI Scout assessment):**\n${ctx.myTier ? `  Tier: ${ctx.myTier}\n` : ''}${ctx.myPosture ? `  Posture: ${ctx.myPosture}\n` : ''}${(ctx.myAiNeeds || []).length > 0 ? `  Priority Needs: ${ctx.myAiNeeds.join(', ')}` : ''}`
+        : '';
 
+    return `Build a free agency action plan for **${ctx.myOwner}** in **${ctx.leagueName}**.
+${teamCtx}
 **REMAINING FAAB:** $${ctx.faabBudget} of $${ctx.startingBudget}
 **STARTING LINEUP SPOTS:** ${rosterPositions}
 
@@ -322,7 +326,10 @@ function buildMockDraftPrompt(ctx: any): string {
     const slotsStr = (ctx.draftSlots || []).map((o: any) => {
         let line = `Slot ${o.slot}: ${o.name} | Trade DNA: ${o.dna}`;
         if (o.draftDna)       line += ` | Draft Label: ${o.draftDna}`;
-        // Show QB roster count explicitly — 0 QBs is a franchise emergency
+        // Tier and posture from AI Scout (league intelligence layer)
+        if (o.tier)           line += ` | Tier: ${o.tier}`;
+        if (o.posture)        line += ` | Posture: ${o.posture}`;
+        // QB roster count — 0 QBs is a franchise emergency, stated explicitly
         if (o.qbCount !== null && o.qbCount !== undefined) {
             line += o.qbCount === 0
                 ? ` | 🚨 QBs on roster: 0 — QB IS A FRANCHISE EMERGENCY`
@@ -334,7 +341,9 @@ function buildMockDraftPrompt(ctx: any): string {
         if (o.earlyDefPct !== null && o.earlyDefPct > 10) {
             line += `\n         ⚠ Takes defenders in R1-R2 ${o.earlyDefPct}% of the time (NFL avg: 9%)`;
         }
-        if (o.needs?.length)  line += `\n         Needs: ${o.needs.join(', ')}`;
+        // Label the source so the AI knows how authoritative the needs are
+        const needsLabel = o.needsSource === 'ai-assessed' ? 'AI-assessed needs' : 'Computed needs';
+        if (o.needs?.length)  line += `\n         ${needsLabel}: ${o.needs.join(', ')}`;
         return line;
     }).join('\n');
 

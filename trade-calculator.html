@@ -3840,6 +3840,24 @@ function TradeCalculator() {
             setAiAnalysis(null);
             try {
                 const ctx = buildContext();
+
+                // Snapshot every team's AI-assessed state into the shared league
+                // intelligence layer so mock draft, FA, and other analyses can
+                // read posture, tier, and needs without re-running Team Deep Dive.
+                const intelRows = assessments.map(a => ({
+                    ownerId:     a.ownerId,
+                    owner:       a.ownerName,
+                    tier:        a.tier,
+                    healthScore: a.healthScore,
+                    posture:     calcOwnerPosture(a, ownerDna[a.ownerId] || 'NONE'),
+                    needs:       (a.needs || []).map(n => n.urgency === 'deficit' ? `${n.pos}*` : n.pos).slice(0, 5),
+                    strengths:   (a.strengths || []).slice(0, 5),
+                    qbCount:     (a.posGroups?.QB || []).length,
+                    record:      `${a.wins}-${a.losses}`,
+                    dna:         ownerDna[a.ownerId] ? (DNA_TYPES[ownerDna[a.ownerId]]?.name || ownerDna[a.ownerId]) : 'Unknown',
+                }));
+                window.OD.saveLeagueIntelligence(leagueId, intelRows).catch(console.warn);
+
                 const result = await window.OD.callAI({
                     type: aiMode, context: ctx,
                     onChunk: text => setAiAnalysis(text),

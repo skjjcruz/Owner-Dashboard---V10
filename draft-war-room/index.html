@@ -793,7 +793,7 @@
         NONE:      'Unknown',
       };
 
-      function buildMockContext() {
+      function buildMockContext(leagueIntel = []) {
         const numTeamCount  = selectedLeague?.totalRosters || numTeams;
         const roundCount    = selectedDraft?.settings?.rounds || 3;
         const leagueId      = selectedLeague?.id;
@@ -807,6 +807,10 @@
 
         // Load draft DNA from localStorage (synced via Sync Draft History button)
         const draftDnaMap = window.DraftHistory?.loadDraftDNA(leagueId) || {};
+
+        // Index AI-assessed intelligence by Sleeper owner_id for O(1) lookup
+        const intelByOwner = {};
+        (leagueIntel || []).forEach(row => { intelByOwner[row.owner_id] = row; });
 
         // Build userId → roster position counts (requires sleeperPlayers to be loaded)
         const userPosCounts = {};
@@ -857,16 +861,30 @@
           const dnaKey      = ownerDnaMap[ownerInfo.userId] || 'NONE';
           const archetype   = DNA_TO_ARCHETYPE[dnaKey] || 'Unknown';
           const draftDna    = draftDnaMap[ownerInfo.userId] || null;
-          draftSlots.push({
-            slot, name: ownerInfo.displayName, dna: archetype,
-            draftDna:       draftDna?.label || null,
-            draftTendency:  draftDna?.tendency || null,
-            roundProfile:   draftDna?.roundProfile || null,
-            earlyDefPct:    draftDna?.earlyDefPct ?? null,
-            overallDefPct:  draftDna?.overallDefPct ?? null,
-            qbCount:        userPosCounts[ownerInfo.userId]?.QB ?? null,
-            needs: computeNeeds(ownerInfo.userId),
-          });
+          {
+            const intel    = intelByOwner[ownerInfo.userId];
+            const rawQb    = userPosCounts[ownerInfo.userId]?.QB ?? null;
+            const qbCount  = intel?.qb_count ?? rawQb;
+            // AI-assessed needs (e.g. ["QB*","WR","RB"]) take priority over counted defaults.
+            // If QB* is present and qbCount is 0, escalate to CRITICAL annotation.
+            const aiNeeds  = intel?.needs?.length > 0 ? intel.needs : null;
+            const needs    = aiNeeds
+              ? aiNeeds.map(n => (n === 'QB' || n === 'QB*') && qbCount === 0 ? 'QB(CRITICAL-0)' : n)
+              : computeNeeds(ownerInfo.userId);
+            draftSlots.push({
+              slot, name: ownerInfo.displayName, dna: archetype,
+              draftDna:       draftDna?.label || null,
+              draftTendency:  draftDna?.tendency || null,
+              roundProfile:   draftDna?.roundProfile || null,
+              earlyDefPct:    draftDna?.earlyDefPct ?? null,
+              overallDefPct:  draftDna?.overallDefPct ?? null,
+              qbCount,
+              tier:           intel?.tier || null,
+              posture:        intel?.posture || null,
+              needsSource:    aiNeeds ? 'ai-assessed' : 'computed',
+              needs,
+            });
+          }
           if (ownerInfo.userId === sleeperUserId) detectedMySlot = slot;
         }
 
@@ -879,16 +897,28 @@
             const dnaKey     = ownerDnaMap[u.user_id] || 'NONE';
             const archetype  = DNA_TO_ARCHETYPE[dnaKey] || 'Unknown';
             const draftDna   = draftDnaMap[u.user_id] || null;
-            draftSlots.push({
-              slot, name: u.display_name || u.username, dna: archetype,
-              draftDna:       draftDna?.label || null,
-              draftTendency:  draftDna?.tendency || null,
-              roundProfile:   draftDna?.roundProfile || null,
-              earlyDefPct:    draftDna?.earlyDefPct ?? null,
-              overallDefPct:  draftDna?.overallDefPct ?? null,
-              qbCount:        userPosCounts[u.user_id]?.QB ?? null,
-              needs: computeNeeds(u.user_id),
-            });
+            {
+              const intel   = intelByOwner[u.user_id];
+              const rawQb   = userPosCounts[u.user_id]?.QB ?? null;
+              const qbCount = intel?.qb_count ?? rawQb;
+              const aiNeeds = intel?.needs?.length > 0 ? intel.needs : null;
+              const needs   = aiNeeds
+                ? aiNeeds.map(n => (n === 'QB' || n === 'QB*') && qbCount === 0 ? 'QB(CRITICAL-0)' : n)
+                : computeNeeds(u.user_id);
+              draftSlots.push({
+                slot, name: u.display_name || u.username, dna: archetype,
+                draftDna:       draftDna?.label || null,
+                draftTendency:  draftDna?.tendency || null,
+                roundProfile:   draftDna?.roundProfile || null,
+                earlyDefPct:    draftDna?.earlyDefPct ?? null,
+                overallDefPct:  draftDna?.overallDefPct ?? null,
+                qbCount,
+                tier:           intel?.tier || null,
+                posture:        intel?.posture || null,
+                needsSource:    aiNeeds ? 'ai-assessed' : 'computed',
+                needs,
+              });
+            }
             if (u.user_id === sleeperUserId) detectedMySlot = slot;
           });
         }
@@ -920,7 +950,9 @@
       async function runMockDraft() {
         setMockLoading(true); setMockError(null); setMockResults(null); setMockCurrentPick(0); setMockIsPlaying(false);
         try {
-          const ctx = buildMockContext();
+          // Load shared league intelligence so mock draft knows AI-assessed needs/tier/posture
+          const leagueIntel = await window.OD.loadLeagueIntelligence(leagueId).catch(() => []);
+          const ctx = buildMockContext(leagueIntel);
           if (!ctx.draftSlots.length) throw new Error('No league owners found — load your Sleeper league first.');
           setMockMySlot(ctx._mySlot);
           // Save real picks so we can restore after mock

@@ -595,6 +595,46 @@ window.OD.saveDNA = function(leagueId, dnaMap) {
 };
 
 // ============================================================
+// LEAGUE INTELLIGENCE — shared per-team AI state across pages
+// Populated by trade-calculator on every AI run.
+// Read by mock draft, FA, and any future analysis context builders.
+// ============================================================
+
+window.OD.saveLeagueIntelligence = async function(leagueId, teams) {
+    const db = getClient();
+    if (!db || !isConfigured()) return;
+    const rows = teams.map(t => ({
+        league_id:    leagueId,
+        owner_id:     t.ownerId,
+        owner_name:   t.owner || null,
+        tier:         t.tier || null,
+        health_score: t.healthScore ?? null,
+        posture:      t.posture || null,
+        needs:        t.needs || [],
+        strengths:    t.strengths || [],
+        qb_count:     t.qbCount ?? null,
+        record:       t.record || null,
+        dna:          t.dna || null,
+        updated_at:   new Date().toISOString(),
+    }));
+    const { error } = await db
+        .from('league_intelligence')
+        .upsert(rows, { onConflict: 'league_id,owner_id' });
+    if (error) console.warn('[OD] league_intelligence save error', error);
+};
+
+window.OD.loadLeagueIntelligence = async function(leagueId) {
+    const db = getClient();
+    if (!db || !isConfigured()) return [];
+    const { data, error } = await db
+        .from('league_intelligence')
+        .select('*')
+        .eq('league_id', leagueId);
+    if (error) { console.warn('[OD] league_intelligence load error', error); return []; }
+    return data || [];
+};
+
+// ============================================================
 // USER PROFILE — tier, platforms, onboarding status
 //
 // Required Supabase SQL (run once in SQL editor):
