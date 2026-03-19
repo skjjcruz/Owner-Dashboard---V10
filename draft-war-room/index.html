@@ -753,11 +753,12 @@
         setAiLoading(true); setAiError(null); setAiAnalysis(null);
         try {
           const ctx = buildDraftContext();
+          const sessionToken = typeof getSessionToken === 'function' ? getSessionToken() : null;
           const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-analyze`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              'Authorization': `Bearer ${sessionToken || SUPABASE_ANON_KEY}`,
               'apikey': SUPABASE_ANON_KEY,
             },
             body: JSON.stringify({ type: aiMode, context: ctx }),
@@ -959,9 +960,10 @@
           setMockMySlot(ctx._mySlot);
           // Save real picks so we can restore after mock
           preMockPicksRef.current = draftPicks;
+          const sessionToken = typeof getSessionToken === 'function' ? getSessionToken() : null;
           const resp = await fetch(`${SUPABASE_URL}/functions/v1/ai-analyze`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'apikey': SUPABASE_ANON_KEY },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionToken || SUPABASE_ANON_KEY}`, 'apikey': SUPABASE_ANON_KEY },
             body: JSON.stringify({ type: 'mock_draft', context: ctx }),
           });
           if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e.error || `HTTP ${resp.status}`); }

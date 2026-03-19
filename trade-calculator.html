@@ -3839,6 +3839,10 @@ function TradeCalculator() {
             setAiError(null);
             setAiAnalysis(null);
             try {
+                if (aiMode === 'team') {
+                    const target = assessments.find(a => a.rosterId === aiSelectedTeam) || myAssessment;
+                    if (!target) throw new Error('Select a team from the dropdown to run Team Deep Dive.');
+                }
                 const ctx = buildContext();
 
                 // Snapshot every team's AI-assessed state into the shared league
@@ -3904,7 +3908,13 @@ function TradeCalculator() {
                 {/* Mode selector */}
                 <div className="ai-mode-bar">
                     {['league','team','partners','chat'].map(m => (
-                        <button key={m} className={`ai-mode-btn${aiMode===m?' active':''}`} onClick={() => { setAiMode(m); setAiAnalysis(null); setAiError(null); }}>
+                        <button key={m} className={`ai-mode-btn${aiMode===m?' active':''}`} onClick={() => {
+                            setAiMode(m);
+                            setAiAnalysis(null);
+                            setAiError(null);
+                            // Auto-select my team when switching to team deep dive
+                            if (m === 'team' && !aiSelectedTeam && myRosterId) setAiSelectedTeam(myRosterId);
+                        }}>
                             {MODE_LABELS[m]}
                         </button>
                     ))}
