@@ -1089,8 +1089,10 @@
                 setAiLoading(true); setAiError(null); setAiAnalysis(null);
                 try {
                     const ctx = buildFAContext();
-                    const result = await window.OD.callAI({ type: aiMode, context: ctx });
-                    setAiAnalysis(result.analysis);
+                    await window.OD.callAI({
+                        type: aiMode, context: ctx,
+                        onChunk: text => setAiAnalysis(text),
+                    });
                 } catch(e) {
                     setAiError(e.message);
                 } finally {

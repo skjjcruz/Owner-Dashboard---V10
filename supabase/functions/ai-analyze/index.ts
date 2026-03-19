@@ -275,8 +275,24 @@ function buildRookiesPrompt(ctx: any): string {
         ? `\n⚡ MANDATORY RULE — #1 OVERALL PICK: This owner holds the #1 overall pick and has an identified QB need (fewer than 2 QBs on their roster). The #1 pick MUST be used on a quarterback with a top-5 fantasy ranking. This is a non-negotiable league rule for this mock draft. Do not recommend any other position with pick #1. If a top-5 fantasy QB is not available (all taken in a previous mock), flag that as a crisis and advise on the best available alternative.`
         : '';
 
+    // All-owner mock draft context — lets AI simulate picks for every team, not just the user's.
+    let allOwnersSection = '';
+    if (ctx.allOwnersDraftNeeds && ctx.allOwnersDraftNeeds.length > 0) {
+        const ownerLines = (ctx.allOwnersDraftNeeds as any[]).map((o: any) => {
+            const meFlag          = o.isMe             ? ' ← YOU'                      : '';
+            const firstFlag       = o.hasFirstOverall  ? ' [HOLDS 1.01]'               : '';
+            const qbFlag          = o.needsQB          ? ' ⚠️ QB NEED'                 : '';
+            const mustQBFlag      = o.mustPickQB       ? ' → MUST DRAFT QB AT 1.01'    : '';
+            const firstRoundNote  = o.firstRoundPicks  ? ` | 1st-rounders: ${o.firstRoundPicks}` : '';
+            const totalNote       = o.totalPicks != null ? ` | Total picks: ${o.totalPicks}` : '';
+            return `  • ${o.owner || o.ownerId} (${o.record})${meFlag}${firstFlag}${qbFlag}${mustQBFlag} | QBs on roster: ${o.qbCount}${firstRoundNote}${totalNote}`;
+        }).join('\n');
+        allOwnersSection = `\n\n**MOCK DRAFT — ALL OWNER NEEDS:**\n${ownerLines}\nWhen simulating or advising on picks for any owner, enforce their positional needs above. Any owner flagged "MUST DRAFT QB AT 1.01" has a non-negotiable obligation to take a top-5 fantasy QB with that pick.`;
+    }
+
     return `Provide a rookie draft strategy for **${ctx.myOwner}** in **${ctx.leagueName}**.
 ${firstPickRule}
+${allOwnersSection}
 
 **STARTING LINEUP SPOTS:** ${rosterPositions}
 
@@ -295,6 +311,7 @@ Provide:
 **DRAFT PICK SITUATION** — Clearly state how many picks this owner has and what it means for their draft strategy.
 **ROSTER NEEDS ANALYSIS** — Which positions are thin, aging, or lack upside?
 **STRATEGY** — If they have picks: BPA vs. positional need advice. If they have NO picks: specific trade strategies to acquire picks or post-draft rookie values to target.
+**MOCK DRAFT BOARD** — Simulate the first 2 rounds pick-by-pick, assigning each owner the best available player based on their stated needs above. Enforce all mandatory rules (e.g. QB at 1.01).
 **TARGET ROOKIES** — Top rookies that fit this team's needs (for drafting if picks exist, or for trade acquisition if not).
 **SLEEPER PICKS** — 1-2 overlooked rookies worth targeting (via draft or trade).`;
 }
@@ -564,33 +581,29 @@ Deno.serve(async (req) => {
         }
 
         const isMockDraft = type === 'mock_draft';
-        const message = await anthropic.messages.create({
-            model: 'claude-sonnet-4-6',
-            max_tokens: isMockDraft ? 16000 : 8192,
-            system: isMockDraft
-                ? 'You are a dynasty fantasy football draft simulator. Output ONLY a raw JSON array. No markdown, no code fences, no backticks, no prose before or after. Start your response with [ and end with ]. Never repeat a player. Track all prior picks carefully so each player is selected at most once.'
-                : buildSystemPrompt(),
-            messages: [{ role: 'user', content: userPrompt }],
-        });
 
-        const analysis = (message.content[0] as any).text as string;
-        const stopReason = (message as any).stop_reason;
-
-        // For mock_draft, parse the JSON picks array from the AI response
-        let picks: any[] | undefined;
+        // mock_draft must return structured JSON for pick parsing — use non-streaming path.
+        // All other types stream tokens so the UI can render progressively.
         if (isMockDraft) {
-            // Detect truncation before attempting to parse
+            const message = await anthropic.messages.create({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 16000,
+                system: 'You are a dynasty fantasy football draft simulator. Output ONLY a raw JSON array. No markdown, no code fences, no backticks, no prose before or after. Start your response with [ and end with ]. Never repeat a player. Track all prior picks carefully so each player is selected at most once.',
+                messages: [{ role: 'user', content: userPrompt }],
+            });
+            const analysis = (message.content[0] as any).text as string;
+            const stopReason = (message as any).stop_reason;
             if (stopReason === 'max_tokens') {
                 return new Response(
                     JSON.stringify({ error: 'Draft simulation response was too long and got cut off. Try reducing the number of rounds or owners.' }),
                     { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
                 );
             }
-            // Strip markdown code fences if the AI wrapped the response despite instructions
             let cleanAnalysis = analysis.trim();
             if (cleanAnalysis.startsWith('```')) {
                 cleanAnalysis = cleanAnalysis.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '');
             }
+            let picks: any[] | undefined;
             try {
                 picks = JSON.parse(cleanAnalysis);
             } catch {
@@ -599,12 +612,46 @@ Deno.serve(async (req) => {
                     try { picks = JSON.parse(match[0]); } catch { /* leave undefined */ }
                 }
             }
+            return new Response(
+                JSON.stringify({ analysis, ...(picks ? { picks } : {}) }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
         }
 
-        return new Response(
-            JSON.stringify({ analysis, ...(picks ? { picks } : {}) }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        // Streaming path — tokens arrive at the client as they are generated.
+        const stream = await anthropic.messages.stream({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 8192,
+            system: buildSystemPrompt(),
+            messages: [{ role: 'user', content: userPrompt }],
+        });
+
+        const encoder = new TextEncoder();
+        const readable = new ReadableStream({
+            async start(controller) {
+                try {
+                    for await (const chunk of stream) {
+                        if (
+                            chunk.type === 'content_block_delta' &&
+                            chunk.delta.type === 'text_delta'
+                        ) {
+                            controller.enqueue(encoder.encode(chunk.delta.text));
+                        }
+                    }
+                } finally {
+                    controller.close();
+                }
+            },
+        });
+
+        return new Response(readable, {
+            headers: {
+                ...corsHeaders,
+                'Content-Type': 'text/plain; charset=utf-8',
+                'X-Accel-Buffering': 'no',
+                'Cache-Control': 'no-cache',
+            },
+        });
     } catch (error: any) {
         console.error('[ai-analyze] error:', error);
         return new Response(

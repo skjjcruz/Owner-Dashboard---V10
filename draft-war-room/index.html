@@ -174,6 +174,40 @@
       return res.json();
     }
 
+    // ── Persistent player DB cache ────────────────────────────────────────────
+    // The Sleeper /players/nfl endpoint is 5-10 MB. We slim it to ~300 KB and
+    // cache it in localStorage for 24 hours so every subsequent page load is instant.
+    const _PLAYERS_LS_KEY = 'od_sleeper_players_v1';
+    const _PLAYERS_TTL    = 24 * 60 * 60 * 1000; // 24 hours
+
+    async function fetchPlayersWithCache() {
+      try {
+        const raw = localStorage.getItem(_PLAYERS_LS_KEY);
+        if (raw) {
+          const { ts, data } = JSON.parse(raw);
+          if (Date.now() - ts < _PLAYERS_TTL) return data;
+        }
+      } catch(e) {}
+      const full = await fetchJSON(`https://api.sleeper.app/v1/players/${SPORT}`);
+      // Slim to only the fields the draft room needs
+      const slim = {};
+      for (const [id, p] of Object.entries(full || {})) {
+        if (!p || !p.position) continue;
+        slim[id] = {
+          position:   p.position,
+          full_name:  p.full_name  || `${p.first_name||''} ${p.last_name||''}`.trim(),
+          first_name: p.first_name || '',
+          last_name:  p.last_name  || '',
+          team:       p.team       || null,
+          years_exp:  p.years_exp  ?? null,
+        };
+      }
+      try {
+        localStorage.setItem(_PLAYERS_LS_KEY, JSON.stringify({ ts: Date.now(), data: slim }));
+      } catch(e) { console.warn('[cache] Players write failed (quota?)'); }
+      return slim;
+    }
+
     // Read URL parameters
     function getUrlParams() {
       const params = new URLSearchParams(window.location.search);
@@ -461,26 +495,27 @@
             setDraftSlotOwners(slotOwners);
           }
 
-          // 2. Check Supabase for a previously saved board first.
-          //    If the owner already built one, restore it and skip Sleeper.
-          if (window.SupabaseDraftClient) {
-            const { data: saved } = await window.SupabaseDraftClient.loadDraftBoardBySleeperDraftId(draftId);
-            if (saved && saved.picks && Object.keys(saved.picks).length > 0) {
-              setDraftPicks(saved.picks);
-              setStatus(`Board restored ✅ - ${Object.keys(saved.picks).length} picks`);
-              return;
-            }
-          }
+          // 2. Fire Supabase board lookup, player DB, and Sleeper picks all in parallel.
+          //    Previously these were sequential awaits — this eliminates 2 full round-trips
+          //    from the critical path. Player DB is served from localStorage cache after first load.
+          setStatus('Loading draft data…');
+          const [savedBoardResult, playersResult, picksData] = await Promise.all([
+            window.SupabaseDraftClient
+              ? window.SupabaseDraftClient.loadDraftBoardBySleeperDraftId(draftId)
+              : Promise.resolve({ data: null }),
+            sleeperPlayers ? Promise.resolve(sleeperPlayers) : fetchPlayersWithCache(),
+            fetchJSON(`https://api.sleeper.app/v1/draft/${draftId}/picks`),
+          ]);
 
-          // 3. No saved board — fall back to Sleeper API picks as a baseline.
-          // Load Sleeper player database if not already loaded
-          if (!sleeperPlayers) {
-            setStatus('Loading player database…');
-            const playersData = await fetchJSON(`https://api.sleeper.app/v1/players/${SPORT}`);
-            setSleeperPlayers(playersData);
-          }
+          // Update player cache in state if we just fetched it
+          if (!sleeperPlayers && playersResult) setSleeperPlayers(playersResult);
 
-          const picksData = await fetchJSON(`https://api.sleeper.app/v1/draft/${draftId}/picks`);
+          // Restore saved board if found (skip Sleeper picks)
+          if (savedBoardResult?.data?.picks && Object.keys(savedBoardResult.data.picks).length > 0) {
+            setDraftPicks(savedBoardResult.data.picks);
+            setStatus(`Board restored ✅ - ${Object.keys(savedBoardResult.data.picks).length} picks`);
+            return;
+          }
 
           if (!picksData || picksData.length === 0) {
             setDraftPicks({});
@@ -670,15 +705,35 @@
           fantasyRank: p.fantasyRank || null,
         }));
 
-        // ── #1 Overall Pick + QB Need Rule ───────────────────────────────────
+        // ── #1 Overall Pick + QB Need Rule — per owner ───────────────────────
         // draftSlotOwners["1_1"] is the current holder of the 1st overall pick
-        // (already resolved for trades). If that's the logged-in user AND they
-        // are thin/deficit at QB, the AI scout must enforce the top-5 QB rule.
+        // (already resolved for trades). Build per-owner needs so the AI scout
+        // can enforce the QB rule for ANY owner during mock draft simulation.
         const firstOverallOwner = draftSlotOwners['1_1'];
-        const hasFirstOverallPick = !!(firstOverallOwner && firstOverallOwner.userId === sleeperUserId);
+
+        const allOwnersDraftNeeds = leagueRosters.map(r => {
+          const oid = r.owner_id;
+          const rPlayers = r.players || [];
+          const ownerQbCount = rPlayers.filter(id => sleeperPlayers?.[id]?.position === 'QB').length;
+          const user = leagueUsers.find(u => u.user_id === oid);
+          const displayName = user?.display_name || user?.username || oid;
+          const hasFirstOverall = !!(firstOverallOwner && firstOverallOwner.userId === oid);
+          const wins = r.settings?.wins ?? 0;
+          const losses = r.settings?.losses ?? 0;
+          return {
+            owner: displayName,
+            isMe: oid === sleeperUserId,
+            record: `${wins}-${losses}`,
+            qbCount: ownerQbCount,
+            needsQB: ownerQbCount < 2,
+            hasFirstOverall,
+            mustPickQB: hasFirstOverall && ownerQbCount < 2,
+          };
+        });
+
         const qbCount = (myRosterObj?.players || []).filter(id => sleeperPlayers?.[id]?.position === 'QB').length;
-        const needsQB = qbCount < 2; // fewer than 2 QBs on roster = identified QB need
-        const mustPickTopQB = hasFirstOverallPick && needsQB;
+        const hasFirstOverallPick = !!(firstOverallOwner && firstOverallOwner.userId === sleeperUserId);
+        const mustPickTopQB = hasFirstOverallPick && qbCount < 2;
 
         return {
           leagueName: selectedLeague?.name || 'Fantasy League',
@@ -690,6 +745,7 @@
           availableRookies,
           question: aiChatInput,
           mustPickTopQB,
+          allOwnersDraftNeeds,
         };
       }
 
@@ -710,8 +766,16 @@
             const err = await response.json().catch(() => ({}));
             throw new Error(err.error || `AI call failed (${response.status})`);
           }
-          const result = await response.json();
-          setAiAnalysis(result.analysis);
+          // Stream tokens as they arrive so the UI renders progressively
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let analysis = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            analysis += decoder.decode(value, { stream: true });
+            setAiAnalysis(analysis);
+          }
         } catch(e) {
           setAiError(e.message);
         } finally {
