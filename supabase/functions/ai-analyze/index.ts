@@ -592,7 +592,15 @@ Deno.serve(async (req) => {
         let userPrompt: string;
         switch (type) {
             case 'league':     userPrompt = buildLeaguePrompt(context);           break;
-            case 'team':       userPrompt = buildTeamPrompt(context);             break;
+            case 'team':
+                if (!context.team) {
+                    return new Response(
+                        JSON.stringify({ error: 'No team selected. Pick a team from the dropdown before running Team Deep Dive.' }),
+                        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                    );
+                }
+                userPrompt = buildTeamPrompt(context);
+                break;
             case 'partners':   userPrompt = buildPartnersPrompt(context);         break;
             case 'fa_targets': userPrompt = buildFATargetsPrompt(context);        break;
             case 'rookies':    userPrompt = buildRookiesPrompt(context);          break;
