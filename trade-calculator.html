@@ -1183,7 +1183,7 @@ function buildPicksByOwner(rosters, tradedPicks, leagueSeason) {
     return picksByOwner;
 }
 
-function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarterSet = {}, ownerPicks = []) {
+function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarterSet = {}, ownerPicks = [], allRosters = []) {
     const scoring   = leagueInfo?.scoring_settings;
     const rosterPos = leagueInfo?.roster_positions || [];
     const user      = users.find(u => u.user_id === roster.owner_id);
@@ -1407,9 +1407,33 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
         .filter(([,v]) => v.status === 'surplus')
         .map(([pos]) => pos);
 
+    // ── #1 Overall Pick + QB Need Rule ───────────────────────────────────────
+    // If this owner holds the #1 overall pick (round 1, originating from the
+    // roster with waiver_position 1 = worst team = first draft slot) AND their
+    // roster assessment shows a QB need, they must draft a top-5 fantasy QB.
+    let hasFirstOverallPick = false;
+    if (allRosters.length > 0 && ownerPicks.length > 0) {
+        // waiver_position 1 = worst team = picks first overall
+        const firstPickRoster = allRosters.reduce((best, r) => {
+            const wp = r.settings?.waiver_position ?? 999;
+            const bestWp = best?.settings?.waiver_position ?? 999;
+            return wp < bestWp ? r : best;
+        }, null);
+        if (firstPickRoster) {
+            const firstPickFromId = String(firstPickRoster.roster_id);
+            hasFirstOverallPick = ownerPicks.some(
+                p => p.round === 1 && String(p.fromRosterId) === firstPickFromId
+            );
+        }
+    }
+    const qbStatus    = posAssessment.QB?.status;
+    const needsQB     = qbStatus === 'deficit' || qbStatus === 'thin';
+    // Rule fires when: owner holds #1 overall pick AND has a QB need
+    const mustPickTopQB = hasFirstOverallPick && needsQB;
+
     return { rosterId:roster.roster_id, ownerId:roster.owner_id, teamName, ownerName, avatar, wins, losses, ties, pf,
              posGroups, posAssessment, picksAssessment, weeklyPts, healthScore, tier, tierColor, tierBg, panic, window, needs, strengths,
-             faabRemaining, waiverBudget };
+             faabRemaining, waiverBudget, hasFirstOverallPick, mustPickTopQB };
 }
 
 // Build per-position "NFL starter sets" using a hybrid score:
@@ -1872,7 +1896,7 @@ function TradeCalculator() {
         const picksByOwner  = buildPicksByOwner(allRosters, tradedPicks, leagueSeason);
         return allRosters.map(r => {
             const ownerPicks = picksByOwner[String(r.owner_id)] || [];
-            return assessTeam(r, playersData, statsData, leagueInfo, leagueUsers, nflStarterSet, ownerPicks);
+            return assessTeam(r, playersData, statsData, leagueInfo, leagueUsers, nflStarterSet, ownerPicks, allRosters);
         });
     }, [allRosters, playersData, statsData, leagueInfo, leagueUsers, valueIndex, tradedPicks]);
 

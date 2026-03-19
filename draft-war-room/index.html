@@ -667,7 +667,18 @@
           pos: p.pos,
           name: p.name,
           team: p.school || 'College',
+          fantasyRank: p.fantasyRank || null,
         }));
+
+        // ── #1 Overall Pick + QB Need Rule ───────────────────────────────────
+        // draftSlotOwners["1_1"] is the current holder of the 1st overall pick
+        // (already resolved for trades). If that's the logged-in user AND they
+        // are thin/deficit at QB, the AI scout must enforce the top-5 QB rule.
+        const firstOverallOwner = draftSlotOwners['1_1'];
+        const hasFirstOverallPick = !!(firstOverallOwner && firstOverallOwner.userId === sleeperUserId);
+        const qbCount = (myRosterObj?.players || []).filter(id => sleeperPlayers?.[id]?.position === 'QB').length;
+        const needsQB = qbCount < 2; // fewer than 2 QBs on roster = identified QB need
+        const mustPickTopQB = hasFirstOverallPick && needsQB;
 
         return {
           leagueName: selectedLeague?.name || 'Fantasy League',
@@ -678,6 +689,7 @@
           topFreeAgents: [],
           availableRookies,
           question: aiChatInput,
+          mustPickTopQB,
         };
       }
 
