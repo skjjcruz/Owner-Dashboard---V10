@@ -359,8 +359,16 @@ function buildMockDraftPrompt(ctx: any): string {
         ? `• This IS an IDP (Individual Defensive Player) league — LB, DL, DB are valid picks at any round IF the owner has a confirmed Need for that position.`
         : `• This is a STANDARD fantasy league (NOT IDP). Defensive positions (LB, DL, DB, S, CB, EDGE) score ZERO fantasy points and are almost never drafted early.`;
 
-    return `Simulate a complete ${ctx.numRounds}-round rookie draft with ${ctx.numTeams} teams in ${ctx.leagueName || 'the league'}.
+    // Pre-compute which slots have a QB emergency so we can flag them at the top
+    const qbEmergencySlots = (ctx.draftSlots || [])
+        .filter((o: any) => o.qbCount === 0 || (o.needs || []).includes('QB(CRITICAL-0)'))
+        .map((o: any) => `Slot ${o.slot} (${o.name})`);
+    const qbEmergencyWarning = qbEmergencySlots.length > 0
+        ? `\n⚠️ QB FRANCHISE EMERGENCY — APPLIES TO: ${qbEmergencySlots.join(', ')}\nThese owners have ZERO QBs. They MUST select the highest-ranked QB in the remaining pool instead of any other position, regardless of DNA or round splits. This is not optional.\n`
+        : '';
 
+    return `Simulate a complete ${ctx.numRounds}-round rookie draft with ${ctx.numTeams} teams in ${ctx.leagueName || 'the league'}.
+${qbEmergencyWarning}
 DRAFT TYPE: ${draftTypeLabel}
 
 OWNER PROFILES (slot → name → Trade DNA → Draft DNA from 3 seasons of real picks → round splits → needs):
@@ -636,7 +644,10 @@ Deno.serve(async (req) => {
                     model: 'claude-opus-4-6',
                     max_tokens: 8192,
                     stream: true,
-                    system: 'You are a dynasty fantasy football draft simulator. Output ONLY a raw JSON array. No markdown, no code fences, no backticks, no prose before or after. Start your response with [ and end with ]. Never repeat a player. Track all prior picks carefully so each player is selected at most once.',
+                    system: `You are a dynasty fantasy football draft simulator. Output ONLY a raw JSON array. No markdown, no code fences, no backticks, no prose before or after. Start your response with [ and end with ].
+
+ABSOLUTE RULE — QB FRANCHISE EMERGENCY:
+Before simulating ANY pick, scan the picking owner's profile. If it contains "🚨 QBs on roster: 0" OR their needs include "QB(CRITICAL-0)", that owner MUST select the highest-ranked QB remaining in the player pool, even if it means passing on the #1 overall prospect. This rule cannot be overridden by DNA, round splits, or positional preference. An owner with zero QBs who passes on a QB is a broken simulation.`,
                     messages: [{ role: 'user', content: userPrompt }],
                 }),
             });
