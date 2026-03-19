@@ -619,6 +619,7 @@ Deno.serve(async (req) => {
         // mock_draft streams tokens like all other types so the connection stays
         // alive and the browser never times out. The client collects the full
         // stream and parses the JSON array once the stream closes.
+        // DEPLOYED: 2026-03-19 streaming fix — replaced blocking create() with stream()
         if (isMockDraft) {
             const stream = await anthropic.messages.stream({
                 model: 'claude-opus-4-6',
