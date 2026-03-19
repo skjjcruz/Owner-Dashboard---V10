@@ -646,7 +646,7 @@ Deno.serve(async (req) => {
 
         // Streaming path — tokens arrive at the client as they are generated.
         const stream = await anthropic.messages.stream({
-            model: 'claude-sonnet-4-6',
+            model: 'claude-opus-4-6',
             max_tokens: 8192,
             system: buildSystemPrompt(),
             messages: [{ role: 'user', content: userPrompt }],
