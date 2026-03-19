@@ -656,8 +656,12 @@ Deno.serve(async (req) => {
             const encoder = new TextEncoder();
             const readable = new ReadableStream({
                 async start(controller) {
+                    let textDeltaCount = 0;
                     try {
-                        const reader = anthropicResp.body!.getReader();
+                        if (!anthropicResp.body) {
+                            throw new Error('Anthropic response body is null');
+                        }
+                        const reader = anthropicResp.body.getReader();
                         const dec = new TextDecoder();
                         let buf = '';
                         while (true) {
@@ -672,18 +676,29 @@ Deno.serve(async (req) => {
                                 if (payload === '[DONE]') continue;
                                 try {
                                     const evt = JSON.parse(payload);
+                                    if (evt.type === 'error') {
+                                        // Anthropic sent a stream-level error (rate limit, overloaded, etc.)
+                                        const msg = evt.error?.message || JSON.stringify(evt.error);
+                                        console.error('[mock_draft] Anthropic stream error:', msg);
+                                        // Enqueue as JSON so the client's parse attempt surfaces the message
+                                        controller.enqueue(encoder.encode(`STREAM_ERROR:${msg}`));
+                                        return;
+                                    }
                                     if (
                                         evt.type === 'content_block_delta' &&
                                         evt.delta?.type === 'text_delta' &&
                                         evt.delta?.text
                                     ) {
+                                        textDeltaCount++;
                                         controller.enqueue(encoder.encode(evt.delta.text));
                                     }
                                 } catch { /* ignore malformed SSE lines */ }
                             }
                         }
+                        console.log(`[mock_draft] stream complete — ${textDeltaCount} text_delta events`);
                     } catch (err) {
                         console.error('[mock_draft] stream read error:', err);
+                        controller.enqueue(encoder.encode(`STREAM_ERROR:${(err as Error).message}`));
                     } finally {
                         controller.close();
                     }

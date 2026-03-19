@@ -982,6 +982,7 @@
             raw += decoder.decode(value, { stream: true });
           }
           raw = raw.trim();
+          if (raw.startsWith('STREAM_ERROR:')) throw new Error(raw.slice(13));
           if (raw.startsWith('```')) raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '');
           let picks = null;
           try { picks = JSON.parse(raw); }
