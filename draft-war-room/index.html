@@ -957,7 +957,7 @@
         try {
           // Load shared league intelligence so mock draft knows AI-assessed needs/tier/posture
           const leagueIntel = typeof window.OD?.loadLeagueIntelligence === 'function'
-            ? await window.OD.loadLeagueIntelligence(leagueId).catch(() => [])
+            ? await window.OD.loadLeagueIntelligence(selectedLeague?.id).catch(() => [])
             : [];
           const ctx = buildMockContext(leagueIntel);
           if (!ctx.draftSlots.length) throw new Error('No league owners found — load your Sleeper league first.');
