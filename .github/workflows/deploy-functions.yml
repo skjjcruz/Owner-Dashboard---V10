@@ -22,34 +22,44 @@ jobs:
           version: latest
 
       - name: Apply database migrations
-        # Applies migration via Supabase Management API.
-        # continue-on-error keeps function deploys running even if migration
+        # Applies all migrations in supabase/migrations/ in filename order.
+        # continue-on-error keeps function deploys running even if a migration
         # was already applied or the token lacks SQL execution scope.
-        # To apply manually: Supabase Dashboard → SQL Editor → paste supabase/migrations/*.sql
+        # To apply manually: Supabase Dashboard → SQL Editor → paste each file.
         continue-on-error: true
         run: |
           python3 - <<'PYEOF'
-          import json, urllib.request, os, sys
+          import json, urllib.request, os, sys, glob
           token = os.environ.get('SUPABASE_ACCESS_TOKEN', '')
           if not token:
-              print('SUPABASE_ACCESS_TOKEN not set — skipping migration', file=sys.stderr)
+              print('SUPABASE_ACCESS_TOKEN not set — skipping migrations', file=sys.stderr)
               sys.exit(0)
-          sql = open('supabase/migrations/20260317000000_app_users_and_subscriptions.sql').read()
-          req = urllib.request.Request(
-              'https://api.supabase.com/v1/projects/sxshiqyxhhifvtfqawbq/database/query',
-              data=json.dumps({'query': sql}).encode(),
-              headers={
-                  'Authorization': f'Bearer {token}',
-                  'Content-Type':  'application/json',
-              },
-              method='POST',
-          )
-          try:
-              with urllib.request.urlopen(req) as r:
-                  print('Migration OK:', r.read().decode()[:200])
-          except urllib.error.HTTPError as e:
-              body = e.read().decode()
-              print('Migration response:', e.code, body, file=sys.stderr)
+          migration_files = sorted(glob.glob('supabase/migrations/*.sql'))
+          if not migration_files:
+              print('No migration files found')
+              sys.exit(0)
+          all_ok = True
+          for path in migration_files:
+              sql = open(path).read()
+              print(f'Applying {path}...')
+              req = urllib.request.Request(
+                  'https://api.supabase.com/v1/projects/sxshiqyxhhifvtfqawbq/database/query',
+                  data=json.dumps({'query': sql}).encode(),
+                  headers={
+                      'Authorization': f'Bearer {token}',
+                      'Content-Type':  'application/json',
+                  },
+                  method='POST',
+              )
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      print(f'  OK: {r.read().decode()[:200]}')
+              except urllib.error.HTTPError as e:
+                  body = e.read().decode()
+                  print(f'  Response {e.code}: {body}', file=sys.stderr)
+                  if 'already exists' not in body and e.code >= 500:
+                      all_ok = False
+          if not all_ok:
               sys.exit(1)
           PYEOF
 
