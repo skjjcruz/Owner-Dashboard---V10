@@ -951,6 +951,12 @@
           name: p.name, pos: p.pos, tier: p.tier, fantasyRank: i + 1,
         }));
 
+        // DEBUG — open browser DevTools console to see what qbCount/needs the AI receives
+        console.table(draftSlots.map(s => ({
+          slot: s.slot, name: s.name, qbCount: s.qbCount, needs: (s.needs || []).join(', ')
+        })));
+        console.log('[mock] top 5 players:', topPlayers.slice(0, 5).map(p => `${p.fantasyRank}. ${p.name} (${p.pos})`).join(' | '));
+
         return {
           numTeams:   draftSlots.length || numTeamCount,
           numRounds:  roundCount,
