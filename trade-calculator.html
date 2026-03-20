@@ -956,35 +956,34 @@ const MAX_VALUE = 10000;
 
 // Dynasty pick values by round (SuperFlex/2QB) — fallback for picks with unknown slot.
 // Used when draft order hasn't been set yet (future picks, pre-season).
-const PICK_VALUES = { 1:5300, 2:1500, 3:565, 4:270, 5:150, 6:90, 7:55 };
+const PICK_VALUES = { 1:2300, 2:720, 3:240, 4:110, 5:54, 6:31, 7:19 };
 const PICK_COLORS  = { 1:'#D4AF37', 2:'#5DADE2', 3:'#2ECC71', 4:'#BB8FCE', 5:'#95A5A6', 6:'#7F8C8D', 7:'#6C7A7D' };
 
 // Slot-specific dynasty pick values (112-pick draft: 16 teams × 7 rounds).
-// Calibrated to historical dynasty production rates in 2QB/SuperFlex format.
-// Geometric decay within each round; each round opens just below the previous round's close.
+// Balanced calibration: top-5 carry a heavy premium vs picks 6–16; R1 >> R2 >> R3+.
 // Overall slot = (round - 1) * numTeams + slotInRound.
 const PICK_VALUES_BY_SLOT = {
-    //  R1 — elite prospects; 1.01 ≈ franchise-altering QB or top WR
-     1:9500,  2:8690,  3:7950,  4:7270,  5:6650,  6:6080,  7:5560,  8:5090,
-     9:4650, 10:4260, 11:3890, 12:3560, 13:3260, 14:2980, 15:2730, 16:2490,
-    //  R2 — solid depth prospects; 2.01 ≈ good starter upside
-    17:2380, 18:2220, 19:2080, 20:1940, 21:1810, 22:1690, 23:1580, 24:1470,
-    25:1380, 26:1280, 27:1200, 28:1120, 29:1050, 30: 980, 31: 910, 32: 850,
-    //  R3 — developmental prospects; high ceiling, uncertain floor
-    33: 815, 34: 770, 35: 730, 36: 695, 37: 660, 38: 625, 39: 595, 40: 560,
-    41: 535, 42: 505, 43: 480, 44: 455, 45: 430, 46: 410, 47: 390, 48: 370,
-    //  R4 — speculative; late-round value
-    49: 355, 50: 340, 51: 330, 52: 315, 53: 305, 54: 290, 55: 280, 56: 270,
-    57: 260, 58: 250, 59: 240, 60: 230, 61: 220, 62: 210, 63: 205, 64: 195,
-    //  R5 — roster filler / handcuff territory
-    65: 188, 66: 182, 67: 176, 68: 170, 69: 165, 70: 160, 71: 155, 72: 150,
-    73: 145, 74: 140, 75: 136, 76: 132, 77: 128, 78: 124, 79: 120, 80: 116,
-    //  R6 — near-minimum value
-    81: 111, 82: 108, 83: 105, 84: 102, 85:  99, 86:  96, 87:  93, 88:  90,
-    89:  87, 90:  85, 91:  82, 92:  80, 93:  78, 94:  76, 95:  74, 96:  72,
+    //  R1 — top-5 are franchise-altering; steep cliff after pick 5
+     1:5500,  2:5100,  3:4700,  4:4300,  5:3900,  6:2800,  7:2450,  8:2150,
+     9:1900, 10:1680, 11:1490, 12:1325, 13:1180, 14:1055, 15: 950, 16: 870,
+    //  R2 — meaningful assets; big drop from R1
+    17:1450, 18:1300, 19:1165, 20:1045, 21: 940, 22: 845, 23: 760, 24: 685,
+    25: 620, 26: 560, 27: 510, 28: 465, 29: 425, 30: 390, 31: 360, 32: 335,
+    //  R3 — dart throws; fringe value
+    33: 310, 34: 290, 35: 270, 36: 255, 37: 240, 38: 225, 39: 213, 40: 200,
+    41: 190, 42: 180, 43: 170, 44: 161, 45: 153, 46: 145, 47: 139, 48: 133,
+    //  R4 — speculative depth
+    49: 145, 50: 137, 51: 130, 52: 123, 53: 117, 54: 111, 55: 106, 56: 101,
+    57:  96, 58:  91, 59:  87, 60:  83, 61:  79, 62:  76, 63:  73, 64:  70,
+    //  R5 — roster filler
+    65:  68, 66:  65, 67:  62, 68:  59, 69:  57, 70:  54, 71:  52, 72:  50,
+    73:  48, 74:  46, 75:  44, 76:  43, 77:  41, 78:  40, 79:  38, 80:  37,
+    //  R6 — near-minimum
+    81:  37, 82:  35, 83:  34, 84:  33, 85:  32, 86:  30, 87:  29, 88:  28,
+    89:  27, 90:  26, 91:  25, 92:  24, 93:  24, 94:  23, 95:  22, 96:  22,
     //  R7 — minimum dynasty value
-    97:  68, 98:  66, 99:  64,100:  62,101:  60,102:  58,103:  56,104:  54,
-   105:  52,106:  50,107:  48,108:  46,109:  44,110:  43,111:  41,112:  40,
+    97:  22, 98:  21, 99:  20,100:  20,101:  19,102:  18,103:  18,104:  17,
+   105:  17,106:  16,107:  16,108:  15,109:  15,110:  15,111:  15,112:  15,
 };
 
 // Given a pick's round and origin roster ID, compute the overall draft slot (1–N).
