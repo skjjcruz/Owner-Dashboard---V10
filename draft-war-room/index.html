@@ -819,7 +819,8 @@
         if (sleeperPlayers && leagueRosters.length) {
           leagueRosters.forEach(roster => {
             if (!roster.owner_id) return;
-            const counts = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, LB: 0, DL: 0, DB: 0 };
+            const counts = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, LB: 0, DL: 0, DB: 0, qbStarters: 0 };
+            const starterSet = new Set(roster.starters || []);
             (roster.players || []).forEach(pid => {
               const p = sleeperPlayers[pid];
               if (!p) return;
@@ -831,6 +832,8 @@
                         : ['CB','S','SS','FS','DB'].includes(rawPos) ? 'DB'
                         : null;
               if (pos && counts[pos] !== undefined) counts[pos]++;
+              // Count QBs actually slotted into a starting lineup spot
+              if (pos === 'QB' && starterSet.has(pid)) counts.qbStarters++;
             });
             userPosCounts[roster.owner_id] = counts;
           });
@@ -841,9 +844,12 @@
           const c = userPosCounts[userId];
           if (!c) return ['QB(CRITICAL-0)', 'RB', 'WR']; // sensible default
           const needs = [];
-          if (c.QB === 0)      needs.push('QB(CRITICAL-0)');
-          else if (c.QB === 1) needs.push('QB(CRITICAL-1)');
-          else if (c.QB < 3)   needs.push('QB');
+          // Use starter-lineup count as quality signal when available (offseason it may be 0 for everyone)
+          const qbQuality = (c.qbStarters > 0 || c.QB === 0) ? c.qbStarters : null;
+          const qbSignal  = qbQuality ?? c.QB; // fall back to raw count if no starters data
+          if (qbSignal === 0)      needs.push('QB(CRITICAL-0)');
+          else if (qbSignal === 1) needs.push('QB(CRITICAL-1)');
+          else if (qbSignal < 3)   needs.push('QB');
           if (c.RB < 4)  needs.push('RB');
           if (c.WR < 4)  needs.push('WR');
           if (c.TE < 2)  needs.push('TE');
@@ -871,11 +877,11 @@
             const qbCount  = intel?.qb_count ?? rawQb;
             const aiNeeds  = intel?.needs?.length > 0 ? intel.needs : null;
             // Escalate QB need level:
-            //   CRITICAL-0: 0 QBs (franchise emergency)
-            //   CRITICAL-1: 1 QB (critically thin — must grab a top QB early)
-            //   unknown qbCount: escalate if aiNeeds marks QB as deficit (QB*)
-            const hasQbCritical0 = qbCount === 0 || (qbCount === null && aiNeeds?.some(n => n === 'QB*'));
-            const hasQbCritical1 = qbCount === 1;
+            //   CRITICAL-0: 0 starter-quality QBs (franchise emergency) — also when trade-calc AI flags QB*
+            //   CRITICAL-1: exactly 1 starter-quality QB (critically thin — must grab top QB early)
+            // QB* in aiNeeds means trade-calc AI assessed NO starter-quality QB regardless of raw count
+            const hasQbCritical0 = qbCount === 0 || aiNeeds?.some(n => n === 'QB*');
+            const hasQbCritical1 = !hasQbCritical0 && qbCount === 1;
             const needs    = aiNeeds
               ? aiNeeds.map(n => {
                   if ((n === 'QB' || n === 'QB*') && hasQbCritical0) return 'QB(CRITICAL-0)';
@@ -891,6 +897,7 @@
               earlyDefPct:    draftDna?.earlyDefPct ?? null,
               overallDefPct:  draftDna?.overallDefPct ?? null,
               qbCount,
+              qbStarters:     userPosCounts[ownerInfo.userId]?.qbStarters ?? null,
               tier:           intel?.tier || null,
               posture:        intel?.posture || null,
               needsSource:    aiNeeds ? 'ai-assessed' : 'computed',
@@ -914,8 +921,8 @@
               const rawQb   = userPosCounts[u.user_id]?.QB ?? null;
               const qbCount = intel?.qb_count ?? rawQb;
               const aiNeeds = intel?.needs?.length > 0 ? intel.needs : null;
-              const hasQbCritical0 = qbCount === 0 || (qbCount === null && aiNeeds?.some(n => n === 'QB*'));
-              const hasQbCritical1 = qbCount === 1;
+              const hasQbCritical0 = qbCount === 0 || aiNeeds?.some(n => n === 'QB*');
+              const hasQbCritical1 = !hasQbCritical0 && qbCount === 1;
               const needs   = aiNeeds
                 ? aiNeeds.map(n => {
                     if ((n === 'QB' || n === 'QB*') && hasQbCritical0) return 'QB(CRITICAL-0)';
@@ -931,6 +938,7 @@
                 earlyDefPct:    draftDna?.earlyDefPct ?? null,
                 overallDefPct:  draftDna?.overallDefPct ?? null,
                 qbCount,
+                qbStarters:     userPosCounts[u.user_id]?.qbStarters ?? null,
                 tier:           intel?.tier || null,
                 posture:        intel?.posture || null,
                 needsSource:    aiNeeds ? 'ai-assessed' : 'computed',
@@ -982,7 +990,7 @@
           if (!ctx.draftSlots.length) throw new Error('No league owners found — load your Sleeper league first.');
           setMockMySlot(ctx._mySlot);
           setMockDebug({
-            slots: ctx.draftSlots.map(s => ({ slot: s.slot, name: s.name, qbCount: s.qbCount, needs: (s.needs||[]).join(', ') || '—' })),
+            slots: ctx.draftSlots.map(s => ({ slot: s.slot, name: s.name, qbCount: s.qbCount, qbStarters: s.qbStarters ?? '?', needs: (s.needs||[]).join(', ') || '—' })),
             top5: (ctx.players||[]).slice(0,5).map(p => `#${p.fantasyRank} ${p.name} (${p.pos})`),
           });
           // Save real picks so we can restore after mock
@@ -1607,7 +1615,7 @@
                               <div className="mb-1"><span className="text-silver/50">Top 5 pool:</span> {mockDebug.top5.join(' · ')}</div>
                               {mockDebug.slots.map(s => (
                                 <div key={s.slot} className={s.needs.includes('CRITICAL') ? 'text-loss-red' : ''}>
-                                  Slot {s.slot} {s.name}: QB={s.qbCount ?? 'null'} | needs: {s.needs}
+                                  Slot {s.slot} {s.name}: QB={s.qbCount ?? 'null'} starters={s.qbStarters ?? '?'} | needs: {s.needs}
                                 </div>
                               ))}
                             </div>
