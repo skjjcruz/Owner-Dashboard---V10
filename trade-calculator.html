@@ -3283,14 +3283,17 @@ function TradeCalculator() {
                         );
                     })}
 
-                    {/* Added picks */}
-                    {pickIds.map(pkId => {
+                    {/* Added picks — sorted by year then round */}
+                    {[...pickIds].sort((a, b) => {
+                        const pa = a.split('-'), pb = b.split('-');
+                        return Number(pa[1]) - Number(pb[1]) || Number(pa[2]) - Number(pb[2]);
+                    }).map(pkId => {
                         const parts = pkId.split('-');
                         const yr = parts[1], rd = Number(parts[2]), fromRid = parts[3];
                         const { value: val, slot } = resolvePickValue(rd, fromRid, allRosters);
                         const numTeams = allRosters.length || 16;
                         const slotInRound = slot ? slot - (rd - 1) * numTeams : null;
-                        const slotLabel = slotInRound ? `${rd}.${String(slotInRound).padStart(2,'0')}` : null;
+                        const slotLabel = slotInRound ? `${rd}.${slotInRound}` : null;
                         const pct = Math.round((val / MAX_VALUE) * 100);
                         const pickColor = PICK_COLORS[rd] || 'var(--silver)';
                         const via = ownerNameForRosterId(fromRid);
@@ -3334,7 +3337,7 @@ function TradeCalculator() {
                                             const { value: val, slot } = resolvePickValue(round, fromRosterId, allRosters);
                                             const numTeams = allRosters.length || 16;
                                             const slotInRound = slot ? slot - (round - 1) * numTeams : null;
-                                            const slotLabel = slotInRound ? `${round}.${String(slotInRound).padStart(2,'0')}` : null;
+                                            const slotLabel = slotInRound ? `${round}.${slotInRound}` : null;
                                             const pickColor = PICK_COLORS[round] || 'var(--silver)';
                                             const via   = ownerNameForRosterId(fromRosterId);
                                             const r = allRosters.find(x => x.owner_id === ownerId);
