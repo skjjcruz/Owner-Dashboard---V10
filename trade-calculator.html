@@ -573,6 +573,8 @@ const fetchRosters    = id     => apiFetch(`${SLEEPER_BASE}/league/${id}/rosters
 const fetchLeagueInfo = id     => apiFetch(`${SLEEPER_BASE}/league/${id}`);
 const fetchLeagueUsers= id     => apiFetch(`${SLEEPER_BASE}/league/${id}/users`);
 const fetchTradedPicks= id     => apiFetch(`${SLEEPER_BASE}/league/${id}/traded_picks`);
+const fetchLeagueDrafts= id    => apiFetch(`${SLEEPER_BASE}/league/${id}/drafts`);
+const fetchDraftDetails= did   => apiFetch(`${SLEEPER_BASE}/draft/${did}`);
 
 let _playersCacheData = null;
 let _playersCacheTime = 0;
@@ -986,28 +988,33 @@ const PICK_VALUES_BY_SLOT = {
    105:  17,106:  16,107:  16,108:  15,109:  15,110:  15,111:  15,112:  15,
 };
 
-// Given a pick's round and origin roster ID, compute the overall draft slot (1–N).
-// Determines the overall draft slot for a pick originating from fromRosterId.
-// Draft order: worst record picks first (slot 1), best record picks last.
-// Tiebreak: fewer points scored = earlier pick. waiver_position as final tiebreak.
-function getPickOverallSlot(round, fromRosterId, allRosters) {
-    if (!allRosters || !allRosters.length || !fromRosterId) return null;
+// Given a pick's year, round, and origin roster ID, compute the overall draft slot (1–N).
+// Uses Sleeper's slot_to_roster_id (same source as Draft War Room) when available.
+// Falls back to waiver_position as proxy when no draft has been configured yet.
+function getPickOverallSlot(year, round, fromRosterId, allRosters, draftSlotMaps) {
+    if (!fromRosterId || !allRosters?.length) return null;
     const numTeams = allRosters.length;
-    const sorted = [...allRosters].sort((a, b) => {
-        const wA = a.settings?.wins  ?? 0, wB = b.settings?.wins  ?? 0;
-        const pA = a.settings?.fpts  ?? 0, pB = b.settings?.fpts  ?? 0;
-        const vA = a.settings?.waiver_position ?? 999, vB = b.settings?.waiver_position ?? 999;
-        return wA - wB || pA - pB || vA - vB;
-    });
-    const slotInRound = sorted.findIndex(r => String(r.roster_id) === String(fromRosterId)) + 1;
-    if (slotInRound < 1) return null;
-    return (round - 1) * numTeams + slotInRound;
+
+    // Primary: use Sleeper's authoritative slot_to_roster_id
+    const yearMap = draftSlotMaps?.[Number(year)];
+    if (yearMap) {
+        const slotInRound = yearMap[String(fromRosterId)];
+        if (slotInRound >= 1) return (round - 1) * numTeams + slotInRound;
+    }
+
+    // Fallback: waiver_position (set by Sleeper post-season as draft-order proxy)
+    const roster = allRosters.find(r => String(r.roster_id) === String(fromRosterId));
+    if (!roster) return null;
+    const slotInRound = roster.settings?.waiver_position;
+    if (slotInRound >= 1 && slotInRound <= numTeams) return (round - 1) * numTeams + slotInRound;
+
+    return null;
 }
 
 // Returns { value, slot } — slot is the overall pick number if determinable, else null.
 // Falls back to round-average value when slot is unknown.
-function resolvePickValue(round, fromRosterId, allRosters) {
-    const slot = getPickOverallSlot(round, fromRosterId, allRosters);
+function resolvePickValue(year, round, fromRosterId, allRosters, draftSlotMaps) {
+    const slot = getPickOverallSlot(year, round, fromRosterId, allRosters, draftSlotMaps);
     if (slot && PICK_VALUES_BY_SLOT[slot]) return { value: PICK_VALUES_BY_SLOT[slot], slot };
     return { value: PICK_VALUES[round] || 100, slot: null };
 }
@@ -1170,29 +1177,26 @@ function calcOptimalLineup(playerIds, reserve, taxi, playersData, statsData, sco
 }
 
 // ─── PICK RESOLUTION (Team Comp–style) ───────────────────────────────────────
-// Builds a map of userId → [{year, round}] for every team in the league.
+// Detects whether traded_picks.owner_id is a roster_id or user_id.
+function detectPickIdMode(rosters, tradedPicks) {
+    const rosterIds = new Set(rosters.map(r => String(r.roster_id)));
+    const userIds   = new Set(rosters.map(r => String(r.owner_id)));
+    let rosterHits = 0, userHits = 0;
+    for (const tp of tradedPicks || []) {
+        const oid = String(tp.owner_id ?? '');
+        if (rosterIds.has(oid)) rosterHits++;
+        if (userIds.has(oid))   userHits++;
+    }
+    return rosterHits >= userHits ? 'roster' : 'user';
+}
+
+// Builds a map of userId → [{year, round, fromRosterId}] for every team in the league.
 // Initialises each team with all their own picks then applies traded_picks on top.
 function buildPicksByOwner(rosters, tradedPicks, leagueSeason) {
     const PICK_YEARS_INT = Array.from({ length: PICK_HORIZON }, (_, i) => leagueSeason + i);
+    const mode           = detectPickIdMode(rosters, tradedPicks);
     const rosterById     = {};
-    const userIdSet      = new Set();
-    for (const r of rosters) {
-        rosterById[String(r.roster_id)] = r;
-        if (r.owner_id) userIdSet.add(String(r.owner_id));
-    }
-
-    // Resolve traded_pick.owner_id → user_id regardless of whether Sleeper
-    // stored a roster_id or a user_id in that field (both are used in practice).
-    function resolveNewOwner(rawOwnerId) {
-        const s = String(rawOwnerId ?? '');
-        if (!s) return null;
-        // Try as roster_id first
-        const byRoster = rosterById[s];
-        if (byRoster?.owner_id) return String(byRoster.owner_id);
-        // Fall back: treat as user_id directly
-        if (userIdSet.has(s)) return s;
-        return null;
-    }
+    for (const r of rosters) rosterById[String(r.roster_id)] = r;
 
     // ownerByKey["year-round-originRosterId"] = currentOwnerUserId
     const ownerByKey = {};
@@ -1212,8 +1216,14 @@ function buildPicksByOwner(rosters, tradedPicks, leagueSeason) {
         if (!PICK_YEARS_INT.includes(y)) continue;
         const rd = Number(tp.round);
         if (!Number.isFinite(rd) || rd < 1 || rd > DRAFT_ROUNDS) continue;
-        const originRosterId  = String(tp.roster_id);
-        const newOwnerUserId  = resolveNewOwner(tp.owner_id);
+        const originRosterId = String(tp.roster_id);
+        let newOwnerUserId;
+        if (mode === 'user') {
+            newOwnerUserId = String(tp.owner_id ?? '');
+        } else {
+            const r = rosterById[String(tp.owner_id ?? '')];
+            newOwnerUserId = r?.owner_id ? String(r.owner_id) : null;
+        }
         if (!newOwnerUserId) continue;
         const key = `${y}-${rd}-${originRosterId}`;
         if (key in ownerByKey) ownerByKey[key] = newOwnerUserId;
@@ -1794,7 +1804,8 @@ function TradeCalculator() {
     const [leagueUsers, setLeagueUsers] = useState([]);
     const [playersData, setPlayersData] = useState({});
     const [statsData,   setStatsData]   = useState({});
-    const [tradedPicks, setTradedPicks] = useState([]);
+    const [tradedPicks,    setTradedPicks]    = useState([]);
+    const [draftSlotMaps,  setDraftSlotMaps]  = useState({}); // { year: { rosterId: slotNum } }
     const [loading,     setLoading]     = useState(false);
 
     const [activeTab,    setActiveTab]    = useState(() => sessionStorage.getItem('tc_activeTab') || 'guide');
@@ -1883,13 +1894,14 @@ function TradeCalculator() {
         setAllRosters([]); setLeagueUsers([]); setPlayersData({}); setStatsData({});
         setTradeIds({ A:[], B:[] }); setTradePickIds({ A:[], B:[] }); setTradeFaab({ A:0, B:0 }); setSearchText({ A:'', B:'' }); setShowSearch({ A:false, B:false });
         try {
-            const [rosters, info, users, stats, fc, tPicks] = await Promise.all([
+            const [rosters, info, users, stats, fc, tPicks, draftsData] = await Promise.all([
                 fetchRosters(leagueId),
                 fetchLeagueInfo(leagueId),
                 fetchLeagueUsers(leagueId),
                 fetchSeasonStats(STATS_YEAR),
                 fetchFantasyCalcValues(),
                 fetchTradedPicks(leagueId),
+                fetchLeagueDrafts(leagueId).catch(() => []),
             ]);
             const resolvedStats = stats || {};
             const scoring = info?.scoring_settings;
@@ -1899,6 +1911,30 @@ function TradeCalculator() {
             setStatsData(resolvedStats);
             setTradedPicks(tPicks || []);
             setFcValues(fc);
+
+            // Build draft slot maps: { year: { rosterId: slotNum } }
+            // Uses Sleeper's slot_to_roster_id — the same source as the Draft War Room.
+            if (draftsData?.length) {
+                const leagueSeason = parseInt(info?.season || new Date().getFullYear());
+                const pickYears = Array.from({ length: PICK_HORIZON }, (_, i) => leagueSeason + i);
+                const relevantDrafts = draftsData.filter(d => pickYears.includes(Number(d.season)));
+                if (relevantDrafts.length) {
+                    const details = await Promise.all(
+                        relevantDrafts.map(d => fetchDraftDetails(d.draft_id).catch(() => null))
+                    );
+                    const maps = {};
+                    details.forEach((d, i) => {
+                        if (!d?.slot_to_roster_id) return;
+                        const year = Number(relevantDrafts[i].season);
+                        const rosterToSlot = {};
+                        Object.entries(d.slot_to_roster_id).forEach(([slot, rosterId]) => {
+                            rosterToSlot[String(rosterId)] = parseInt(slot);
+                        });
+                        maps[year] = rosterToSlot;
+                    });
+                    setDraftSlotMaps(maps);
+                }
+            }
             // Load player names + build internal values in background — large payload, non-blocking
             fetchPlayers().then(players => {
                 const resolvedPlayers = players || {};
@@ -2007,9 +2043,10 @@ function TradeCalculator() {
         }, 0);
         const pickSum = pickIds.reduce((sum, pkId) => {
             const parts = pkId.split('-'); // "PICK-year-round-rosterId"
+            const year  = Number(parts[1]);
             const round = Number(parts[2]);
             const fromRosterId = parts[3];
-            const { value } = resolvePickValue(round, fromRosterId, allRosters);
+            const { value } = resolvePickValue(year, round, fromRosterId, allRosters, draftSlotMaps);
             return sum + value;
         }, 0);
         return playerSum + pickSum + Math.round(faab * FAAB_RATE);
@@ -3292,7 +3329,7 @@ function TradeCalculator() {
                     }).map(pkId => {
                         const parts = pkId.split('-');
                         const yr = parts[1], rd = Number(parts[2]), fromRid = parts[3];
-                        const { value: val, slot } = resolvePickValue(rd, fromRid, allRosters);
+                        const { value: val, slot } = resolvePickValue(Number(yr), rd, fromRid, allRosters, draftSlotMaps);
                         const numTeams = allRosters.length || 16;
                         const slotInRound = slot ? slot - (rd - 1) * numTeams : null;
                         const slotLabel = slotInRound ? `${rd}.${slotInRound}` : null;
@@ -3336,7 +3373,7 @@ function TradeCalculator() {
                                         {ownerPicks.map(({ year, round, fromRosterId }) => {
                                             const pkId = makePickId(year, round, fromRosterId);
                                             const added = pickIds.includes(pkId);
-                                            const { value: val, slot } = resolvePickValue(round, fromRosterId, allRosters);
+                                            const { value: val, slot } = resolvePickValue(year, round, fromRosterId, allRosters, draftSlotMaps);
                                             const numTeams = allRosters.length || 16;
                                             const slotInRound = slot ? slot - (round - 1) * numTeams : null;
                                             const slotLabel = slotInRound ? `${round}.${slotInRound}` : null;
