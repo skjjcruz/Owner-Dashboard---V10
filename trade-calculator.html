@@ -3241,9 +3241,19 @@ function TradeCalculator() {
             const globalResults = side === 'A' ? resultsA : resultsB;
             const ownerSelected = !!tradeOwner[side];
 
-            // Picks available to this side's owner
+            // Picks available to this side's owner — sorted by year, round, then slot
             const ownerId       = tradeOwner[side] || null;
-            const ownerPicks    = ownerId ? (picksByOwner[ownerId] || []) : [];
+            function pickSlot(year, fromRosterId) {
+                const m = draftSlotMaps?.[Number(year)];
+                if (m) return m[String(fromRosterId)] ?? 999;
+                const r = allRosters.find(x => String(x.roster_id) === String(fromRosterId));
+                return r?.settings?.waiver_position ?? 999;
+            }
+            const ownerPicks    = (ownerId ? (picksByOwner[ownerId] || []) : [])
+                .slice().sort((a, b) =>
+                    a.year - b.year || a.round - b.round ||
+                    pickSlot(a.year, a.fromRosterId) - pickSlot(b.year, b.fromRosterId)
+                );
 
             // Group roster players by position for display
             function RosterListGrouped({ players }) {
@@ -3322,10 +3332,12 @@ function TradeCalculator() {
                         );
                     })}
 
-                    {/* Added picks — sorted by year then round */}
+                    {/* Added picks — sorted by year, round, then slot */}
                     {[...pickIds].sort((a, b) => {
                         const pa = a.split('-'), pb = b.split('-');
-                        return Number(pa[1]) - Number(pb[1]) || Number(pa[2]) - Number(pb[2]);
+                        return Number(pa[1]) - Number(pb[1])
+                            || Number(pa[2]) - Number(pb[2])
+                            || pickSlot(pa[1], pa[3]) - pickSlot(pb[1], pb[3]);
                     }).map(pkId => {
                         const parts = pkId.split('-');
                         const yr = parts[1], rd = Number(parts[2]), fromRid = parts[3];
