@@ -987,15 +987,20 @@ const PICK_VALUES_BY_SLOT = {
 };
 
 // Given a pick's round and origin roster ID, compute the overall draft slot (1–N).
-// Uses waiver_position as draft-order proxy: position 1 = worst record = picks first.
-// Returns null if slot cannot be determined.
+// Determines the overall draft slot for a pick originating from fromRosterId.
+// Draft order: worst record picks first (slot 1), best record picks last.
+// Tiebreak: fewer points scored = earlier pick. waiver_position as final tiebreak.
 function getPickOverallSlot(round, fromRosterId, allRosters) {
     if (!allRosters || !allRosters.length || !fromRosterId) return null;
     const numTeams = allRosters.length;
-    const roster = allRosters.find(r => String(r.roster_id) === String(fromRosterId));
-    if (!roster) return null;
-    const slotInRound = roster.settings?.waiver_position;
-    if (!slotInRound || slotInRound < 1 || slotInRound > numTeams) return null;
+    const sorted = [...allRosters].sort((a, b) => {
+        const wA = a.settings?.wins  ?? 0, wB = b.settings?.wins  ?? 0;
+        const pA = a.settings?.fpts  ?? 0, pB = b.settings?.fpts  ?? 0;
+        const vA = a.settings?.waiver_position ?? 999, vB = b.settings?.waiver_position ?? 999;
+        return wA - wB || pA - pB || vA - vB;
+    });
+    const slotInRound = sorted.findIndex(r => String(r.roster_id) === String(fromRosterId)) + 1;
+    if (slotInRound < 1) return null;
     return (round - 1) * numTeams + slotInRound;
 }
 
@@ -1165,26 +1170,29 @@ function calcOptimalLineup(playerIds, reserve, taxi, playersData, statsData, sco
 }
 
 // ─── PICK RESOLUTION (Team Comp–style) ───────────────────────────────────────
-// Detects whether traded_picks.owner_id is a roster_id or user_id.
-function detectPickIdMode(rosters, tradedPicks) {
-    const rosterIds = new Set(rosters.map(r => String(r.roster_id)));
-    const userIds   = new Set(rosters.map(r => String(r.owner_id)));
-    let rosterHits = 0, userHits = 0;
-    for (const tp of tradedPicks || []) {
-        const oid = String(tp.owner_id ?? '');
-        if (rosterIds.has(oid)) rosterHits++;
-        if (userIds.has(oid))   userHits++;
-    }
-    return rosterHits >= userHits ? 'roster' : 'user';
-}
-
 // Builds a map of userId → [{year, round}] for every team in the league.
 // Initialises each team with all their own picks then applies traded_picks on top.
 function buildPicksByOwner(rosters, tradedPicks, leagueSeason) {
     const PICK_YEARS_INT = Array.from({ length: PICK_HORIZON }, (_, i) => leagueSeason + i);
-    const mode           = detectPickIdMode(rosters, tradedPicks);
     const rosterById     = {};
-    for (const r of rosters) rosterById[String(r.roster_id)] = r;
+    const userIdSet      = new Set();
+    for (const r of rosters) {
+        rosterById[String(r.roster_id)] = r;
+        if (r.owner_id) userIdSet.add(String(r.owner_id));
+    }
+
+    // Resolve traded_pick.owner_id → user_id regardless of whether Sleeper
+    // stored a roster_id or a user_id in that field (both are used in practice).
+    function resolveNewOwner(rawOwnerId) {
+        const s = String(rawOwnerId ?? '');
+        if (!s) return null;
+        // Try as roster_id first
+        const byRoster = rosterById[s];
+        if (byRoster?.owner_id) return String(byRoster.owner_id);
+        // Fall back: treat as user_id directly
+        if (userIdSet.has(s)) return s;
+        return null;
+    }
 
     // ownerByKey["year-round-originRosterId"] = currentOwnerUserId
     const ownerByKey = {};
@@ -1204,14 +1212,8 @@ function buildPicksByOwner(rosters, tradedPicks, leagueSeason) {
         if (!PICK_YEARS_INT.includes(y)) continue;
         const rd = Number(tp.round);
         if (!Number.isFinite(rd) || rd < 1 || rd > DRAFT_ROUNDS) continue;
-        const originRosterId = String(tp.roster_id);
-        let newOwnerUserId;
-        if (mode === 'user') {
-            newOwnerUserId = String(tp.owner_id ?? '');
-        } else {
-            const r = rosterById[String(tp.owner_id ?? '')];
-            newOwnerUserId = r?.owner_id ? String(r.owner_id) : null;
-        }
+        const originRosterId  = String(tp.roster_id);
+        const newOwnerUserId  = resolveNewOwner(tp.owner_id);
         if (!newOwnerUserId) continue;
         const key = `${y}-${rd}-${originRosterId}`;
         if (key in ownerByKey) ownerByKey[key] = newOwnerUserId;
