@@ -272,7 +272,6 @@
       const [mockIsPlaying,    setMockIsPlaying]    = useState(false);
       const [mockLoading,      setMockLoading]      = useState(false);
       const [mockError,        setMockError]        = useState(null);
-      const [mockDebug,        setMockDebug]        = useState(null);
       const [draftDnaSyncing,  setDraftDnaSyncing]  = useState(false);
       const [draftDnaSyncMsg,  setDraftDnaSyncMsg]  = useState(null);
       const preMockPicksRef = React.useRef(null); // saves real picks before mock overwrites board
@@ -989,10 +988,6 @@
           const ctx = buildMockContext(leagueIntel);
           if (!ctx.draftSlots.length) throw new Error('No league owners found — load your Sleeper league first.');
           setMockMySlot(ctx._mySlot);
-          setMockDebug({
-            slots: ctx.draftSlots.map(s => ({ slot: s.slot, name: s.name, qbCount: s.qbCount, qbStarters: s.qbStarters ?? '?', needs: (s.needs||[]).join(', ') || '—' })),
-            top5: (ctx.players||[]).slice(0,5).map(p => `#${p.fantasyRank} ${p.name} (${p.pos})`),
-          });
           // Save real picks so we can restore after mock
           preMockPicksRef.current = draftPicks;
           const sessionToken = typeof getSessionToken === 'function' ? getSessionToken() : null;
@@ -1609,17 +1604,6 @@
                             ) : '⚡ Run AI Mock Draft'}
                           </button>
                           {mockError && <div className="mt-3 text-loss-red text-xs">⚠ {mockError}</div>}
-                          {mockDebug && (
-                            <div className="mt-3 p-2 bg-black/40 border border-silver/20 rounded text-[10px] font-mono text-silver/70">
-                              <div className="text-gold/80 font-bold mb-1">🔍 DEBUG — QB Context</div>
-                              <div className="mb-1"><span className="text-silver/50">Top 5 pool:</span> {mockDebug.top5.join(' · ')}</div>
-                              {mockDebug.slots.map(s => (
-                                <div key={s.slot} className={s.needs.includes('CRITICAL') ? 'text-loss-red' : ''}>
-                                  Slot {s.slot} {s.name}: QB={s.qbCount ?? 'null'} starters={s.qbStarters ?? '?'} | needs: {s.needs}
-                                </div>
-                              ))}
-                            </div>
-                          )}
                         </>
                       )}
                     </div>
