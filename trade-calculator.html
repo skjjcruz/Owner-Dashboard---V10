@@ -3293,7 +3293,7 @@ function TradeCalculator() {
                         const { value: val, slot } = resolvePickValue(rd, fromRid, allRosters);
                         const numTeams = allRosters.length || 16;
                         const slotInRound = slot ? slot - (rd - 1) * numTeams : null;
-                        const slotLabel = slotInRound ? `${rd}.${String(slotInRound).padStart(2,'0')}` : null;
+                        const slotLabel = slotInRound ? `${rd}.${slotInRound}` : null;
                         const pct = Math.round((val / MAX_VALUE) * 100);
                         const pickColor = PICK_COLORS[rd] || 'var(--silver)';
                         const via = ownerNameForRosterId(fromRid);
@@ -3337,7 +3337,7 @@ function TradeCalculator() {
                                             const { value: val, slot } = resolvePickValue(round, fromRosterId, allRosters);
                                             const numTeams = allRosters.length || 16;
                                             const slotInRound = slot ? slot - (round - 1) * numTeams : null;
-                                            const slotLabel = slotInRound ? `${round}.${String(slotInRound).padStart(2,'0')}` : null;
+                                            const slotLabel = slotInRound ? `${round}.${slotInRound}` : null;
                                             const pickColor = PICK_COLORS[round] || 'var(--silver)';
                                             const via   = ownerNameForRosterId(fromRosterId);
                                             const r = allRosters.find(x => x.owner_id === ownerId);
