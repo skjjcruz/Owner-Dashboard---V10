@@ -715,8 +715,11 @@ window.OD.status = function() {
 
     async function getSignature() {
         try {
-            const r = await fetch(location.href, { method: 'HEAD', cache: 'no-store' });
-            return r.headers.get('etag') || r.headers.get('last-modified') || null;
+            const url = location.origin + location.pathname + '?_v=' + Date.now();
+            const r = await fetch(url, { cache: 'no-store' });
+            const text = await r.text();
+            // Fingerprint using content length + first 200 non-whitespace chars
+            return text.length + '|' + text.replace(/\s+/g, '').slice(0, 200);
         } catch { return null; }
     }
 
