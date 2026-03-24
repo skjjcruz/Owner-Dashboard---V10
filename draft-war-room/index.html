@@ -753,12 +753,26 @@
         setAiLoading(true); setAiError(null); setAiAnalysis(null);
         try {
           const ctx = buildDraftContext();
-          const sessionToken = typeof getSessionToken === 'function' ? getSessionToken() : null;
+          let sessionToken = typeof getSessionToken === 'function' ? getSessionToken() : null;
+          // Auto-refresh expired session token for legacy Sleeper users
+          if (!sessionToken) {
+            try {
+              const authRaw = localStorage.getItem('od_auth_v1');
+              if (authRaw) {
+                const auth = JSON.parse(authRaw);
+                if (auth?.username && typeof window.OD?.acquireSessionToken === 'function') {
+                  const session = await window.OD.acquireSessionToken(auth.username);
+                  if (session?.token) sessionToken = session.token;
+                }
+              }
+            } catch {}
+          }
+          if (!sessionToken) throw new Error('Session expired. Please log out and log back in to continue using AI.');
           const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-analyze`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${sessionToken || SUPABASE_ANON_KEY}`,
+              'Authorization': `Bearer ${sessionToken}`,
               'apikey': SUPABASE_ANON_KEY,
             },
             body: JSON.stringify({ type: aiMode, context: ctx }),
@@ -990,10 +1004,23 @@
           setMockMySlot(ctx._mySlot);
           // Save real picks so we can restore after mock
           preMockPicksRef.current = draftPicks;
-          const sessionToken = typeof getSessionToken === 'function' ? getSessionToken() : null;
+          let sessionToken = typeof getSessionToken === 'function' ? getSessionToken() : null;
+          if (!sessionToken) {
+            try {
+              const authRaw = localStorage.getItem('od_auth_v1');
+              if (authRaw) {
+                const auth = JSON.parse(authRaw);
+                if (auth?.username && typeof window.OD?.acquireSessionToken === 'function') {
+                  const session = await window.OD.acquireSessionToken(auth.username);
+                  if (session?.token) sessionToken = session.token;
+                }
+              }
+            } catch {}
+          }
+          if (!sessionToken) throw new Error('Session expired. Please log out and log back in to continue using AI.');
           const resp = await fetch(`${SUPABASE_URL}/functions/v1/ai-analyze`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionToken || SUPABASE_ANON_KEY}`, 'apikey': SUPABASE_ANON_KEY },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionToken}`, 'apikey': SUPABASE_ANON_KEY },
             body: JSON.stringify({ type: 'mock_draft', context: ctx }),
           });
           if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e.error || `HTTP ${resp.status}`); }
