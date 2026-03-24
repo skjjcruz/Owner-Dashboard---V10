@@ -484,12 +484,31 @@ window.OD.updatePassword = async function(username, newPassword) {
 // mock_draft type returns JSON and does not stream — onChunk is ignored for it.
 // The returned { analysis } contains the full completed text.
 window.OD.callAI = async function({ type, context, onChunk }) {
-    const token = getSessionToken();
+    let token = getSessionToken();
+
+    // Auto-refresh expired session token for legacy Sleeper users
+    if (!token) {
+        try {
+            const authRaw = localStorage.getItem('od_auth_v1');
+            if (authRaw) {
+                const auth = JSON.parse(authRaw);
+                if (auth?.username) {
+                    const session = await window.OD.acquireSessionToken(auth.username);
+                    if (session?.token) token = session.token;
+                }
+            }
+        } catch {}
+    }
+
+    if (!token) {
+        throw new Error('Session expired. Please log out and log back in to continue using AI.');
+    }
+
     const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-analyze`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token || SUPABASE_ANON}`,
+            'Authorization': `Bearer ${token}`,
             'apikey': SUPABASE_ANON,
         },
         body: JSON.stringify({ type, context }),
