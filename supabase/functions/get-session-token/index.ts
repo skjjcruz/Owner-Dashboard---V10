@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
             return json({ error: 'username is required' }, 400);
         }
 
-        const jwtSecret  = Deno.env.get('SUPABASE_JWT_SECRET');
+        const jwtSecret  = Deno.env.get('SUPABASE_JWT_SECRET') ?? Deno.env.get('JWT_SECRET');
         const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
         const supabaseUrl = Deno.env.get('SUPABASE_URL');
 
