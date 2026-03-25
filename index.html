@@ -991,6 +991,32 @@
 <body>
     <div id="root"></div>
 
+<script>
+// ── Service Worker registration + auto-update handler ──────
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+
+    // When a new SW takes control (skipWaiting + clients.claim fired),
+    // show the gold banner and reload — works on browser AND home screen PWA.
+    let _swRefreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (_swRefreshing) return;
+        _swRefreshing = true;
+        const el = document.createElement('div');
+        el.textContent = '\u26A1 Updating to latest version...';
+        el.style.cssText = [
+            'position:fixed','top:0','left:0','right:0','z-index:99999',
+            'background:#D4AF37','color:#0A0A0A',
+            'font-family:Oswald,sans-serif','font-weight:700',
+            'font-size:0.82rem','letter-spacing:0.06em',
+            'text-align:center','padding:0.55rem','pointer-events:none'
+        ].join(';');
+        document.body.appendChild(el);
+        setTimeout(() => window.location.reload(), 1500);
+    });
+}
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase-client.js"></script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
