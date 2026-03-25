@@ -705,44 +705,7 @@ window.OD.status = function() {
     console.log('[OD] Session token:', token ? 'valid' : 'none — DB writes will be blocked by RLS');
 };
 
-// ============================================================
-// AUTO-UPDATE POLLING
-// ============================================================
-(function startAutoUpdatePoller() {
-    if (typeof fetch === 'undefined' || typeof window === 'undefined') return;
-
-    let baseline = null;
-
-    async function getSignature() {
-        try {
-            const url = location.origin + location.pathname + '?_v=' + Date.now();
-            const r = await fetch(url, { cache: 'no-store' });
-            const text = await r.text();
-            // Fingerprint using content length + first 200 non-whitespace chars
-            return text.length + '|' + text.replace(/\s+/g, '').slice(0, 200);
-        } catch { return null; }
-    }
-
-    function reload() {
-        const el = document.createElement('div');
-        el.textContent = '⚡ Updating to latest version...';
-        el.style.cssText = [
-            'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
-            'background:#D4AF37', 'color:#0A0A0A',
-            'font-family:Oswald,sans-serif', 'font-weight:700',
-            'font-size:0.82rem', 'letter-spacing:0.06em',
-            'text-align:center', 'padding:0.55rem', 'pointer-events:none'
-        ].join(';');
-        document.body.appendChild(el);
-        setTimeout(() => location.reload(), 1500);
-    }
-
-    setTimeout(async () => {
-        baseline = await getSignature();
-        setInterval(async () => {
-            if (!baseline) { baseline = await getSignature(); return; }
-            const current = await getSignature();
-            if (current && current !== baseline) reload();
-        }, 2 * 60 * 1000);
-    }, 5000);
-})();
+// Auto-updates are now handled by the service worker (sw.js).
+// The SW uses skipWaiting + clients.claim on activation, and
+// index.html listens for the controllerchange event to show
+// the gold banner and reload — works on browser and PWA.
