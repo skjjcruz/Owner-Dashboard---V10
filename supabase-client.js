@@ -25,7 +25,18 @@ function getSessionToken() {
         if (raw) {
             const s = JSON.parse(raw);
             // fw_session_v1 shape: { token, user: { ... } }
-            if (s?.token) return s.token;
+            if (s?.token) {
+                // Decode JWT payload and check expiry (5-min early buffer)
+                const parts = s.token.split('.');
+                if (parts.length === 3) {
+                    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                    if (payload?.exp && Date.now() < (payload.exp - 5 * 60) * 1000) {
+                        return s.token;
+                    }
+                    return null; // Token expired
+                }
+                return s.token; // Malformed JWT — pass through, server will reject
+            }
         }
     } catch {}
 
@@ -514,6 +525,9 @@ window.OD.callAI = async function({ type, context, onChunk }) {
         body: JSON.stringify({ type, context }),
     });
     if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error('Session expired. Please sign out and sign back in to continue using AI.');
+        }
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `AI call failed (${response.status})`);
     }
