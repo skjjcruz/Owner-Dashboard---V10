@@ -1032,10 +1032,9 @@ if ('serviceWorker' in navigator) {
     const newSession   = (() => { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; } })();
     const isAuthed     = !!(legacyAuth || newSession?.token);
 
-    // Landing/onboarding flow temporarily disabled — go straight to app
-    // if (!isAuthed) {
-    //     window.location.href = 'landing.html';
-    // }
+    if (!isAuthed) {
+        window.location.href = 'landing.html';
+    }
 
     let sleeperUsername = '';
     try {
@@ -1049,7 +1048,7 @@ if ('serviceWorker' in navigator) {
         }
     } catch (e) {
         localStorage.removeItem(AUTH_KEY);
-        // if (!newSession?.token) window.location.href = 'landing.html';
+        if (!newSession?.token) window.location.href = 'landing.html';
     }
 
     const { useState, useEffect, useRef } = React;
