@@ -1024,31 +1024,25 @@ if ('serviceWorker' in navigator) {
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <script type="text/babel">
-    // ===== AUTHENTICATION CHECK =====
+    // ===== SESSION LOAD (no redirect — landing/onboarding disconnected) =====
     const AUTH_KEY    = 'od_auth_v1';
     const SESSION_KEY = 'fw_session_v1';
 
-    const legacyAuth   = localStorage.getItem(AUTH_KEY);
-    const newSession   = (() => { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; } })();
-    const isAuthed     = !!(legacyAuth || newSession?.token);
-
-    if (!isAuthed) {
-        window.location.href = 'landing.html';
-    }
+    const legacyAuth = localStorage.getItem(AUTH_KEY);
+    // newSession kept for AI / Supabase calls that need the JWT
+    (() => { try { JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { localStorage.removeItem(SESSION_KEY); } })();
 
     let sleeperUsername = '';
     try {
         if (legacyAuth) {
             const credentials = JSON.parse(legacyAuth);
             sleeperUsername = credentials.username || '';
-            // Sync username to Team Comps page localStorage key so it auto-logs in
             if (sleeperUsername) {
                 localStorage.setItem('od_locked_username_v2', sleeperUsername);
             }
         }
     } catch (e) {
         localStorage.removeItem(AUTH_KEY);
-        if (!newSession?.token) window.location.href = 'landing.html';
     }
 
     const { useState, useEffect, useRef } = React;
