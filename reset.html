@@ -3,21 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resetting Session…</title>
+  <title>Reset Session</title>
   <style>
-    body { margin: 0; background: #0a0a0a; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; color: #d4af37; text-align: center; }
+    body { margin: 0; background: #0a0a0a; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; color: #d4af37; text-align: center; padding: 2rem; box-sizing: border-box; }
+    h2 { margin: 0 0 1rem; }
+    p { color: #aaa; margin: 0 0 2rem; }
+    a { display: inline-block; padding: 0.75rem 2rem; background: #d4af37; color: #000; font-weight: bold; text-decoration: none; border-radius: 6px; font-size: 1rem; }
   </style>
 </head>
 <body>
   <div>
-    <p>Clearing session…</p>
+    <h2 id="msg">Clearing session…</h2>
+    <p id="sub">Please wait</p>
+    <a href="landing.html" id="btn" style="display:none">Go to Login</a>
   </div>
   <script>
-    // Clear all known session keys
-    ['fw_session_v1', 'od_session_v1', 'od_auth_v1', 'od_profile_v1'].forEach(function(k) {
-      localStorage.removeItem(k);
-    });
-    window.location.href = 'landing.html';
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      document.getElementById('msg').textContent = '✓ Session cleared';
+      document.getElementById('sub').textContent = 'Redirecting to login…';
+      document.getElementById('btn').style.display = 'inline-block';
+      setTimeout(function() { window.location.replace('landing.html'); }, 1500);
+    } catch(e) {
+      document.getElementById('msg').textContent = 'Error: ' + e.message;
+      document.getElementById('sub').textContent = 'Tap the button below to go to login';
+      document.getElementById('btn').style.display = 'inline-block';
+    }
   </script>
 </body>
 </html>
