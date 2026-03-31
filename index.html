@@ -990,6 +990,27 @@
 </head>
 <body>
     <div id="root"></div>
+    <div id="fatal-error" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#0a0a0a;color:#d4af37;font-family:sans-serif;padding:2rem;z-index:9999;overflow:auto;">
+      <h2 style="margin:0 0 1rem">App Error</h2>
+      <pre id="fatal-error-msg" style="color:#ff6b6b;font-size:0.85rem;white-space:pre-wrap;word-break:break-all;background:rgba(255,0,0,0.1);padding:1rem;border-radius:6px;"></pre>
+      <button onclick="localStorage.clear();window.location.href='landing.html'" style="margin-top:1.5rem;padding:0.75rem 2rem;background:#d4af37;color:#000;border:none;border-radius:6px;font-weight:bold;font-size:1rem;cursor:pointer;">Clear Session &amp; Go to Login</button>
+    </div>
+    <script>
+      window.onerror = function(msg, src, line, col, err) {
+        var el = document.getElementById('fatal-error');
+        var msgEl = document.getElementById('fatal-error-msg');
+        if (el && msgEl) { msgEl.textContent = (err ? err.stack : msg) || msg; el.style.display = 'block'; }
+      };
+      // Show error if React hasn't mounted after 12 seconds (CDN timeout)
+      setTimeout(function() {
+        var root = document.getElementById('root');
+        if (root && !root.hasChildNodes()) {
+          var el = document.getElementById('fatal-error');
+          var msgEl = document.getElementById('fatal-error-msg');
+          if (el && msgEl) { msgEl.textContent = 'Page failed to load (scripts timed out or CDN unavailable). Check your internet connection and try again.'; el.style.display = 'block'; }
+        }
+      }, 12000);
+    </script>
 
 <script>
 // ── Service Worker registration + auto-update handler ──────
@@ -3356,7 +3377,13 @@ if ('serviceWorker' in navigator) {
         );
     }
 
-    ReactDOM.render(<OwnerDashboard />, document.getElementById('root'));
+    try {
+        ReactDOM.render(<OwnerDashboard />, document.getElementById('root'));
+    } catch(e) {
+        var el = document.getElementById('fatal-error');
+        var msgEl = document.getElementById('fatal-error-msg');
+        if (el && msgEl) { msgEl.textContent = e.stack || e.message || String(e); el.style.display = 'block'; }
+    }
 </script>
 
 <footer style="text-align:center;padding:16px;font-size:12px;color:#666;border-top:1px solid #1a1a1a;margin-top:32px;">&copy; 2026 skjjcruz. All rights reserved.</footer>
