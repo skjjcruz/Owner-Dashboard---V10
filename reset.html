@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resetting Session…</title>
+  <style>
+    body { margin: 0; background: #0a0a0a; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; color: #d4af37; text-align: center; }
+  </style>
+</head>
+<body>
+  <div>
+    <p>Clearing session…</p>
+  </div>
+  <script>
+    // Clear all known session keys
+    ['fw_session_v1', 'od_session_v1', 'od_auth_v1', 'od_profile_v1'].forEach(function(k) {
+      localStorage.removeItem(k);
+    });
+    window.location.href = 'landing.html';
+  </script>
+</body>
+</html>
