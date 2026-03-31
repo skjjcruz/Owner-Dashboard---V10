@@ -3377,12 +3377,29 @@ if ('serviceWorker' in navigator) {
         );
     }
 
+    class ErrorBoundary extends React.Component {
+        constructor(props) { super(props); this.state = { error: null }; }
+        static getDerivedStateFromError(error) { return { error }; }
+        componentDidCatch(error, info) {
+            var el = document.getElementById('fatal-error');
+            var msgEl = document.getElementById('fatal-error-msg');
+            if (el && msgEl) {
+                msgEl.textContent = 'ERROR: ' + (error.message || String(error)) + '\n\nCOMPONENT: ' + (info.componentStack || '') + '\n\nSTACK: ' + (error.stack || '');
+                el.style.display = 'block';
+            }
+        }
+        render() { return this.state.error ? null : this.props.children; }
+    }
+
     try {
-        ReactDOM.render(<OwnerDashboard />, document.getElementById('root'));
+        ReactDOM.render(
+            <ErrorBoundary><OwnerDashboard /></ErrorBoundary>,
+            document.getElementById('root')
+        );
     } catch(e) {
         var el = document.getElementById('fatal-error');
         var msgEl = document.getElementById('fatal-error-msg');
-        if (el && msgEl) { msgEl.textContent = e.stack || e.message || String(e); el.style.display = 'block'; }
+        if (el && msgEl) { msgEl.textContent = 'ERROR: ' + (e.message || String(e)) + '\n\nSTACK: ' + (e.stack || ''); el.style.display = 'block'; }
     }
 </script>
 
