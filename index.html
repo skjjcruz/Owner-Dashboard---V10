@@ -2698,6 +2698,7 @@
 
     // Main Dashboard
     function OwnerDashboard() {
+        const newSession = (() => { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; } })();
         const [showSettings, setShowSettings] = useState(false);
         const [loading, setLoading] = useState(true);
         const [error, setError] = useState(null);
