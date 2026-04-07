@@ -229,6 +229,11 @@
       const [draftPicks, setDraftPicks] = useState({});
       const [selectedPickSlot, setSelectedPickSlot] = useState(null);
       const [selectedPlayerDetail, setSelectedPlayerDetail] = useState(null);
+
+      // ---- Drag & Drop state -----------------------------------------------
+      const [dragOver, setDragOver] = useState(null);           // pick key hovered during drag
+      const [rankingDragOver, setRankingDragOver] = useState(null); // player id hovered in rankings
+      const [customPlayerOrder, setCustomPlayerOrder] = useState(null); // user-reordered ranking IDs
       
       // Get URL params on mount
       const urlParams = getUrlParams();
@@ -623,25 +628,31 @@
       // Positions to always exclude (OL/special teams - no fantasy value)
       const excludedPositions = ['OL', 'OT', 'IOL', 'T', 'G', 'C', 'OG', 'P', 'LS'];
 
-      const filteredPlayers = players
-        .filter(p => {
+      const filteredPlayers = (() => {
+        const list = players.filter(p => {
           const matchesPos = selectedPos === 'ALL' || p.pos === selectedPos;
           const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                (p.school && p.school.toLowerCase().includes(searchTerm.toLowerCase()));
           const notDrafted = !Object.values(draftPicks).includes(p.id);
-          // Always exclude OL/special teams positions
           const notExcludedPosition = !excludedPositions.includes(p.pos);
           return matchesPos && matchesSearch && notDrafted && notExcludedPosition;
-        })
-        .sort((a, b) => {
-          if (rankingMode === 'fantasy') {
-            // For fantasy, sort by fantasyRank ascending (lower is better)
-            return (a.fantasyRank || 999) - (b.fantasyRank || 999);
-          } else {
-            // For consensus, sort by consensusRank ascending (lower is better)
-            return (a.consensusRank || 999) - (b.consensusRank || 999);
-          }
         });
+        if (customPlayerOrder) {
+          const orderMap = new Map(customPlayerOrder.map((id, i) => [id, i]));
+          list.sort((a, b) => {
+            const ai = orderMap.has(a.id) ? orderMap.get(a.id) : 99999;
+            const bi = orderMap.has(b.id) ? orderMap.get(b.id) : 99999;
+            if (ai !== bi) return ai - bi;
+            return (a.fantasyRank || 999) - (b.fantasyRank || 999);
+          });
+        } else {
+          list.sort((a, b) => {
+            if (rankingMode === 'fantasy') return (a.fantasyRank || 999) - (b.fantasyRank || 999);
+            return (a.consensusRank || 999) - (b.consensusRank || 999);
+          });
+        }
+        return list;
+      })();
 
       const positionCounts = positions.reduce((acc, pos) => {
         acc[pos] = players.filter(p => p.pos === pos && !Object.values(draftPicks).includes(p.id)).length;
@@ -669,6 +680,41 @@
         } else {
           setSelectedPickSlot(pickKey);
         }
+      };
+
+      // ---- Drag & Drop handlers --------------------------------------------
+      // Drop a rankings player onto a board pick slot
+      const handlePlayerDrop = (playerId, pickKey) => {
+        setDraftPicks(prev => ({ ...prev, [pickKey]: playerId }));
+        setSelectedPickSlot(null);
+      };
+
+      // Swap two picks on the draft board
+      const handlePickSwap = (fromKey, toKey) => {
+        if (fromKey === toKey) return;
+        setDraftPicks(prev => {
+          const np = { ...prev };
+          const temp = np[fromKey];
+          if (np[toKey] !== undefined) np[fromKey] = np[toKey];
+          else delete np[fromKey];
+          np[toKey] = temp;
+          return np;
+        });
+      };
+
+      // Reorder players within the rankings list
+      const handleRankingReorder = (draggedId, targetId) => {
+        if (draggedId === targetId) return;
+        setCustomPlayerOrder(prev => {
+          const base = prev !== null ? prev : filteredPlayers.map(p => p.id);
+          const fi = base.indexOf(draggedId);
+          const ti = base.indexOf(targetId);
+          if (fi === -1 || ti === -1) return prev;
+          const next = [...base];
+          next.splice(fi, 1);
+          next.splice(ti, 0, draggedId);
+          return next;
+        });
       };
 
       // ---- AI Scout helpers -----------------------------------------------
@@ -1276,8 +1322,31 @@
                         return (
                           <div
                             key={pick.key}
+                            draggable={!!pickData}
+                            onDragStart={pickData ? (e) => {
+                              e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'board', pickKey: pick.key }));
+                              e.dataTransfer.effectAllowed = 'move';
+                            } : undefined}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                              setDragOver(pick.key);
+                            }}
+                            onDragLeave={() => setDragOver(null)}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setDragOver(null);
+                              try {
+                                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                if (data.type === 'ranking') handlePlayerDrop(data.playerId, pick.key);
+                                else if (data.type === 'board') handlePickSwap(data.pickKey, pick.key);
+                              } catch {}
+                            }}
                             onClick={() => handlePickSlotClick(pick.key)}
-                            className={`draft-board-pick p-1 md:p-3 rounded border cursor-pointer transition-all flex items-center gap-1 md:gap-3 ${
+                            className={`draft-board-pick p-1 md:p-3 rounded border transition-all flex items-center gap-1 md:gap-3 ${
+                              pickData ? 'cursor-grab' : 'cursor-pointer'
+                            } ${
+                              dragOver === pick.key ? 'border-win-green bg-win-green/10' :
                               isSelected ? 'border-gold bg-gold bg-opacity-10' :
                               isMySlot && pickData?.isMock ? 'border-gold bg-gold/15' :
                               isMySlot ? 'border-red-700 bg-red-950' :
@@ -1368,21 +1437,30 @@
                   {rightTab === 'rankings' ? (
                     <>
                       <button
-                        onClick={() => setRankingMode('fantasy')}
+                        onClick={() => { setRankingMode('fantasy'); setCustomPlayerOrder(null); }}
                         className={`ranking-mode-btn flex-1 px-1 md:px-3 py-0 md:py-2 rounded text-xs md:text-sm font-semibold ${
-                          rankingMode === 'fantasy' ? 'bg-gold text-black' : 'bg-charcoal text-silver'
+                          rankingMode === 'fantasy' && !customPlayerOrder ? 'bg-gold text-black' : 'bg-charcoal text-silver'
                         }`}
                       >
                         🏈 Fantasy Rank
                       </button>
                       <button
-                        onClick={() => setRankingMode('consensus')}
+                        onClick={() => { setRankingMode('consensus'); setCustomPlayerOrder(null); }}
                         className={`ranking-mode-btn flex-1 px-1 md:px-3 py-0 md:py-2 rounded text-xs md:text-sm font-semibold ${
-                          rankingMode === 'consensus' ? 'bg-gold text-black' : 'bg-charcoal text-silver'
+                          rankingMode === 'consensus' && !customPlayerOrder ? 'bg-gold text-black' : 'bg-charcoal text-silver'
                         }`}
                       >
                         📊 Consensus Rank
                       </button>
+                      {customPlayerOrder && (
+                        <button
+                          onClick={() => setCustomPlayerOrder(null)}
+                          className="ranking-mode-btn px-1 md:px-2 py-0 md:py-2 rounded text-xs font-semibold bg-gold/20 text-gold border border-gold/40"
+                          title="Reset to default ranking order"
+                        >
+                          ↺
+                        </button>
+                      )}
                     </>
                   ) : (
                     <>
@@ -1464,16 +1542,41 @@
                   {filteredPlayers.map((player, displayIndex) => (
                     <div
                       key={player.id}
-                      className="player-card-mobile p-1 md:p-3 hover:bg-charcoal border-b border-gold/20"
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'ranking', playerId: player.id }));
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        setRankingDragOver(player.id);
+                      }}
+                      onDragLeave={() => setRankingDragOver(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setRankingDragOver(null);
+                        try {
+                          const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                          if (data.type === 'ranking') handleRankingReorder(data.playerId, player.id);
+                        } catch {}
+                      }}
+                      className={`player-card-mobile p-1 md:p-3 border-b border-gold/20 transition-colors ${
+                        rankingDragOver === player.id ? 'bg-gold/20 border-gold/60' : 'hover:bg-charcoal'
+                      }`}
+                      style={{ cursor: 'grab' }}
                     >
                       <div className="flex items-center gap-0.5 md:gap-3">
                         <div className="player-rank-number w-10 md:w-16 text-silver font-bold text-xs md:text-base text-center flex-shrink-0 flex items-center justify-center gap-0.5">
                           <span>#{displayIndex + 1}</span>
-                          {rankingMode === 'consensus' && player.rankChange > 0 && (
+                          {!customPlayerOrder && rankingMode === 'consensus' && player.rankChange > 0 && (
                             <span className="text-win-green text-[8px] md:text-xs" title={`Up ${player.rankChange} from #${player.previousRank}`}>▲</span>
                           )}
-                          {rankingMode === 'consensus' && player.rankChange < 0 && (
+                          {!customPlayerOrder && rankingMode === 'consensus' && player.rankChange < 0 && (
                             <span className="text-loss-red text-[8px] md:text-xs" title={`Down ${Math.abs(player.rankChange)} from #${player.previousRank}`}>▼</span>
+                          )}
+                          {customPlayerOrder && (
+                            <span className="text-gold/40 text-[8px] hidden md:inline" title="Custom order — drag to reorder">⠿</span>
                           )}
                         </div>
                         <img
