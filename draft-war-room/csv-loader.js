@@ -265,8 +265,10 @@ async function loadPlayersFromCSV() {
                    player['Player Name'] || player['player name'] || player['PLAYER NAME'] || '';
 
       // Get position (handle variations)
-      const pos = player.pos || player.Pos || player.position || player.Position ||
+      const rawPos = player.pos || player.Pos || player.position || player.Position ||
                   player.POS || player.POSITION || '';
+      // Normalize "ED" (Edge Defender abbreviation in CSV) to "EDGE" for UI filter consistency
+      const pos = rawPos === 'ED' ? 'EDGE' : rawPos;
 
       // Look up enrichment data by name only (school comes FROM enrichment)
       const enrichmentKey = name.toLowerCase().trim();
