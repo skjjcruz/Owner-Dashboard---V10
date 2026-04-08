@@ -628,14 +628,29 @@
       // Positions to always exclude (OL/special teams - no fantasy value)
       const excludedPositions = ['OL', 'OT', 'IOL', 'T', 'G', 'C', 'OG', 'P', 'LS'];
 
+      const isMockDraftActive = aiMode === 'mock_draft';
+      // Build sets of drafted players: plain IDs (user picks) and names (AI mock picks)
+      const draftedPlayerIds = new Set();
+      const draftedPlayerNames = new Set();
+      Object.values(draftPicks).forEach(v => {
+        if (v && typeof v === 'object' && v.isMock) {
+          const m = v.metadata || {};
+          const fullName = `${m.first_name || ''} ${m.last_name || ''}`.trim();
+          if (fullName) draftedPlayerNames.add(fullName.toLowerCase());
+        } else if (v) {
+          draftedPlayerIds.add(v);
+        }
+      });
+
       const filteredPlayers = (() => {
         const list = players.filter(p => {
           const matchesPos = selectedPos === 'ALL' || p.pos === selectedPos;
           const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                (p.school && p.school.toLowerCase().includes(searchTerm.toLowerCase()));
-          const notDrafted = !Object.values(draftPicks).includes(p.id);
           const notExcludedPosition = !excludedPositions.includes(p.pos);
-          return matchesPos && matchesSearch && notDrafted && notExcludedPosition;
+          // During mock drafts, keep drafted players visible (they'll be highlighted green)
+          const notDrafted = isMockDraftActive ? true : !draftedPlayerIds.has(p.id);
+          return matchesPos && matchesSearch && notExcludedPosition && notDrafted;
         });
         if (customPlayerOrder) {
           const orderMap = new Map(customPlayerOrder.map((id, i) => [id, i]));
@@ -654,11 +669,13 @@
         return list;
       })();
 
+      const isPlayerDrafted = (p) =>
+        draftedPlayerIds.has(p.id) || (isMockDraftActive && draftedPlayerNames.has(p.name?.toLowerCase()));
       const positionCounts = positions.reduce((acc, pos) => {
-        acc[pos] = players.filter(p => p.pos === pos && !Object.values(draftPicks).includes(p.id)).length;
+        acc[pos] = players.filter(p => p.pos === pos && !isPlayerDrafted(p)).length;
         return acc;
       }, {});
-      const totalAvailable = players.filter(p => !Object.values(draftPicks).includes(p.id)).length;
+      const totalAvailable = players.filter(p => !isPlayerDrafted(p)).length;
 
       const handlePlayerClick = (player) => {
         if (!selectedPickSlot) {
@@ -1539,11 +1556,14 @@
 
               {rightTab === 'rankings' ? (
                 <div className="flex-1 overflow-y-auto scroll-container">
-                  {filteredPlayers.map((player, displayIndex) => (
+                  {filteredPlayers.map((player, displayIndex) => {
+                    const isDrafted = isMockDraftActive && (draftedPlayerIds.has(player.id) || draftedPlayerNames.has(player.name?.toLowerCase()));
+                    return (
                     <div
                       key={player.id}
-                      draggable={true}
+                      draggable={!isDrafted}
                       onDragStart={(e) => {
+                        if (isDrafted) { e.preventDefault(); return; }
                         e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'ranking', playerId: player.id }));
                         e.dataTransfer.effectAllowed = 'move';
                       }}
@@ -1562,27 +1582,29 @@
                         } catch {}
                       }}
                       className={`player-card-mobile p-1 md:p-3 border-b border-gold/20 transition-colors ${
-                        rankingDragOver === player.id ? 'bg-gold/20 border-gold/60' : 'hover:bg-charcoal'
+                        isDrafted
+                          ? 'bg-green-900/40'
+                          : rankingDragOver === player.id ? 'bg-gold/20 border-gold/60' : 'hover:bg-charcoal'
                       }`}
-                      style={{ cursor: 'grab' }}
+                      style={{ cursor: isDrafted ? 'default' : 'grab' }}
                     >
                       <div className="flex items-center gap-0.5 md:gap-3">
-                        <div className="player-rank-number w-10 md:w-16 text-silver font-bold text-xs md:text-base text-center flex-shrink-0 flex items-center justify-center gap-0.5">
+                        <div className={`player-rank-number w-10 md:w-16 font-bold text-xs md:text-base text-center flex-shrink-0 flex items-center justify-center gap-0.5 ${isDrafted ? 'text-green-400/70' : 'text-silver'}`}>
                           <span>#{displayIndex + 1}</span>
-                          {!customPlayerOrder && rankingMode === 'consensus' && player.rankChange > 0 && (
+                          {!isDrafted && !customPlayerOrder && rankingMode === 'consensus' && player.rankChange > 0 && (
                             <span className="text-win-green text-[8px] md:text-xs" title={`Up ${player.rankChange} from #${player.previousRank}`}>▲</span>
                           )}
-                          {!customPlayerOrder && rankingMode === 'consensus' && player.rankChange < 0 && (
+                          {!isDrafted && !customPlayerOrder && rankingMode === 'consensus' && player.rankChange < 0 && (
                             <span className="text-loss-red text-[8px] md:text-xs" title={`Down ${Math.abs(player.rankChange)} from #${player.previousRank}`}>▼</span>
                           )}
-                          {customPlayerOrder && (
+                          {!isDrafted && customPlayerOrder && (
                             <span className="text-gold/40 text-[8px] hidden md:inline" title="Custom order — drag to reorder">⠿</span>
                           )}
                         </div>
                         <img
                           src={player.photoUrl}
                           alt={player.name}
-                          className="hidden md:block w-10 h-10 rounded-full object-cover flex-shrink-0 bg-charcoal"
+                          className={`hidden md:block w-10 h-10 rounded-full object-cover flex-shrink-0 bg-charcoal ${isDrafted ? 'opacity-50' : ''}`}
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=D4AF37&color=0A0A0A&size=128&bold=true`;
@@ -1592,26 +1614,30 @@
                           className="flex-1 min-w-0 cursor-pointer"
                           onClick={() => setSelectedPlayerDetail(player)}
                         >
-                          <div className="player-name font-bold text-xs md:text-base truncate flex items-center gap-1">
+                          <div className={`player-name font-bold text-xs md:text-base truncate flex items-center gap-1 ${isDrafted ? 'text-green-300/70' : ''}`}>
                             {player.name}
+                            {isDrafted && <span className="text-green-400/80 text-[8px] md:text-[10px] font-normal ml-1">DRAFTED</span>}
                           </div>
                           <div className="player-details text-[9px] md:text-xs text-silver truncate">
                             {player.pos} • {player.school} • {player.size} • {player.weight} lbs
                           </div>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePlayerClick(player);
-                          }}
-                          className="text-xs px-1.5 md:px-3 py-0.5 md:py-1.5 rounded bg-dark-gold hover:bg-gold text-black font-bold flex-shrink-0"
-                        >
-                          <span className="md:hidden">+</span>
-                          <span className="hidden md:inline">DB</span>
-                        </button>
+                        {!isDrafted && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePlayerClick(player);
+                            }}
+                            className="text-xs px-1.5 md:px-3 py-0.5 md:py-1.5 rounded bg-dark-gold hover:bg-gold text-black font-bold flex-shrink-0"
+                          >
+                            <span className="md:hidden">+</span>
+                            <span className="hidden md:inline">DB</span>
+                          </button>
+                        )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : aiMode === 'mock_draft' ? (
                 /* AI Mock Draft panel */
