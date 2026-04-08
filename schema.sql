@@ -128,6 +128,7 @@ alter table public.ai_analysis         enable row level security;
 alter table public.owner_dna           enable row level security;
 alter table public.draft_boards        enable row level security;
 alter table public.mock_draft_prospects enable row level security;
+alter table public.player_tags          enable row level security;
 
 -- Drop old policies (safe re-run)
 drop policy if exists "users_all"           on public.users;
@@ -151,6 +152,7 @@ drop policy if exists "ai_analysis_own"     on public.ai_analysis;
 drop policy if exists "owner_dna_own"       on public.owner_dna;
 drop policy if exists "draft_boards_own"    on public.draft_boards;
 drop policy if exists "prospects_read"      on public.mock_draft_prospects;
+drop policy if exists "player_tags_own"    on public.player_tags;
 
 -- ── users ─────────────────────────────────────────────────────
 create policy "users_own" on public.users
@@ -215,6 +217,12 @@ create policy "draft_boards_own" on public.draft_boards
 create policy "prospects_read" on public.mock_draft_prospects
     for select
     using ((auth.jwt() -> 'app_metadata' ->> 'sleeper_username') is not null);
+
+-- ── player_tags ───────────────────────────────────────────────
+create policy "player_tags_own" on public.player_tags
+    for all
+    using  ((auth.jwt() -> 'app_metadata' ->> 'sleeper_username') = username)
+    with check ((auth.jwt() -> 'app_metadata' ->> 'sleeper_username') = username);
 
 -- ============================================================
 -- INDEXES
