@@ -280,6 +280,7 @@
       const [draftDnaSyncing,  setDraftDnaSyncing]  = useState(false);
       const [draftDnaSyncMsg,  setDraftDnaSyncMsg]  = useState(null);
       const preMockPicksRef = React.useRef(null); // saves real picks before mock overwrites board
+      const sleeperPollRef  = React.useRef(null); // interval id for live-draft polling
 
       // Auto-load on mount if we have URL params
       useEffect(() => {
@@ -603,6 +604,35 @@
         }, 600);
       }, [draftPicks]);
 
+      // ---- Live Sleeper draft polling (every 7s when draft is in progress) ---
+      useEffect(() => {
+        clearInterval(sleeperPollRef.current);
+        if (!selectedDraft?.draft_id) return;
+        const isLive = selectedDraft.status === 'drafting' || selectedDraft.status === 'in_progress';
+        if (!isLive) return;
+
+        const poll = async () => {
+          try {
+            const picksData = await fetchJSON(`https://api.sleeper.app/v1/draft/${selectedDraft.draft_id}/picks`);
+            if (!picksData || picksData.length === 0) return;
+            const mappedPicks = {};
+            picksData.forEach(pick => {
+              const key = `${pick.round}.${String(pick.draft_slot).padStart(2, '0')}`;
+              mappedPicks[key] = { playerId: pick.player_id, metadata: pick.metadata, pickedBy: pick.picked_by };
+            });
+            // Suppress auto-save during poll updates — picks are already on Sleeper's server
+            isRestoringRef.current = true;
+            setDraftPicks(mappedPicks);
+            setTimeout(() => { isRestoringRef.current = false; }, 700);
+          } catch (err) {
+            console.error('[sleeper-poll] Failed:', err);
+          }
+        };
+
+        sleeperPollRef.current = setInterval(poll, 7000);
+        return () => clearInterval(sleeperPollRef.current);
+      }, [selectedDraft?.draft_id, selectedDraft?.status]);
+
       const generateDraftOrder = () => {
         const order = [];
         for (let round = 1; round <= numRounds; round++) {
@@ -629,11 +659,12 @@
       const excludedPositions = ['OL', 'OT', 'IOL', 'T', 'G', 'C', 'OG', 'P', 'LS'];
 
       const isMockDraftActive = aiMode === 'mock_draft';
-      // Build sets of drafted players: plain IDs (user picks) and names (AI mock picks)
+      const isSleeperDraftContext = !!selectedDraft?.draft_id;
+      // Build sets of drafted players: plain IDs (user picks), and names (AI mock + Sleeper picks)
       const draftedPlayerIds = new Set();
       const draftedPlayerNames = new Set();
       Object.values(draftPicks).forEach(v => {
-        if (v && typeof v === 'object' && v.isMock) {
+        if (v && typeof v === 'object' && (v.isMock || v.playerId)) {
           const m = v.metadata || {};
           const fullName = `${m.first_name || ''} ${m.last_name || ''}`.trim();
           if (fullName) draftedPlayerNames.add(fullName.toLowerCase());
@@ -648,8 +679,8 @@
           const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                (p.school && p.school.toLowerCase().includes(searchTerm.toLowerCase()));
           const notExcludedPosition = !excludedPositions.includes(p.pos);
-          // During mock drafts, keep drafted players visible (they'll be highlighted green)
-          const notDrafted = isMockDraftActive ? true : !draftedPlayerIds.has(p.id);
+          // During mock/Sleeper drafts keep drafted players visible (highlighted green)
+          const notDrafted = (isMockDraftActive || isSleeperDraftContext) ? true : !draftedPlayerIds.has(p.id);
           return matchesPos && matchesSearch && notExcludedPosition && notDrafted;
         });
         if (customPlayerOrder) {
@@ -1223,8 +1254,14 @@
               </div>
             </div>
 
-            <div className="mt-1 text-[10px] text-silver truncate px-2">
-              {status}
+            <div className="mt-1 text-[10px] text-silver truncate px-2 flex items-center gap-2">
+              <span className="truncate">{status}</span>
+              {(selectedDraft?.status === 'drafting' || selectedDraft?.status === 'in_progress') && (
+                <span className="flex items-center gap-1 flex-shrink-0 text-green-400 font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"></span>
+                  LIVE
+                </span>
+              )}
             </div>
           </div>
 
@@ -1366,8 +1403,10 @@
                               dragOver === pick.key ? 'border-win-green bg-win-green/10' :
                               isSelected ? 'border-gold bg-gold bg-opacity-10' :
                               isMySlot && pickData?.isMock ? 'border-gold bg-gold/15' :
+                              isMySlot && typeof pickData === 'object' && pickData?.playerId ? 'border-gold/60 bg-green-900/50' :
                               isMySlot ? 'border-red-700 bg-red-950' :
                               pickData?.isMock ? 'border-indigo-500/40 bg-indigo-950/20' :
+                              typeof pickData === 'object' && pickData?.playerId ? 'border-green-700/40 bg-green-900/30' :
                               pickData ? 'border-gold/30 bg-charcoal' :
                               'border-gold/30 bg-charcoal hover:border-gold/40'
                             }`}
@@ -1557,7 +1596,7 @@
               {rightTab === 'rankings' ? (
                 <div className="flex-1 overflow-y-auto scroll-container">
                   {filteredPlayers.map((player, displayIndex) => {
-                    const isDrafted = isMockDraftActive && (draftedPlayerIds.has(player.id) || draftedPlayerNames.has(player.name?.toLowerCase()));
+                    const isDrafted = (isMockDraftActive || isSleeperDraftContext) && (draftedPlayerIds.has(player.id) || draftedPlayerNames.has(player.name?.toLowerCase()));
                     return (
                     <div
                       key={player.id}
