@@ -253,6 +253,11 @@ body{
 }
 .btn:active{ transform: translateY(1px); }
 
+/* ===== Per-panel team picker (iPhone only) ===== */
+.teamPickerRow{
+  display: none;
+}
+
 /* ===== Activity Pane ===== */
 .activityPane{
   border-top: 1px solid var(--line);
@@ -561,8 +566,43 @@ th.player, td.player{
     min-height: calc(100vh - 92px);
   }
 
+  /* iPhone: hide the shared Teams/Activity sidebar; each panel picks its own team */
   .teamsPane{
-    grid-column: 1 / -1 !important;
+    display: none !important;
+  }
+
+  .teamPickerRow{
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel2);
+  }
+  .teamPickerRow label{
+    font-family: 'Bebas Neue', cursive;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    flex: 0 0 auto;
+  }
+  .teamPicker{
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    height: 36px;
+    padding: 6px 8px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+  }
+  .teamPicker:focus{
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 6px rgba(212,175,55,0.3);
   }
 
   .paneTitle,
