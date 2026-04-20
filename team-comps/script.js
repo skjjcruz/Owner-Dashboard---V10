@@ -47,6 +47,10 @@ const elMainBtn = document.getElementById("mainBtn");
 // Activity DOM hook
 const elActivityList = document.getElementById("activityList");
 
+// Per-panel team picker (primary switcher on iPhone)
+const elLeftTeamPicker = document.getElementById("leftTeamPicker");
+const elRightTeamPicker = document.getElementById("rightTeamPicker");
+
 // ===== LocalStorage keys =====
 const LS_LOCKED_USERNAME = "od_locked_username_v2";
 
@@ -766,6 +770,79 @@ function addDraftPicksSection(tbody, ownerId) {
 }
 
 /* =========================
+   Per-panel team pickers (iPhone)
+========================= */
+function populateTeamPicker(selectEl, side) {
+  if (!selectEl) return;
+
+  const sortedRosters = [...state.rosters].sort((a, b) => {
+    const aw = a.settings?.wins ?? 0;
+    const al = a.settings?.losses ?? 0;
+    const bw = b.settings?.wins ?? 0;
+    const bl = b.settings?.losses ?? 0;
+    if (bw !== aw) return bw - aw;
+    if (al !== bl) return al - bl;
+    return 0;
+  });
+
+  selectEl.innerHTML = "";
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = side === "left" ? "— Select left team —" : "— Select right team —";
+  selectEl.appendChild(placeholder);
+
+  for (const r of sortedRosters) {
+    const opt = document.createElement("option");
+    opt.value = String(r.owner_id);
+    opt.textContent = ownerDisplayWithRecord(r.owner_id);
+    selectEl.appendChild(opt);
+  }
+
+  syncTeamPickers();
+}
+
+function syncTeamPickers() {
+  if (elLeftTeamPicker) {
+    elLeftTeamPicker.value = state.currentLeftOwnerId ? String(state.currentLeftOwnerId) : "";
+  }
+  if (elRightTeamPicker) {
+    elRightTeamPicker.value = state.currentRightOwnerId ? String(state.currentRightOwnerId) : "";
+  }
+}
+
+function loadTeamIntoPanel(side, ownerId) {
+  if (!ownerId) return;
+  if (side === "left") {
+    state.currentLeftOwnerId = ownerId;
+    setRosterTitle(elLeftTitle, ownerId);
+    primeProjectionsForRoster(state.rosterByOwner[ownerId]);
+    renderCompareTables();
+    setStatus(`Ready ✅ (Left loaded) — Week ${state.week || 1}`);
+  } else {
+    state.currentRightOwnerId = ownerId;
+    setRosterTitle(elRightTitle, ownerId);
+    primeProjectionsForRoster(state.rosterByOwner[ownerId]);
+    renderCompareTables();
+    setStatus(`Ready ✅ (Right loaded) — Week ${state.week || 1}`);
+  }
+  syncTeamPickers();
+}
+
+if (elLeftTeamPicker) {
+  elLeftTeamPicker.addEventListener("change", (e) => {
+    const ownerId = e.target.value;
+    if (ownerId) loadTeamIntoPanel("left", ownerId);
+  });
+}
+if (elRightTeamPicker) {
+  elRightTeamPicker.addEventListener("change", (e) => {
+    const ownerId = e.target.value;
+    if (ownerId) loadTeamIntoPanel("right", ownerId);
+  });
+}
+
+/* =========================
    Teams list
 ========================= */
 function renderTeamsList() {
@@ -809,24 +886,12 @@ function renderTeamsList() {
     const bL = document.createElement("button");
     bL.className = "btn";
     bL.textContent = "L";
-    bL.addEventListener("click", () => {
-      state.currentLeftOwnerId = r.owner_id;
-      setRosterTitle(elLeftTitle, r.owner_id);
-      primeProjectionsForRoster(state.rosterByOwner[r.owner_id]);
-      renderCompareTables();
-      setStatus(`Ready ✅ (Left loaded) — Week ${state.week || 1}`);
-    });
+    bL.addEventListener("click", () => loadTeamIntoPanel("left", r.owner_id));
 
     const bR = document.createElement("button");
     bR.className = "btn";
     bR.textContent = "R";
-    bR.addEventListener("click", () => {
-      state.currentRightOwnerId = r.owner_id;
-      setRosterTitle(elRightTitle, r.owner_id);
-      primeProjectionsForRoster(state.rosterByOwner[r.owner_id]);
-      renderCompareTables();
-      setStatus(`Ready ✅ (Right loaded) — Week ${state.week || 1}`);
-    });
+    bR.addEventListener("click", () => loadTeamIntoPanel("right", r.owner_id));
 
     btnWrap.appendChild(bL);
     btnWrap.appendChild(bR);
@@ -835,6 +900,9 @@ function renderTeamsList() {
     li.appendChild(btnWrap);
     elTeams.appendChild(li);
   });
+
+  populateTeamPicker(elLeftTeamPicker, "left");
+  populateTeamPicker(elRightTeamPicker, "right");
 }
 
 /* ===== FantasyPros Player Link ===== */
