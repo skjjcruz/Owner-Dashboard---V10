@@ -3122,6 +3122,11 @@ function TradeCalculator() {
         const grudgeTax       = calcGrudgeTax(myOwnerId, otherOwnerId, grudges, otherDnaKey);
         const netTaxTotal     = psychTaxes.reduce((s,t) => s + t.impact, 0) + grudgeTax.total;
         const fairMargin      = Math.round(Math.max(totalA, totalB) * 0.04);
+        // DNA/grudge taxes are likelihood-percent points; convert to value units
+        // (proportional to trade size) so they fold into the verdict score.
+        const taxValueAdjust  = Math.round((netTaxTotal / 100) * Math.max(totalA, totalB, 1));
+        const adjustedGain    = userGain + taxValueAdjust;
+        const absAdjusted     = Math.abs(adjustedGain);
 
         // DNA-based acceptance curve
         let likelihood = 50;
@@ -3158,10 +3163,11 @@ function TradeCalculator() {
         }
 
         const likelihoodColor = likelihood >= 70 ? 'var(--win-green)' : likelihood >= 45 ? 'var(--amber)' : 'var(--loss-red)';
-        // verdictColor/Text use userGain (YOUR perspective): positive = you WIN
-        const verdictColor = userGain > fairMargin ? 'var(--win-green)' : userGain < -fairMargin ? '#E74C3C' : 'var(--gold)';
-        const verdictText  = userGain > fairMargin ? 'YOU WIN'          : userGain < -fairMargin ? 'YOU LOSE' : 'EVEN TRADE';
-        const diffDisplay  = userGain > 0 ? `+${absDiff.toLocaleString()}` : userGain < 0 ? `-${absDiff.toLocaleString()}` : '±0';
+        // verdict uses adjustedGain (raw value diff + DNA/grudge tax adjustment) so
+        // owner psychology folds into the headline score, not just the likelihood bar.
+        const verdictColor = adjustedGain > fairMargin ? 'var(--win-green)' : adjustedGain < -fairMargin ? '#E74C3C' : 'var(--gold)';
+        const verdictText  = adjustedGain > fairMargin ? 'YOU WIN'          : adjustedGain < -fairMargin ? 'YOU LOSE' : 'EVEN TRADE';
+        const diffDisplay  = adjustedGain > 0 ? `+${absAdjusted.toLocaleString()}` : adjustedGain < 0 ? `-${absAdjusted.toLocaleString()}` : '±0';
 
         // Roster-specific player list — sorted by position group then value
         function rosterPlayersFor(side) {
@@ -3577,7 +3583,8 @@ function TradeCalculator() {
                             <span className="verdict-diff" style={{ color: verdictColor }}>{diffDisplay}</span>
                             <span style={{ fontFamily:'Bebas Neue,cursive', fontSize:'1.1rem', color: verdictColor }}>{verdictText}</span>
                             <span style={{ fontSize:'0.62rem', color:'var(--silver)', opacity:0.55 }}>
-                                (gave {totalA.toLocaleString()} · received {totalB.toLocaleString()})
+                                (gave {totalA.toLocaleString()} · received {totalB.toLocaleString()}
+                                {taxValueAdjust !== 0 && ` · raw ${userGain > 0 ? '+' : userGain < 0 ? '-' : '±'}${absDiff.toLocaleString()}, DNA ${taxValueAdjust > 0 ? '+' : ''}${taxValueAdjust.toLocaleString()}`})
                             </span>
                         </div>
 
@@ -3615,7 +3622,7 @@ function TradeCalculator() {
                                 )}
                                 <div className="tax-table-row total">
                                     <span className="tax-name">NET MODIFIER</span>
-                                    <span className="tax-desc">Applied to base likelihood</span>
+                                    <span className="tax-desc">Applied to verdict score & acceptance likelihood</span>
                                     <span className="tax-val" style={{ color: netTaxTotal > 0 ? 'var(--win-green)' : netTaxTotal < 0 ? 'var(--loss-red)' : 'var(--silver)' }}>
                                         {netTaxTotal > 0 ? '+' : ''}{netTaxTotal}
                                     </span>
