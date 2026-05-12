@@ -3128,28 +3128,17 @@ function TradeCalculator() {
         const adjustedGain    = userGain + taxValueAdjust;
         const absAdjusted     = Math.abs(adjustedGain);
 
-        // DNA-based acceptance curve
+        // Value-based acceptance curve: market diff + DNA/posture/grudge taxes
+        // (already converted to value units in taxValueAdjust) = effective surplus
+        // from THEIR perspective. One monotonic curve for every DNA — direction
+        // and magnitude always behave consistently.
         let likelihood = 50;
         if (hasTrade && (totalA > 0 || totalB > 0)) {
-            const maxSide        = Math.max(totalA, totalB, 1);
-            const normalizedDiff = diff / maxSide;
-            if (otherDnaKey === 'FLEECER') {
-                likelihood = normalizedDiff < -0.05 ? 75 + Math.round(Math.abs(normalizedDiff)*40) : Math.max(15, 50 - Math.round(normalizedDiff*150));
-            } else if (otherDnaKey === 'DOMINATOR') {
-                likelihood = normalizedDiff < -0.10 ? 70 : normalizedDiff < 0 ? 55 : Math.max(10, 40 - Math.round(normalizedDiff*200));
-            } else if (otherDnaKey === 'STALWART') {
-                likelihood = Math.min(85, Math.max(20, Math.round((1 - Math.abs(normalizedDiff)*3)*80)));
-            } else if (otherDnaKey === 'ACCEPTOR') {
-                likelihood = Math.min(90, Math.max(30, 60 + Math.round(normalizedDiff*100)));
-            } else if (otherDnaKey === 'DESPERATE') {
-                const fitsNeed = theirAssessment?.needs?.some(n => (myAssessment?.strengths||[]).includes(n.pos));
-                likelihood = fitsNeed ? Math.min(92, 65 + Math.round(Math.abs(normalizedDiff)*20) + 20) : Math.min(75, 55 + Math.round(Math.abs(normalizedDiff)*30));
-            } else {
-                likelihood = Math.min(85, Math.max(15, 50 - Math.round(normalizedDiff*120)));
-            }
-            likelihood += netTaxTotal;
+            const theirEffectiveSurplus = diff + taxValueAdjust;
+            const normalizedSurplus     = theirEffectiveSurplus / Math.max(totalA, totalB, 1);
+            likelihood = 50 + Math.round(normalizedSurplus * 200);
         }
-        likelihood = Math.round(Math.max(5, Math.min(97, likelihood)));
+        likelihood = Math.round(Math.max(5, Math.min(95, likelihood)));
 
         function logGrudge(type) {
             if (!myOwnerId || !otherOwnerId) return;
