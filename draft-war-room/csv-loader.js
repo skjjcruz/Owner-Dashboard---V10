@@ -379,9 +379,59 @@ async function loadPlayersFromCSV() {
   }
 }
 
+// ============================================
+// SHARED SCORING HELPERS (re-exported for redraft path)
+// Mirrors the inner helpers in loadPlayersFromCSV so the
+// redraft loader can produce identically-shaped player objects.
+// ============================================
+
+function _calculateTier(rank) {
+  if (rank <= 10) return 1;
+  if (rank <= 32) return 2;
+  if (rank <= 64) return 3;
+  if (rank <= 100) return 4;
+  if (rank <= 150) return 5;
+  if (rank <= 224) return 6;
+  return 7;
+}
+
+function _calculateGrade(rank) {
+  if (rank <= 5) return 9.0 + (6 - rank) * 0.2;
+  if (rank <= 10) return 8.5 + (11 - rank) * 0.1;
+  if (rank <= 32) return 7.0 + (33 - rank) * 0.07;
+  if (rank <= 64) return 6.0 + (65 - rank) * 0.03;
+  if (rank <= 100) return 5.0 + (101 - rank) * 0.03;
+  if (rank <= 224) return 3.0 + (225 - rank) * 0.016;
+  return Math.max(1.0, 3.0 - (rank - 224) * 0.01);
+}
+
+const _FANTASY_POS_MULTIPLIERS = {
+  'QB': 2.0, 'RB': 1.90, 'WR': 1.75, 'TE': 1.5, 'K': 0.5,
+  'DE': 0.35, 'EDGE': 0.35, 'OLB': 0.35,
+  'LB': 0.30, 'ILB': 0.30,
+  'DB': 0.25, 'S': 0.25, 'CB': 0.25,
+  'DL': 0.2, 'DT': 0.2, 'IDL': 0.2, 'DEF': 0.6,
+  'OT': 0.15, 'T': 0.15, 'IOL': 0.15, 'OG': 0.15, 'G': 0.15, 'C': 0.15, 'OL': 0.15,
+  'P': 0.2
+};
+
+function _getFantasyMultiplier(pos) {
+  return _FANTASY_POS_MULTIPLIERS[pos] || 0.3;
+}
+
 // Export for module usage or expose globally for the dashboard
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { loadPlayersFromCSV };
+  module.exports = {
+    loadPlayersFromCSV,
+    calculateTier: _calculateTier,
+    calculateGrade: _calculateGrade,
+    getFantasyMultiplier: _getFantasyMultiplier,
+  };
 } else {
   window.loadPlayersFromCSV = loadPlayersFromCSV;
+  window.draftScoring = {
+    calculateTier: _calculateTier,
+    calculateGrade: _calculateGrade,
+    getFantasyMultiplier: _getFantasyMultiplier,
+  };
 }

@@ -166,7 +166,11 @@
       { id: 10, name: 'Abdul Carter', pos: 'EDGE', school: 'Penn State', size: '6\'3"', weight: 252, speed: 4.4, tier: 1 },
     ];
 
-    const positions = ['QB', 'RB', 'WR', 'TE', 'EDGE', 'DL', 'LB', 'CB', 'S', 'K'];
+    const POSITIONS_ROOKIE  = ['QB', 'RB', 'WR', 'TE', 'EDGE', 'DL', 'LB', 'CB', 'S', 'K'];
+    const POSITIONS_REDRAFT = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+    // Back-compat alias for any code outside the component that still expects
+    // the rookie list.
+    const positions = POSITIONS_ROOKIE;
 
     async function fetchJSON(url) {
       const res = await fetch(url);
@@ -206,6 +210,115 @@
         localStorage.setItem(_PLAYERS_LS_KEY, JSON.stringify({ ts: Date.now(), data: slim }));
       } catch(e) { console.warn('[cache] Players write failed (quota?)'); }
       return slim;
+    }
+
+    // ── Redraft player builder ────────────────────────────────────────────────
+    // We re-shape Sleeper's /players/nfl into the same object the UI consumes
+    // for the rookie/CSV path so every existing render, sort, drag, and AI hook
+    // works without conditionals downstream.
+    async function loadPlayersFromSleeper() {
+      // Re-use the cached /players/nfl payload — also fetches `search_rank`,
+      // `team`, `position`, and `years_exp` which is all we need.
+      // fetchPlayersWithCache currently slims out `search_rank` and a few
+      // other fields, so go to the network here and cache separately.
+      const REDRAFT_LS_KEY = 'od_sleeper_players_redraft_v1';
+      const REDRAFT_TTL    = 24 * 60 * 60 * 1000;
+
+      let full = null;
+      try {
+        const raw = localStorage.getItem(REDRAFT_LS_KEY);
+        if (raw) {
+          const { ts, data } = JSON.parse(raw);
+          if (Date.now() - ts < REDRAFT_TTL) full = data;
+        }
+      } catch (e) {}
+
+      if (!full) {
+        const fresh = await fetchJSON(`https://api.sleeper.app/v1/players/nfl`);
+        // Slim to just what we need — keeps localStorage manageable.
+        full = {};
+        for (const [id, p] of Object.entries(fresh || {})) {
+          if (!p) continue;
+          // Only active NFL players with a team and a usable position.
+          // search_rank === 9999999 is Sleeper's "unranked" sentinel.
+          if (p.active === false) continue;
+          if (!p.team) continue;
+          if (!p.position) continue;
+          if (typeof p.search_rank !== 'number' || p.search_rank >= 9999999) continue;
+          full[id] = {
+            position:    p.position,
+            full_name:   p.full_name || `${p.first_name||''} ${p.last_name||''}`.trim(),
+            team:        p.team,
+            years_exp:   p.years_exp ?? null,
+            height:      p.height ?? null,
+            weight:      p.weight ?? null,
+            age:         p.age ?? null,
+            search_rank: p.search_rank,
+          };
+        }
+        try {
+          localStorage.setItem(REDRAFT_LS_KEY, JSON.stringify({ ts: Date.now(), data: full }));
+        } catch (e) { console.warn('[cache] Redraft players write failed (quota?)'); }
+      }
+
+      const scoring = window.draftScoring || {};
+      const tierFn  = scoring.calculateTier      || ((r) => Math.min(7, Math.ceil(r / 32)));
+      const gradeFn = scoring.calculateGrade     || ((r) => Math.max(1, 10 - r * 0.04));
+      const multFn  = scoring.getFantasyMultiplier || (() => 1.0);
+
+      // Format Sleeper height: it can be inches as a string ("74") or already
+      // formatted ("6'2\""). Normalize to feet/inches for the existing UI row.
+      const fmtHeight = (h) => {
+        if (h == null || h === '') return '';
+        const s = String(h);
+        if (s.includes('\'') || s.includes('"')) return s;
+        const inches = parseInt(s, 10);
+        if (isNaN(inches)) return s;
+        return `${Math.floor(inches / 12)}'${inches % 12}"`;
+      };
+
+      const POS_NORMALIZE = { 'DEF': 'DEF', 'DST': 'DEF' };
+
+      const ranked = Object.entries(full)
+        .map(([id, p]) => ({ id, ...p }))
+        .sort((a, b) => a.search_rank - b.search_rank);
+
+      return ranked.map((p, idx) => {
+        const rank = idx + 1;
+        const pos  = POS_NORMALIZE[p.position] || p.position;
+        // Sleeper's search_rank is already an ADP-style overall order tuned for
+        // fantasy, so we set fantasyRank = consensusRank = rank rather than
+        // re-weighting by position (which the rookie path needs because its
+        // base rank is an NFL-draft prospect rank, not a fantasy rank).
+        const grade = Math.round(gradeFn(rank) * 10) / 10;
+        return {
+          id:                p.id,
+          name:              p.full_name,
+          pos,
+          position:          pos,
+          school:            p.team || 'FA',   // re-purposed for NFL team in the row template
+          year:              p.years_exp != null ? (p.years_exp === 0 ? 'R' : `${p.years_exp} yr`) : '',
+          size:              fmtHeight(p.height),
+          weight:            p.weight || '',
+          speed:             '',
+          tier:              tierFn(rank),
+          rank,
+          previousRank:      null,
+          rankChange:        0,
+          consensusRank:     rank,
+          fantasyRank:       rank,
+          sourceCount:       1,
+          grade,
+          isGenerational:    rank <= 5 && grade >= 9.0,
+          fantasyMultiplier: multFn(pos),
+          draftScore:        Math.round(Math.max(0, (250 - rank) / 25) * 100) / 100,
+          sources:           [],
+          highlightUrl:      `https://www.youtube.com/results?search_query=${encodeURIComponent(`${p.full_name} ${p.team} highlights`)}`,
+          initials:          (p.full_name || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+          photoUrl:          `https://sleepercdn.com/content/nfl/players/${p.id}.jpg`,
+          summary:           '',
+        };
+      });
     }
 
     // Read URL parameters
@@ -258,6 +371,37 @@
       const [leagueUsers, setLeagueUsers] = useState([]);
       const [draftSlotOwners, setDraftSlotOwners] = useState({}); // { slotNum: {userId, displayName, avatar} }
 
+      // ---- Board mode (rookie vs redraft) ---------------------------------
+      // 'auto' derives from Sleeper league type: settings.type === 2 (dynasty)
+      // ⇒ rookie board (CSV prospects); anything else (0 redraft / 1 keeper)
+      // ⇒ redraft board (all NFL players ranked by Sleeper search_rank).
+      // The user can force a specific mode via the dropdown; that override is
+      // persisted per-browser.
+      const LS_BOARD_MODE_OVERRIDE = 'od_board_mode_override_v1';
+      const [boardModeOverride, setBoardModeOverride] = useState(() => {
+        try { return localStorage.getItem(LS_BOARD_MODE_OVERRIDE) || 'auto'; }
+        catch (e) { return 'auto'; }
+      });
+      const effectiveMode = (() => {
+        if (boardModeOverride === 'rookie' || boardModeOverride === 'redraft') {
+          return boardModeOverride;
+        }
+        // Auto: settings.type 2 = dynasty/rookie; everything else (incl. unknown) = redraft.
+        // While the league hasn't loaded yet, default to rookie so the CSV path
+        // is the cold-start behavior (preserves prior behavior on first paint).
+        if (!selectedLeague) return 'rookie';
+        return selectedLeague.type === 2 ? 'rookie' : 'redraft';
+      })();
+      const positionsForMode = effectiveMode === 'redraft' ? POSITIONS_REDRAFT : POSITIONS_ROOKIE;
+
+      const handleBoardModeChange = (mode) => {
+        setBoardModeOverride(mode);
+        try { localStorage.setItem(LS_BOARD_MODE_OVERRIDE, mode); } catch (e) {}
+        // Reset any custom drag-reorder so we don't carry rookie IDs into redraft view.
+        setCustomPlayerOrder(null);
+        setSelectedPos('ALL');
+      };
+
       // Refs: prevent auto-save from firing during initial load/restore
       const isRestoringRef = React.useRef(true);
       const autoSaveTimerRef = React.useRef(null);
@@ -293,19 +437,39 @@
         }
       }, []);
 
-      // Load players from CSV files
+      // Load players based on the active mode:
+      //   rookie   → CSV prospect rankings
+      //   redraft  → Sleeper /players/nfl sorted by search_rank
       useEffect(() => {
-        loadPlayersFromCSV()
-          .then(data => {
-            console.log(`Loaded ${data.length} players from CSV files`);
-            setPlayers(data);
-          })
-          .catch(err => {
-            console.error('Error loading players:', err);
-            // Fallback to mock players if CSV fails to load
-            setPlayers(mockPlayers);
-          });
-      }, []);
+        let cancelled = false;
+        setCustomPlayerOrder(null);
+        if (effectiveMode === 'redraft') {
+          console.log('[board] loading redraft players from Sleeper');
+          loadPlayersFromSleeper()
+            .then(data => {
+              if (cancelled) return;
+              console.log(`Loaded ${data.length} redraft players from Sleeper`);
+              setPlayers(data);
+            })
+            .catch(err => {
+              console.error('Error loading redraft players:', err);
+              if (!cancelled) setPlayers([]);
+            });
+        } else {
+          console.log('[board] loading rookie players from CSV');
+          loadPlayersFromCSV()
+            .then(data => {
+              if (cancelled) return;
+              console.log(`Loaded ${data.length} players from CSV files`);
+              setPlayers(data);
+            })
+            .catch(err => {
+              console.error('Error loading players:', err);
+              if (!cancelled) setPlayers(mockPlayers);
+            });
+        }
+        return () => { cancelled = true; };
+      }, [effectiveMode]);
 
       // Auto-advance mock draft picks + inject each pick into the board as it reveals
       useEffect(() => {
@@ -702,7 +866,7 @@
 
       const isPlayerDrafted = (p) =>
         draftedPlayerIds.has(p.id) || (isMockDraftActive && draftedPlayerNames.has(p.name?.toLowerCase()));
-      const positionCounts = positions.reduce((acc, pos) => {
+      const positionCounts = positionsForMode.reduce((acc, pos) => {
         acc[pos] = players.filter(p => p.pos === pos && !isPlayerDrafted(p)).length;
         return acc;
       }, {});
@@ -1211,6 +1375,17 @@
                   </select>
 
                   <select
+                    value={boardModeOverride}
+                    onChange={(e) => handleBoardModeChange(e.target.value)}
+                    className="bg-charcoal border border-gold/30 rounded px-2 py-1 text-xs text-white"
+                    title={`Auto detects league type: dynasty (Sleeper type 2) → rookie board; otherwise → redraft. Currently: ${effectiveMode.toUpperCase()}`}
+                  >
+                    <option value="auto">Auto ({effectiveMode === 'redraft' ? 'Redraft' : 'Rookie'})</option>
+                    <option value="rookie">Rookie</option>
+                    <option value="redraft">Redraft</option>
+                  </select>
+
+                  <select
                     value={draftYear || ''}
                     onChange={(e) => handleDraftYearChange(e.target.value)}
                     className="bg-charcoal border border-gold/30 rounded px-2 py-1 text-xs text-white"
@@ -1578,7 +1753,7 @@
                     >
                       ALL ({totalAvailable})
                     </button>
-                    {positions.map(pos => (
+                    {positionsForMode.map(pos => (
                       <button
                         key={pos}
                         onClick={() => setSelectedPos(pos)}
