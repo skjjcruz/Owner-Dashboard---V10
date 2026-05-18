@@ -17,6 +17,23 @@
   <script src="./supabase-config.js"></script>
   <!-- Draft board + mock draft Supabase helpers -->
   <script src="./supabase-draft-client.js"></script>
+  <!-- Mobile drag-and-drop polyfill: makes the existing HTML5 drag handlers
+       respond to touch events on iOS/Android so drag-to-board, board-to-board
+       swap, and ranking reorder all work on Capacitor / mobile browsers. -->
+  <link rel="stylesheet" href="https://unpkg.com/mobile-drag-drop@2.3.0-rc.2/default.css">
+  <script src="https://unpkg.com/mobile-drag-drop@2.3.0-rc.2/release/index.min.js"></script>
+  <script>
+    // Long-press 250ms before drag activates so vertical scrolling still works
+    // normally inside the rankings list.
+    if (window.MobileDragDrop) {
+      window.MobileDragDrop.polyfill({
+        holdToDrag: 250,
+        dragImageTranslateOverride: window.MobileDragDrop.scrollBehaviourDragImageTranslateOverride
+      });
+      // Polyfill needs a non-passive touchmove listener to call preventDefault.
+      window.addEventListener('touchmove', function () {}, { passive: false });
+    }
+  </script>
   <!-- Draft DNA: historical pick analysis -->
   <script src="../draft-history.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
