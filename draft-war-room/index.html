@@ -705,7 +705,16 @@
             setDraftSlotOwners(slotOwners);
           }
 
-          // 2. Fire Supabase board lookup, player DB, and Sleeper picks all in parallel.
+          // 2. Instant restore from localStorage so intra-app navigation
+          //    (e.g. dashboard ↔ war room) never shows a flash of empty state.
+          //    Supabase reconcile follows below in step 3.
+          const localCache = readPicksFromLocal(draftId);
+          if (localCache?.picks && Object.keys(localCache.picks).length > 0) {
+            setDraftPicks(localCache.picks);
+            setStatus(`Board restored ✅ - ${Object.keys(localCache.picks).length} picks`);
+          }
+
+          // 3. Fire Supabase board lookup, player DB, and Sleeper picks all in parallel.
           //    Previously these were sequential awaits — this eliminates 2 full round-trips
           //    from the critical path. Player DB is served from localStorage cache after first load.
           setStatus('Loading draft data…');
@@ -720,10 +729,14 @@
           // Update player cache in state if we just fetched it
           if (!sleeperPlayers && playersResult) setSleeperPlayers(playersResult);
 
-          // Restore saved board if found (skip Sleeper picks)
-          if (savedBoardResult?.data?.picks && Object.keys(savedBoardResult.data.picks).length > 0) {
-            setDraftPicks(savedBoardResult.data.picks);
-            setStatus(`Board restored ✅ - ${Object.keys(savedBoardResult.data.picks).length} picks`);
+          // Reconcile saved board from local + supabase, newest wins.
+          const winner = reconcilePickSources(localCache, savedBoardResult?.data);
+          if (winner) {
+            if (winner.source === 'remote') {
+              setDraftPicks(winner.picks);
+              writePicksToLocal(draftId, winner.picks);
+            }
+            setStatus(`Board restored ✅ - ${Object.keys(winner.picks).length} picks`);
             return;
           }
 
@@ -793,6 +806,49 @@
         return `custom_${sleeperUsername || 'anon'}_${selectedLeague?.id || 'none'}_${effectiveMode}`;
       };
 
+      // ---- LocalStorage write-through cache for picks -----------------------
+      // The Supabase save is debounced 600ms and runs over async fetch — both
+      // get killed if the user navigates away from the draft-war-room page
+      // (e.g. clicking "Back to Dashboard"). localStorage writes are
+      // synchronous and survive page unload, so they're the source of truth
+      // for in-app navigation. Supabase still saves async for cross-device.
+      const LS_PICKS_PREFIX = 'od_draft_picks_v1_';
+      const writePicksToLocal = (key, picks) => {
+        if (!key) return;
+        try {
+          localStorage.setItem(LS_PICKS_PREFIX + key, JSON.stringify({
+            picks,
+            updated_at: Date.now(),
+          }));
+        } catch (e) { console.warn('[local-cache] write failed:', e); }
+      };
+      const readPicksFromLocal = (key) => {
+        if (!key) return null;
+        try {
+          const raw = localStorage.getItem(LS_PICKS_PREFIX + key);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (e) { return null; }
+      };
+      // Pick the freshest source between local + supabase. Returns
+      // { picks, updatedAt, source } or null if neither has any picks.
+      const reconcilePickSources = (localCache, supabaseRow) => {
+        const localPicks = localCache?.picks || null;
+        const localAt    = localCache?.updated_at || 0;
+        const remotePicks = supabaseRow?.picks || null;
+        const remoteAt = supabaseRow?.updated_at
+          ? new Date(supabaseRow.updated_at).getTime()
+          : 0;
+        const localHasAny  = localPicks  && Object.keys(localPicks).length > 0;
+        const remoteHasAny = remotePicks && Object.keys(remotePicks).length > 0;
+        if (!localHasAny && !remoteHasAny) return null;
+        if (!remoteHasAny) return { picks: localPicks, updatedAt: localAt, source: 'local' };
+        if (!localHasAny)  return { picks: remotePicks, updatedAt: remoteAt, source: 'remote' };
+        return remoteAt > localAt
+          ? { picks: remotePicks, updatedAt: remoteAt, source: 'remote' }
+          : { picks: localPicks, updatedAt: localAt, source: 'local' };
+      };
+
       // ---- Restore a custom-keyed board (no Sleeper draft) ------------------
       // Used when a redraft/keeper league has no Sleeper draft on file: the
       // auto-save layers picks under a `custom_<user>_<league>_<mode>` key in
@@ -801,25 +857,38 @@
       // this is called from inside async flows where React closures may still
       // hold the previous league.
       const restoreCustomBoardIfAny = async (leagueId, username, mode) => {
-        if (!window.SupabaseDraftClient || !username || !leagueId) {
+        if (!username || !leagueId) {
           setDraftPicks({});
           isRestoringRef.current = false;
           return;
         }
         const customKey = `custom_${username}_${leagueId}_${mode}`;
+        // 1) Instant restore from localStorage so intra-app navigation
+        //    never shows a flash of empty state.
+        const localCache = readPicksFromLocal(customKey);
+        if (localCache?.picks && Object.keys(localCache.picks).length > 0) {
+          setDraftPicks(localCache.picks);
+          setStatus(`Board restored ✅ - ${Object.keys(localCache.picks).length} picks`);
+        } else {
+          setDraftPicks({});
+          setStatus('No saved board yet — start drafting.');
+        }
+        // 2) Reconcile with Supabase (cross-device sync). Newest wins.
+        if (!window.SupabaseDraftClient) {
+          isRestoringRef.current = false;
+          return;
+        }
         try {
           const { data } = await window.SupabaseDraftClient
             .loadDraftBoardBySleeperDraftId(customKey);
-          if (data?.picks && Object.keys(data.picks).length > 0) {
-            setDraftPicks(data.picks);
-            setStatus(`Board restored ✅ - ${Object.keys(data.picks).length} picks`);
-          } else {
-            setDraftPicks({});
-            setStatus('No saved board yet — start drafting.');
+          const winner = reconcilePickSources(localCache, data);
+          if (winner && winner.source === 'remote') {
+            setDraftPicks(winner.picks);
+            writePicksToLocal(customKey, winner.picks);
+            setStatus(`Board restored ✅ - ${Object.keys(winner.picks).length} picks`);
           }
         } catch (err) {
-          console.error('[restore-custom] Failed:', err);
-          setDraftPicks({});
+          console.error('[restore-custom] Supabase reconcile failed:', err);
         } finally {
           isRestoringRef.current = false;
         }
@@ -840,9 +909,16 @@
         draftType,
       });
 
-      // ---- Supabase: auto-save on every draftPicks change (debounced 600ms) -
+      // ---- Auto-save on every draftPicks change ----------------------------
+      // localStorage write is synchronous and survives page unload, so it's
+      // the source of truth for intra-app navigation. Supabase save is
+      // debounced 600ms for cross-device sync (and is allowed to be killed
+      // by navigation — local cache covers the gap).
       useEffect(() => {
         if (isRestoringRef.current) return;   // skip while loading/restoring
+
+        writePicksToLocal(getBoardKey(), draftPicks);
+
         if (!window.SupabaseDraftClient) return;
 
         clearTimeout(autoSaveTimerRef.current);
