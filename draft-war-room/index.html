@@ -189,6 +189,27 @@
     // the rookie list.
     const positions = POSITIONS_ROOKIE;
 
+    // Per-round strategy hints rendered on the right side of each round header
+    // in redraft mode. Rookie/dynasty boards intentionally leave the header
+    // clean. Rounds beyond this list fall back to no hint.
+    const REDRAFT_ROUND_HINTS = {
+      1:  'Best RB',
+      2:  'Best WR or Brock Bowers',
+      3:  'Best WR or Trey McBride/George Kittle',
+      4:  'RB',
+      5:  'WR',
+      6:  'RB',
+      7:  'WR',
+      8:  'TE',
+      9:  'RB',
+      10: 'QB',
+      11: 'QB',
+      12: 'WR or RB',
+      13: 'Defense',
+      14: 'Kicker',
+      15: 'Best Available',
+    };
+
     async function fetchJSON(url) {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1698,8 +1719,13 @@
               <div className="flex-1 p-1 md:p-4 space-y-2 md:space-y-6 overflow-y-auto scroll-container draft-board-container">
                 {Object.entries(picksByRound).map(([round, picks]) => (
                   <div key={round}>
-                    <div className="sticky top-0 bg-off-black py-0.5 md:py-2 mb-1 md:mb-3 border-b-2 border-gold z-10">
+                    <div className="sticky top-0 bg-off-black py-0.5 md:py-2 mb-1 md:mb-3 border-b-2 border-gold z-10 flex items-center justify-between gap-2">
                       <h3 className="font-bebas font-bold text-gold text-xs md:text-lg tracking-wide">Round {round}</h3>
+                      {effectiveMode === 'redraft' && REDRAFT_ROUND_HINTS[round] && (
+                        <span className="font-oswald text-silver text-[10px] md:text-sm uppercase tracking-wide whitespace-nowrap truncate">
+                          {REDRAFT_ROUND_HINTS[round]}
+                        </span>
+                      )}
                     </div>
 
                     <div className="space-y-1 md:space-y-2">
