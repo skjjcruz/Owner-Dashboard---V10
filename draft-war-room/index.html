@@ -554,9 +554,11 @@
           if (psycho) auto = psycho;
           
           setSelectedLeague(auto);
-          
-          // Load drafts for selected league
-          await loadDraftsForLeague(auto.id);
+
+          // Load drafts for selected league — pass the league object so the
+          // no-Sleeper-draft fallback derives the correct mode without waiting
+          // for selectedLeague state to flush.
+          await loadDraftsForLeague(auto.id, auto);
           
           setStatus(`Leagues loaded ✅ - ${mappedLeagues.length} league(s) found`);
           
@@ -568,11 +570,27 @@
         }
       };
 
-      const loadDraftsForLeague = async (leagueId) => {
+      // Derive the board mode for a specific league object (independent of
+      // selectedLeague state, which may be stale inside async closures).
+      const deriveModeForLeague = (league) => {
+        if (boardModeOverride === 'rookie' || boardModeOverride === 'redraft') {
+          return boardModeOverride;
+        }
+        if (!league) return 'rookie';
+        return league.type === 2 ? 'rookie' : 'redraft';
+      };
+
+      const loadDraftsForLeague = async (leagueId, leagueOverride) => {
         if (!leagueId) return;
 
         // Pre-load DNA from Supabase into localStorage so buildMockContext() reads fresh data
         SupabaseDraftClient.preloadDNAFromSupabase(leagueId).catch(() => {});
+
+        isRestoringRef.current = true;
+        const leagueForMode = leagueOverride
+          || userLeagues.find(l => l.id === leagueId)
+          || selectedLeague;
+        const modeForLeague = deriveModeForLeague(leagueForMode);
 
         try {
           setStatus('Loading draft history…');
@@ -583,41 +601,46 @@
             fetchJSON(`https://api.sleeper.app/v1/league/${leagueId}/rosters`),
             fetchJSON(`https://api.sleeper.app/v1/league/${leagueId}/users`)
           ]);
-          
+
           setLeagueRosters(rostersData || []);
           setLeagueUsers(usersData || []);
-          
+
           if (!draftsData || draftsData.length === 0) {
             setAvailableDrafts([]);
             setSelectedDraft(null);
             setDraftYear(null);
-            setStatus('No drafts found for this league.');
+            // No Sleeper draft → try to restore a custom-keyed board so picks
+            // built mid-season survive app restarts. Helper resets the
+            // restoring ref in its finally block.
+            await restoreCustomBoardIfAny(leagueId, sleeperUsername, modeForLeague);
             return;
           }
-          
+
           // Sort drafts by most recent first
           const sortedDrafts = draftsData.sort((a, b) => {
             return Number(b.season || 0) - Number(a.season || 0);
           });
-          
+
           setAvailableDrafts(sortedDrafts);
-          
+
           // Auto-select most recent draft
           const mostRecent = sortedDrafts[0];
           setSelectedDraft(mostRecent);
           setDraftYear(mostRecent.season);
-          
-          // Load picks for this draft (pass fresh rosters/users/leagueId before React state settles)
+
+          // Load picks for this draft (pass fresh rosters/users/leagueId before
+          // React state settles). loadDraftPicks resets isRestoringRef itself.
           await loadDraftPicks(mostRecent.draft_id, rostersData, usersData, leagueId);
 
           // Auto-sync draft DNA in the background — no spinner, no blocking
           if (window.DraftHistory) {
             window.DraftHistory.syncDraftDNA(leagueId).catch(() => {});
           }
-          
+
         } catch (err) {
           console.error('Error loading drafts:', err);
           setStatus('Failed to load draft history.');
+          isRestoringRef.current = false;
         }
       };
 
@@ -744,7 +767,12 @@
       const handleLeagueChange = (leagueId) => {
         const league = userLeagues.find(l => l.id === leagueId);
         setSelectedLeague(league);
-        loadDraftsForLeague(leagueId);
+        // Null the previous draft immediately so getBoardKey() returns the
+        // new league's custom key on the next render (the auto-save effect
+        // must not write the new picks under the previous league's key).
+        setSelectedDraft(null);
+        // Pass the league explicitly — selectedLeague state isn't flushed yet.
+        loadDraftsForLeague(leagueId, league);
       };
 
       const handleReload = () => {
@@ -757,11 +785,60 @@
       };
 
       // ---- Supabase: stable key for the current board -----------------------
-      // Uses the Sleeper draft_id when available, otherwise a composite key.
+      // Uses the Sleeper draft_id when available, otherwise a composite key
+      // that includes the board mode so a rookie/redraft override on the same
+      // league saves to a distinct row.
       const getBoardKey = () => {
         if (selectedDraft?.draft_id) return selectedDraft.draft_id;
-        return `custom_${sleeperUsername || 'anon'}_${selectedLeague?.id || 'none'}`;
+        return `custom_${sleeperUsername || 'anon'}_${selectedLeague?.id || 'none'}_${effectiveMode}`;
       };
+
+      // ---- Restore a custom-keyed board (no Sleeper draft) ------------------
+      // Used when a redraft/keeper league has no Sleeper draft on file: the
+      // auto-save layers picks under a `custom_<user>_<league>_<mode>` key in
+      // the same `sleeper_draft_id` column (the schema's partial unique index
+      // covers any non-null string). Args (not state) are required because
+      // this is called from inside async flows where React closures may still
+      // hold the previous league.
+      const restoreCustomBoardIfAny = async (leagueId, username, mode) => {
+        if (!window.SupabaseDraftClient || !username || !leagueId) {
+          setDraftPicks({});
+          isRestoringRef.current = false;
+          return;
+        }
+        const customKey = `custom_${username}_${leagueId}_${mode}`;
+        try {
+          const { data } = await window.SupabaseDraftClient
+            .loadDraftBoardBySleeperDraftId(customKey);
+          if (data?.picks && Object.keys(data.picks).length > 0) {
+            setDraftPicks(data.picks);
+            setStatus(`Board restored ✅ - ${Object.keys(data.picks).length} picks`);
+          } else {
+            setDraftPicks({});
+            setStatus('No saved board yet — start drafting.');
+          }
+        } catch (err) {
+          console.error('[restore-custom] Failed:', err);
+          setDraftPicks({});
+        } finally {
+          isRestoringRef.current = false;
+        }
+      };
+
+      // ---- Supabase: shared save payload builder ----------------------------
+      // Used by both the debounced auto-save effect and the visibilitychange
+      // flush so the two paths stay byte-identical.
+      const buildSavePayload = () => ({
+        picks:           draftPicks,
+        sleeperDraftId:  getBoardKey(),
+        sleeperUsername: sleeperUsername || null,
+        leagueId:        selectedLeague?.id || null,
+        draftYear:       draftYear || null,
+        boardName:       `${sleeperUsername || 'owner'} — ${draftYear || 'custom'}`,
+        numTeams,
+        numRounds,
+        draftType,
+      });
 
       // ---- Supabase: auto-save on every draftPicks change (debounced 600ms) -
       useEffect(() => {
@@ -770,20 +847,30 @@
 
         clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = setTimeout(async () => {
-          const { error } = await window.SupabaseDraftClient.saveDraftBoard({
-            picks:           draftPicks,
-            sleeperDraftId:  getBoardKey(),
-            sleeperUsername: sleeperUsername || null,
-            leagueId:        selectedLeague?.id || null,
-            draftYear:       draftYear || null,
-            boardName:       `${sleeperUsername || 'owner'} — ${draftYear || 'custom'}`,
-            numTeams,
-            numRounds,
-            draftType,
-          });
+          const { error } = await window.SupabaseDraftClient.saveDraftBoard(buildSavePayload());
           if (error) console.error('[auto-save] Failed:', error.message);
         }, 600);
       }, [draftPicks]);
+
+      // ---- Flush pending save when app backgrounds (Capacitor / mobile) -----
+      // The 600ms debounce may not flush before the OS suspends JS execution.
+      // On visibilitychange→hidden, cancel the pending timer and fire one
+      // immediate save with the latest payload. Fire-and-forget — if it
+      // doesn't land, the next foreground edit triggers another save.
+      useEffect(() => {
+        const handler = () => {
+          if (document.visibilityState !== 'hidden') return;
+          if (isRestoringRef.current) return;
+          if (!window.SupabaseDraftClient) return;
+          if (!autoSaveTimerRef.current) return;
+          clearTimeout(autoSaveTimerRef.current);
+          autoSaveTimerRef.current = null;
+          window.SupabaseDraftClient.saveDraftBoard(buildSavePayload())
+            .catch(err => console.error('[bg-flush] Failed:', err));
+        };
+        document.addEventListener('visibilitychange', handler);
+        return () => document.removeEventListener('visibilitychange', handler);
+      }, [draftPicks, sleeperUsername, selectedLeague, draftYear, numTeams, numRounds, draftType, effectiveMode]);
 
       // ---- Live Sleeper draft polling (every 7s when draft is in progress) ---
       useEffect(() => {
