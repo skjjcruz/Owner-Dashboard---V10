@@ -1081,15 +1081,45 @@
         setSelectedPickSlot(null);
       };
 
-      // Swap two picks on the draft board
+      // Move a board pick to a new slot. Insert-and-shift semantics: every
+      // pick between the source and destination moves one position toward
+      // the source to fill the gap, instead of a two-way swap.
+      //
+      // Example with picks A(1), B(2), C(3), …, J(10):
+      //   drag J from #10 onto #2  →  A(1), J(2), B(3), C(4), …, I(10)
+      //   drag B from #2 onto #10  →  A(1), C(2), D(3), …, J(9), B(10)
       const handlePickSwap = (fromKey, toKey) => {
         if (fromKey === toKey) return;
+        const fromIndex = draftOrder.findIndex(p => p.key === fromKey);
+        const toIndex   = draftOrder.findIndex(p => p.key === toKey);
+        if (fromIndex === -1 || toIndex === -1) return;
+
         setDraftPicks(prev => {
           const np = { ...prev };
-          const temp = np[fromKey];
-          if (np[toKey] !== undefined) np[fromKey] = np[toKey];
-          else delete np[fromKey];
-          np[toKey] = temp;
+          const moving = np[fromKey];
+
+          if (fromIndex < toIndex) {
+            // Moving DOWN the board: walk left→right copying i+1 → i so
+            // we don't overwrite a slot before reading from it.
+            for (let i = fromIndex; i < toIndex; i++) {
+              const src = draftOrder[i + 1].key;
+              const dst = draftOrder[i].key;
+              if (np[src] !== undefined) np[dst] = np[src];
+              else delete np[dst];
+            }
+          } else {
+            // Moving UP the board: walk right→left copying i-1 → i.
+            for (let i = fromIndex; i > toIndex; i--) {
+              const src = draftOrder[i - 1].key;
+              const dst = draftOrder[i].key;
+              if (np[src] !== undefined) np[dst] = np[src];
+              else delete np[dst];
+            }
+          }
+
+          if (moving !== undefined) np[toKey] = moving;
+          else delete np[toKey];
+
           return np;
         });
       };
