@@ -378,6 +378,7 @@
       const [showPositionFilters, setShowPositionFilters] = useState(false); // toggle for position filter tabs
       const [players, setPlayers] = useState([]);
       const [draftPicks, setDraftPicks] = useState({});
+      const [struckPicks, setStruckPicks] = useState({}); // { [pickKey]: true } — swiped/crossed-off on the board
       const [selectedPickSlot, setSelectedPickSlot] = useState(null);
       const [selectedPlayerDetail, setSelectedPlayerDetail] = useState(null);
 
@@ -443,6 +444,12 @@
       // Refs: prevent auto-save from firing during initial load/restore
       const isRestoringRef = React.useRef(true);
       const autoSaveTimerRef = React.useRef(null);
+
+      // Refs: swipe-to-cross-off a board pick (touch). swipeRef holds the
+      // touchstart sample; suppressClickRef stops the synthetic click that
+      // follows a swipe from deleting the pick via handlePickSlotClick.
+      const swipeRef = React.useRef(null);
+      const suppressClickRef = React.useRef(false);
 
       // AI Scout state
       const [rightTab,    setRightTab]    = useState('rankings'); // 'rankings' | 'ai'
@@ -726,6 +733,8 @@
             setDraftSlotOwners(slotOwners);
           }
 
+          // Restore cross-off marks for this board (device-local).
+          setStruckPicks(readStruckFromLocal(draftId));
           // 2. Instant restore from localStorage so intra-app navigation
           //    (e.g. dashboard ↔ war room) never shows a flash of empty state.
           //    Supabase reconcile follows below in step 3.
@@ -884,6 +893,8 @@
           return;
         }
         const customKey = `custom_${username}_${leagueId}_${mode}`;
+        // Restore cross-off marks for this board (device-local).
+        setStruckPicks(readStruckFromLocal(customKey));
         // 1) Instant restore from localStorage so intra-app navigation
         //    never shows a flash of empty state.
         const localCache = readPicksFromLocal(customKey);
@@ -948,6 +959,12 @@
           if (error) console.error('[auto-save] Failed:', error.message);
         }, 600);
       }, [draftPicks]);
+
+      // ---- Persist cross-off state to localStorage (device-local) ----------
+      useEffect(() => {
+        if (isRestoringRef.current) return;
+        writeStruckToLocal(getBoardKey(), struckPicks);
+      }, [struckPicks]);
 
       // ---- Flush pending save when app backgrounds (Capacitor / mobile) -----
       // The 600ms debounce may not flush before the OS suspends JS execution.
@@ -1093,6 +1110,54 @@
         } else {
           setSelectedPickSlot(pickKey);
         }
+      };
+
+      // ---- Swipe-to-cross-off a board pick (touch only) --------------------
+      // Toggling is reversible: swipe again to remove the line. Device-local
+      // (localStorage) — does not sync to Supabase.
+      const toggleStruck = (pickKey) => {
+        setStruckPicks(prev => {
+          const next = { ...prev };
+          if (next[pickKey]) delete next[pickKey];
+          else next[pickKey] = true;
+          return next;
+        });
+      };
+
+      const handlePickTouchStart = (pickKey, e) => {
+        const t = e.touches && e.touches[0];
+        if (!t) return;
+        swipeRef.current = { key: pickKey, x: t.clientX, y: t.clientY, t: Date.now() };
+      };
+
+      const handlePickTouchEnd = (pickKey, hasPlayer, e) => {
+        const s = swipeRef.current;
+        swipeRef.current = null;
+        if (!s || s.key !== pickKey || !hasPlayer) return;
+        const t = e.changedTouches && e.changedTouches[0];
+        if (!t) return;
+        const dx = t.clientX - s.x;
+        const dy = t.clientY - s.y;
+        const elapsed = Date.now() - s.t;
+        // Horizontal swipe: ≥60px sideways, clearly more horizontal than
+        // vertical, and not a slow drag-hold (the polyfill owns ≥250ms holds).
+        if (Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && elapsed < 800) {
+          suppressClickRef.current = true; // stop the synthetic click from deleting the pick
+          toggleStruck(pickKey);
+        }
+      };
+
+      // ---- LocalStorage: cross-off state (device-local) --------------------
+      const LS_STRUCK_PREFIX = 'od_draft_struck_v1_';
+      const writeStruckToLocal = (key, struck) => {
+        if (!key) return;
+        try { localStorage.setItem(LS_STRUCK_PREFIX + key, JSON.stringify(struck || {})); }
+        catch (e) { console.warn('[struck-cache] write failed:', e); }
+      };
+      const readStruckFromLocal = (key) => {
+        if (!key) return {};
+        try { return JSON.parse(localStorage.getItem(LS_STRUCK_PREFIX + key) || '{}'); }
+        catch (e) { return {}; }
       };
 
       // ---- Drag & Drop handlers --------------------------------------------
@@ -1636,7 +1701,7 @@
 
                 <div className="flex gap-2 items-center">
                   <button
-                    onClick={() => setDraftPicks({})}
+                    onClick={() => { setDraftPicks({}); setStruckPicks({}); }}
                     className="px-2 py-1 bg-loss-red hover:bg-loss-red rounded text-xs font-bold text-white whitespace-nowrap"
                   >
                     Clear
@@ -1784,11 +1849,14 @@
                           }
                         }
 
+                        const isStruck = !!struckPicks[pick.key];
+
                         return (
                           <div
                             key={pick.key}
                             draggable={!!pickData}
                             onDragStart={pickData ? (e) => {
+                              swipeRef.current = null; // a drag is not a swipe — don't toggle strike on the trailing touchend
                               e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'board', pickKey: pick.key }));
                               e.dataTransfer.effectAllowed = 'move';
                             } : undefined}
@@ -1807,7 +1875,12 @@
                                 else if (data.type === 'board') handlePickSwap(data.pickKey, pick.key);
                               } catch {}
                             }}
-                            onClick={() => handlePickSlotClick(pick.key)}
+                            onTouchStart={(e) => handlePickTouchStart(pick.key, e)}
+                            onTouchEnd={(e) => handlePickTouchEnd(pick.key, !!pickData, e)}
+                            onClick={() => {
+                              if (suppressClickRef.current) { suppressClickRef.current = false; return; }
+                              handlePickSlotClick(pick.key);
+                            }}
                             className={`draft-board-pick p-1 md:p-3 rounded border transition-all flex items-center gap-1 md:gap-3 ${
                               pickData ? 'cursor-grab' : 'cursor-pointer'
                             } ${
@@ -1842,7 +1915,7 @@
                             )}
 
                             <div className="flex-1 min-w-0">
-                              <div className="pick-name font-bold truncate text-xs md:text-base">{displayName}</div>
+                              <div className={`pick-name font-bold truncate text-xs md:text-base ${isStruck ? 'line-through decoration-2 decoration-loss-red opacity-50' : ''}`}>{displayName}</div>
                               {displayDetails && (
                                 <div className="pick-details text-[9px] md:text-sm text-silver flex gap-0.5 md:gap-3 mt-0.5">
                                   {displayDetails}
