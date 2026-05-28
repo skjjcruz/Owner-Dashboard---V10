@@ -90,18 +90,18 @@
       h3 { font-size: 0.8rem !important; }
 
       /* Draft Board optimizations */
-      .draft-board-container .space-y-2 { gap: 0.25rem !important; }
-      .draft-board-pick { padding: 0.5rem !important; }
-      .pick-number { font-size: 0.7rem !important; }
-      .pick-overall { font-size: 0.6rem !important; }
-      .pick-name { font-size: 0.7rem !important; }
-      .pick-details { font-size: 0.6rem !important; }
+      .draft-board-container .space-y-2 { gap: 0.15rem !important; }
+      .draft-board-pick { padding: 0.3rem 0.4rem !important; }
+      .pick-number { font-size: 0.6rem !important; }
+      .pick-overall { font-size: 0.5rem !important; }
+      .pick-name { font-size: 0.6rem !important; }
+      .pick-details { font-size: 0.5rem !important; }
 
       /* Player Rankings optimizations */
-      .player-card-mobile { padding: 0.5rem 0.25rem !important; }
-      .player-name { font-size: 0.7rem !important; line-height: 1.2 !important; }
-      .player-details { font-size: 0.6rem !important; line-height: 1.1 !important; }
-      .player-rank-number { font-size: 0.65rem !important; }
+      .player-card-mobile { padding: 0.3rem 0.25rem !important; }
+      .player-name { font-size: 0.6rem !important; line-height: 1.15 !important; }
+      .player-details { font-size: 0.5rem !important; line-height: 1.05 !important; }
+      .player-rank-number { font-size: 0.56rem !important; }
 
       /* Position filters - better spacing */
       .position-filter-btn {
@@ -1881,7 +1881,7 @@
                               if (suppressClickRef.current) { suppressClickRef.current = false; return; }
                               handlePickSlotClick(pick.key);
                             }}
-                            className={`draft-board-pick p-1 md:p-3 rounded border transition-all flex items-center gap-1 md:gap-3 ${
+                            className={`draft-board-pick p-1 md:p-2 rounded border transition-all flex items-center gap-1 md:gap-2 ${
                               pickData ? 'cursor-grab' : 'cursor-pointer'
                             } ${
                               dragOver === pick.key ? 'border-win-green bg-win-green/10' :
@@ -1895,8 +1895,8 @@
                               'border-gold/30 bg-charcoal hover:border-gold/40'
                             }`}
                           >
-                            <div className="w-10 md:w-20 text-center flex-shrink-0">
-                              <div className="pick-number font-bold text-gold text-xs md:text-base">{pick.key}</div>
+                            <div className="w-10 md:w-16 text-center flex-shrink-0">
+                              <div className="pick-number font-bold text-gold text-xs md:text-sm">{pick.key}</div>
                               {playerRank && (
                                 <div className="pick-overall text-silver text-[9px] md:text-xs mt-0.5">#{playerRank}</div>
                               )}
@@ -1906,7 +1906,7 @@
                               <img
                                 src={player.photoUrl}
                                 alt={player.name}
-                                className="hidden md:block w-10 h-10 rounded-full object-cover flex-shrink-0 bg-charcoal"
+                                className="hidden md:block w-8 h-8 rounded-full object-cover flex-shrink-0 bg-charcoal"
                                 onError={(e) => {
                                   e.target.onerror = null;
                                   e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=D4AF37&color=0A0A0A&size=128&bold=true`;
@@ -1915,9 +1915,9 @@
                             )}
 
                             <div className="flex-1 min-w-0">
-                              <div className={`pick-name font-bold truncate text-xs md:text-base ${isStruck ? 'line-through decoration-2 decoration-loss-red opacity-50' : ''}`}>{displayName}</div>
+                              <div className={`pick-name font-bold truncate text-xs md:text-sm ${isStruck ? 'line-through decoration-2 decoration-loss-red opacity-50' : ''}`}>{displayName}</div>
                               {displayDetails && (
-                                <div className="pick-details text-[9px] md:text-sm text-silver flex gap-0.5 md:gap-3 mt-0.5">
+                                <div className="pick-details text-[9px] md:text-xs text-silver flex gap-0.5 md:gap-3 mt-0.5">
                                   {displayDetails}
                                 </div>
                               )}
@@ -2104,7 +2104,7 @@
                           if (data.type === 'ranking') handleRankingReorder(data.playerId, player.id);
                         } catch {}
                       }}
-                      className={`player-card-mobile p-1 md:p-3 border-b border-gold/20 transition-colors ${
+                      className={`player-card-mobile p-1 md:p-2 border-b border-gold/20 transition-colors ${
                         isDrafted
                           ? 'bg-green-900/40'
                           : rankingDragOver === player.id ? 'bg-gold/20 border-gold/60' : 'hover:bg-charcoal'
@@ -2112,7 +2112,7 @@
                       style={{ cursor: isDrafted ? 'default' : 'grab' }}
                     >
                       <div className="flex items-center gap-0.5 md:gap-3">
-                        <div className={`player-rank-number w-10 md:w-16 font-bold text-xs md:text-base text-center flex-shrink-0 flex items-center justify-center gap-0.5 ${isDrafted ? 'text-green-400/70' : 'text-silver'}`}>
+                        <div className={`player-rank-number w-10 md:w-14 font-bold text-xs md:text-sm text-center flex-shrink-0 flex items-center justify-center gap-0.5 ${isDrafted ? 'text-green-400/70' : 'text-silver'}`}>
                           <span>#{displayIndex + 1}</span>
                           {!isDrafted && !customPlayerOrder && rankingMode === 'consensus' && player.rankChange > 0 && (
                             <span className="text-win-green text-[8px] md:text-xs" title={`Up ${player.rankChange} from #${player.previousRank}`}>▲</span>
@@ -2127,7 +2127,7 @@
                         <img
                           src={player.photoUrl}
                           alt={player.name}
-                          className={`hidden md:block w-10 h-10 rounded-full object-cover flex-shrink-0 bg-charcoal ${isDrafted ? 'opacity-50' : ''}`}
+                          className={`hidden md:block w-8 h-8 rounded-full object-cover flex-shrink-0 bg-charcoal ${isDrafted ? 'opacity-50' : ''}`}
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=D4AF37&color=0A0A0A&size=128&bold=true`;
@@ -2137,7 +2137,7 @@
                           className="flex-1 min-w-0 cursor-pointer"
                           onClick={() => setSelectedPlayerDetail(player)}
                         >
-                          <div className={`player-name font-bold text-xs md:text-base truncate flex items-center gap-1 ${isDrafted ? 'text-green-300/70' : ''}`}>
+                          <div className={`player-name font-bold text-xs md:text-sm truncate flex items-center gap-1 ${isDrafted ? 'text-green-300/70' : ''}`}>
                             {player.name}
                             {isDrafted && <span className="text-green-400/80 text-[8px] md:text-[10px] font-normal ml-1">DRAFTED</span>}
                           </div>
