@@ -1816,7 +1816,7 @@
                             const sleeperPlayer = sleeperPlayers?.[pickData.playerId];
                             if (sleeperPlayer) {
                               displayName = sleeperPlayer.full_name || sleeperPlayer.first_name + ' ' + sleeperPlayer.last_name || 'Unknown Player';
-                              displayDetails = `${sleeperPlayer.position || ''} ${sleeperPlayer.team || 'FA'}`.trim();
+                              displayDetails = `${sleeperPlayer.position || ''} • ${sleeperPlayer.team || 'FA'}`;
                             } else {
                               displayName = pickData.metadata?.first_name && pickData.metadata?.last_name
                                 ? `${pickData.metadata.first_name} ${pickData.metadata.last_name}`
@@ -1842,7 +1842,7 @@
                             player = players.find(p => p.id === pickData);
                             if (player) {
                               displayName = player.name;
-                              displayDetails = `${player.pos} ${player.school}`;
+                              displayDetails = `${player.pos} • ${player.school}`;
                               // Get the rank based on current ranking mode
                               playerRank = rankingMode === 'fantasy' ? player.fantasyRank : player.rank;
                             }
