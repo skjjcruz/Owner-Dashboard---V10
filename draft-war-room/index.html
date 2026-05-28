@@ -1816,7 +1816,7 @@
                             const sleeperPlayer = sleeperPlayers?.[pickData.playerId];
                             if (sleeperPlayer) {
                               displayName = sleeperPlayer.full_name || sleeperPlayer.first_name + ' ' + sleeperPlayer.last_name || 'Unknown Player';
-                              displayDetails = `${sleeperPlayer.position || ''} • ${sleeperPlayer.team || 'FA'}`;
+                              displayDetails = `${sleeperPlayer.position || ''} ${sleeperPlayer.team || 'FA'}`.trim();
                             } else {
                               displayName = pickData.metadata?.first_name && pickData.metadata?.last_name
                                 ? `${pickData.metadata.first_name} ${pickData.metadata.last_name}`
@@ -1842,7 +1842,7 @@
                             player = players.find(p => p.id === pickData);
                             if (player) {
                               displayName = player.name;
-                              displayDetails = `${player.pos} • ${player.school}`;
+                              displayDetails = `${player.pos} ${player.school}`;
                               // Get the rank based on current ranking mode
                               playerRank = rankingMode === 'fantasy' ? player.fantasyRank : player.rank;
                             }
@@ -1914,16 +1914,16 @@
                               />
                             )}
 
-                            <div className="flex-1 min-w-0">
-                              <div className={`pick-name font-bold truncate text-xs md:text-sm ${isStruck ? 'line-through decoration-2 decoration-loss-red opacity-50' : ''}`}>{displayName}</div>
+                            <div className="flex-1 min-w-0 flex items-center gap-1.5 md:gap-2">
+                              <span className={`pick-name font-bold truncate text-xs md:text-sm ${isStruck ? 'line-through decoration-2 decoration-loss-red opacity-50' : ''}`}>{displayName}</span>
                               {displayDetails && (
-                                <div className="pick-details text-[9px] md:text-xs text-silver flex gap-0.5 md:gap-3 mt-0.5">
+                                <span className="pick-details text-[9px] md:text-xs text-silver flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
                                   {displayDetails}
-                                </div>
+                                </span>
                               )}
                               {/* Always show the slot owner subdued — helps all owners see their picks */}
                               {slotOwner && (
-                                <div className="flex items-center gap-0.5 md:gap-1 mt-0.5">
+                                <span className="flex items-center gap-0.5 md:gap-1 flex-shrink-0 whitespace-nowrap">
                                   {slotOwner.avatar && (
                                     <img
                                       src={`https://sleepercdn.com/avatars/thumbs/${slotOwner.avatar}`}
@@ -1933,9 +1933,9 @@
                                     />
                                   )}
                                   <span className={`text-[8px] md:text-[10px] ${isMySlot ? 'text-red-300/70' : 'text-silver/40'}`}>
-                                    {slotOwner.displayName}
+                                    @{slotOwner.displayName}
                                   </span>
-                                </div>
+                                </span>
                               )}
                             </div>
 
