@@ -88,6 +88,7 @@
       .font-bold { font-weight: 600 !important; }
       h2 { font-size: 0.875rem !important; }
       h3 { font-size: 0.8rem !important; }
+      h3.round-header { font-size: 0.72rem !important; }
 
       /* Draft Board optimizations */
       .draft-board-container .space-y-2 { gap: 0.15rem !important; }
@@ -1785,7 +1786,7 @@
                 {Object.entries(picksByRound).map(([round, picks]) => (
                   <div key={round}>
                     <div className="sticky top-0 bg-off-black py-0.5 md:py-2 mb-1 md:mb-3 border-b-2 border-gold z-10 flex items-center justify-between gap-2">
-                      <h3 className="font-bebas font-bold text-gold text-xs md:text-lg tracking-wide">Round {round}</h3>
+                      <h3 className="round-header font-bebas font-bold text-gold text-xs md:text-base tracking-wide">Round {round}</h3>
                       {effectiveMode === 'redraft' && REDRAFT_ROUND_HINTS[round] && (
                         <span className="font-oswald text-silver text-[10px] md:text-sm uppercase tracking-wide whitespace-nowrap truncate">
                           {REDRAFT_ROUND_HINTS[round]}
