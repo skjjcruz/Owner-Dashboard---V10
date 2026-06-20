@@ -23,7 +23,10 @@ const LEAGUE_SEASON_YEARS = ["2023", "2024", "2025", "2026"];
 const STATS_SEASON_YEARS = ["2023", "2024", "2025"];
 
 const POS_ORDER = ["QB", "RB", "WR", "TE", "K", "DEF", "DL", "LB", "DB", "OTHER"];
-const PICK_YEARS = [2026, 2027, 2028];
+// Tradeable draft-pick horizon (3 years). Recomputed per league in
+// loadLeagueData() — once a season's draft is complete those picks are spent,
+// so the window shifts to start at the following year.
+let PICK_YEARS = [2026, 2027, 2028];
 
 // Mobile breakpoint (matches your CSS phone rules)
 const PHONE_MAX_WIDTH = 520;
@@ -1147,6 +1150,22 @@ async function loadLeagueData() {
   } catch (e) {
     state.tradedPicks = [];
   }
+
+  // Determine the tradeable pick window. If the current league season's draft
+  // is already complete, those picks are spent — start the window at next year.
+  const leagueSeason = parseInt(state.league?.season || state.season || DEFAULT_LEAGUE_SEASON, 10);
+  let pickStartYear = leagueSeason;
+  try {
+    const drafts = await fetchJSON(`https://api.sleeper.app/v1/league/${state.leagueId}/drafts`);
+    const currentDraftComplete = (drafts || []).some(
+      (d) => Number(d.season) === leagueSeason && d.status === "complete"
+    );
+    if (currentDraftComplete) pickStartYear = leagueSeason + 1;
+  } catch (e) {
+    /* draft status unavailable — keep the league season as the start */
+  }
+  PICK_YEARS = [pickStartYear, pickStartYear + 1, pickStartYear + 2];
+
   buildPicksByOwner();
 
   if (!state.playersById) {
