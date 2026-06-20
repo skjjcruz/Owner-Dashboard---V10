@@ -1192,8 +1192,8 @@ function detectPickIdMode(rosters, tradedPicks) {
 
 // Builds a map of userId → [{year, round, fromRosterId}] for every team in the league.
 // Initialises each team with all their own picks then applies traded_picks on top.
-function buildPicksByOwner(rosters, tradedPicks, leagueSeason) {
-    const PICK_YEARS_INT = Array.from({ length: PICK_HORIZON }, (_, i) => leagueSeason + i);
+function buildPicksByOwner(rosters, tradedPicks, startYear) {
+    const PICK_YEARS_INT = Array.from({ length: PICK_HORIZON }, (_, i) => startYear + i);
     const mode           = detectPickIdMode(rosters, tradedPicks);
     const rosterById     = {};
     for (const r of rosters) rosterById[String(r.roster_id)] = r;
@@ -1243,7 +1243,7 @@ function buildPicksByOwner(rosters, tradedPicks, leagueSeason) {
     return picksByOwner;
 }
 
-function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarterSet = {}, ownerPicks = [], allRosters = []) {
+function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarterSet = {}, ownerPicks = [], allRosters = [], pickStartYear = null) {
     const scoring   = leagueInfo?.scoring_settings;
     const rosterPos = leagueInfo?.roster_positions || [];
     const user      = users.find(u => u.user_id === roster.owner_id);
@@ -1363,7 +1363,8 @@ function assessTeam(roster, playersData, statsData, leagueInfo, users, nflStarte
     // Draft picks assessment — ownerPicks is pre-computed by buildPicksByOwner()
     // and contains [{year, round}] for every pick this team currently holds.
     const leagueSeason = parseInt(leagueInfo?.season || new Date().getFullYear());
-    const pickYears    = Array.from({ length: PICK_HORIZON }, (_, i) => String(leagueSeason + i));
+    const firstPickYear = pickStartYear ?? leagueSeason;
+    const pickYears    = Array.from({ length: PICK_HORIZON }, (_, i) => String(firstPickYear + i));
 
     const pickCountByRound     = {};
     const pickCountByYear      = {};
@@ -1806,6 +1807,7 @@ function TradeCalculator() {
     const [statsData,   setStatsData]   = useState({});
     const [tradedPicks,    setTradedPicks]    = useState([]);
     const [draftSlotMaps,  setDraftSlotMaps]  = useState({}); // { year: { rosterId: slotNum } }
+    const [pickStartYear,  setPickStartYear]  = useState(null); // first tradeable draft year; shifts past a completed current-season draft
     const [loading,     setLoading]     = useState(false);
 
     const [activeTab,    setActiveTab]    = useState(() => sessionStorage.getItem('tc_activeTab') || 'guide');
@@ -1912,6 +1914,18 @@ function TradeCalculator() {
             setTradedPicks(tPicks || []);
             setFcValues(fc);
 
+            // If the current league season's draft is already complete, those picks
+            // have been spent — they're no longer tradeable assets. Shift the pick
+            // horizon to start at the following year. Falls back to the league season
+            // when draft status is unavailable.
+            {
+                const ls = parseInt(info?.season || new Date().getFullYear());
+                const currentDraftComplete = (draftsData || []).some(
+                    d => Number(d.season) === ls && d.status === 'complete'
+                );
+                setPickStartYear(currentDraftComplete ? ls + 1 : ls);
+            }
+
             // Build draft slot maps: { year: { rosterId: slotNum } }
             // Uses Sleeper's slot_to_roster_id — the same source as the Draft War Room.
             if (draftsData?.length) {
@@ -1979,12 +1993,13 @@ function TradeCalculator() {
             ? calcNflStarterSet(playersData, valueIndex, statsData, scoring)
             : {};
         const leagueSeason  = parseInt(leagueInfo?.season || new Date().getFullYear());
-        const picksByOwner  = buildPicksByOwner(allRosters, tradedPicks, leagueSeason);
+        const startYear     = pickStartYear ?? leagueSeason;
+        const picksByOwner  = buildPicksByOwner(allRosters, tradedPicks, startYear);
         return allRosters.map(r => {
             const ownerPicks = picksByOwner[String(r.owner_id)] || [];
-            return assessTeam(r, playersData, statsData, leagueInfo, leagueUsers, nflStarterSet, ownerPicks, allRosters);
+            return assessTeam(r, playersData, statsData, leagueInfo, leagueUsers, nflStarterSet, ownerPicks, allRosters, startYear);
         });
-    }, [allRosters, playersData, statsData, leagueInfo, leagueUsers, valueIndex, tradedPicks]);
+    }, [allRosters, playersData, statsData, leagueInfo, leagueUsers, valueIndex, tradedPicks, pickStartYear]);
 
     const myAssessment = useMemo(() =>
         assessments.find(a => a.rosterId === myRosterId) || null,
@@ -2008,8 +2023,9 @@ function TradeCalculator() {
     const picksByOwner = useMemo(() => {
         if (!allRosters.length || !leagueInfo) return {};
         const leagueSeason = parseInt(leagueInfo?.season || new Date().getFullYear());
-        return buildPicksByOwner(allRosters, tradedPicks, leagueSeason);
-    }, [allRosters, tradedPicks, leagueInfo]);
+        const startYear    = pickStartYear ?? leagueSeason;
+        return buildPicksByOwner(allRosters, tradedPicks, startYear);
+    }, [allRosters, tradedPicks, leagueInfo, pickStartYear]);
 
     // Player search across all loaded players — QBs first, then sorted by value within each position group
     const playerSearchResults = useCallback((query) => {
