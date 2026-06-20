@@ -15,7 +15,6 @@ const PRECACHE = [
     './supabase-client.js',
     './themes.js',
     './draft-history.js',
-    './charts.js',
     './manifest.json',
     './icon-192.png',
     './icon-512.png'
