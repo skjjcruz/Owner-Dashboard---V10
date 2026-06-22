@@ -259,8 +259,14 @@
       // `team`, `position`, and `years_exp` which is all we need.
       // fetchPlayersWithCache currently slims out `search_rank` and a few
       // other fields, so go to the network here and cache separately.
-      const REDRAFT_LS_KEY = 'od_sleeper_players_redraft_v1';
+      // v2: positive position allow-list + guaranteed team defenses. Bumped
+      // from v1 so any stale cache built by the old filter is rebuilt.
+      const REDRAFT_LS_KEY = 'od_sleeper_players_redraft_v2';
       const REDRAFT_TTL    = 24 * 60 * 60 * 1000;
+      // The redraft pool is exactly the draftable fantasy positions: offensive
+      // skill players, kickers, and team defenses. ('DST' is Sleeper's older
+      // alias for 'DEF'.)
+      const REDRAFT_POSITIONS = new Set(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
 
       let full = null;
       try {
@@ -276,22 +282,29 @@
         // Slim to just what we need — keeps localStorage manageable.
         full = {};
         for (const [id, p] of Object.entries(fresh || {})) {
-          if (!p) continue;
-          // Only active NFL players with a team and a usable position.
-          // search_rank === 9999999 is Sleeper's "unranked" sentinel.
-          if (p.active === false) continue;
-          if (!p.team) continue;
-          if (!p.position) continue;
-          if (typeof p.search_rank !== 'number' || p.search_rank >= 9999999) continue;
+          if (!p || !p.position || !p.team) continue;
+          const pos = p.position === 'DST' ? 'DEF' : p.position;
+          // Restrict to the draftable redraft positions (skill + K + DEF).
+          if (!REDRAFT_POSITIONS.has(pos)) continue;
+          const isDef = pos === 'DEF';
+          // Team defenses are always draftable (one per team) — never gate them
+          // on `active`, which can be unset/odd on DEF entries.
+          if (!isDef && p.active === false) continue;
+          // search_rank === 9999999 is Sleeper's "unranked" sentinel. Skill
+          // players and kickers must be ranked (drops practice-squad noise);
+          // defenses are kept regardless and sorted to the end when unranked
+          // so all 32 always appear in the pool.
+          const ranked = typeof p.search_rank === 'number' && p.search_rank < 9999999;
+          if (!ranked && !isDef) continue;
           full[id] = {
-            position:    p.position,
+            position:    pos,
             full_name:   p.full_name || `${p.first_name||''} ${p.last_name||''}`.trim(),
             team:        p.team,
             years_exp:   p.years_exp ?? null,
             height:      p.height ?? null,
             weight:      p.weight ?? null,
             age:         p.age ?? null,
-            search_rank: p.search_rank,
+            search_rank: ranked ? p.search_rank : 900000,
           };
         }
         try {
