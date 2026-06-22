@@ -1091,7 +1091,13 @@
       const excludedPositions = ['OL', 'OT', 'IOL', 'T', 'G', 'C', 'OG', 'P', 'LS'];
 
       const isMockDraftActive = aiMode === 'mock_draft';
-      const isSleeperDraftContext = !!selectedDraft?.draft_id;
+      // "Actively drafting" = a mock is running, or a real Sleeper draft is
+      // in progress. ONLY then do drafted players stay on the consensus list
+      // and turn green. Outside an active draft (board-building, or just a
+      // selected/completed draft) a player pulled onto the right board leaves
+      // the left list — so the same player is never shown on both sides.
+      const isLiveDraftActive = selectedDraft?.status === 'drafting' || selectedDraft?.status === 'in_progress';
+      const isActivelyDrafting = isMockDraftActive || isLiveDraftActive;
       // Build sets of drafted players so the consensus list (left) and board
       // (right) can flag exactly who's been selected. We match on both:
       //   • id   — manual click/drag picks, and Sleeper/live picks (their
@@ -1117,12 +1123,11 @@
           const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                (p.school && p.school.toLowerCase().includes(searchTerm.toLowerCase()));
           const notExcludedPosition = !excludedPositions.includes(p.pos);
-          // When a draft is selected (a mock is running or any Sleeper draft is
-          // chosen) keep drafted players in the list and turn them green, so you
-          // can watch picks land live. With no draft selected (hand-built board)
-          // a player leaves the pool as soon as you add them to your board.
-          const draftSelected = isMockDraftActive || isSleeperDraftContext;
-          const notDrafted = draftSelected
+          // While actively drafting (mock or live), keep drafted players in the
+          // list and turn them green so you can watch picks land. Otherwise a
+          // player pulled onto the right board leaves the pool (and reappears if
+          // the pick is removed), so he's never shown on both sides at once.
+          const notDrafted = isActivelyDrafting
             ? true
             : (!draftedPlayerIds.has(p.id) && !draftedPlayerNames.has(p.name?.toLowerCase()));
           return matchesPos && matchesSearch && notExcludedPosition && notDrafted;
@@ -1979,7 +1984,7 @@
                             )}
 
                             <div className="flex-1 min-w-0 flex items-center gap-1.5 md:gap-2">
-                              <span className={`pick-name font-bold truncate text-xs md:text-sm ${(isMockDraftActive || isSleeperDraftContext) && pickData ? 'text-green-300' : ''} ${isStruck ? 'line-through decoration-2 decoration-loss-red opacity-50' : ''}`}>{displayName}</span>
+                              <span className={`pick-name font-bold truncate text-xs md:text-sm ${isActivelyDrafting && pickData ? 'text-green-300' : ''} ${isStruck ? 'line-through decoration-2 decoration-loss-red opacity-50' : ''}`}>{displayName}</span>
                               {displayDetails && (
                                 <span className="pick-details text-[9px] md:text-xs text-silver flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
                                   {displayDetails}
@@ -2144,7 +2149,7 @@
               {rightTab === 'rankings' ? (
                 <div className="flex-1 overflow-y-auto scroll-container">
                   {filteredPlayers.map((player, displayIndex) => {
-                    const isDrafted = (isMockDraftActive || isSleeperDraftContext) && (draftedPlayerIds.has(player.id) || draftedPlayerNames.has(player.name?.toLowerCase()));
+                    const isDrafted = isActivelyDrafting && (draftedPlayerIds.has(player.id) || draftedPlayerNames.has(player.name?.toLowerCase()));
                     return (
                     <div
                       key={player.id}
