@@ -1092,11 +1092,17 @@
 
       const isMockDraftActive = aiMode === 'mock_draft';
       const isSleeperDraftContext = !!selectedDraft?.draft_id;
-      // Build sets of drafted players: plain IDs (user picks), and names (AI mock + Sleeper picks)
+      // Build sets of drafted players so the consensus list (left) and board
+      // (right) can flag exactly who's been selected. We match on both:
+      //   • id   — manual click/drag picks, and Sleeper/live picks (their
+      //            player_id equals the redraft list's player id)
+      //   • name — AI mock picks (no Sleeper id) and as a fallback
+      // Only players actually in the picks turn green; everyone else is normal.
       const draftedPlayerIds = new Set();
       const draftedPlayerNames = new Set();
       Object.values(draftPicks).forEach(v => {
         if (v && typeof v === 'object' && (v.isMock || v.playerId)) {
+          if (v.playerId) draftedPlayerIds.add(v.playerId);
           const m = v.metadata || {};
           const fullName = `${m.first_name || ''} ${m.last_name || ''}`.trim();
           if (fullName) draftedPlayerNames.add(fullName.toLowerCase());
@@ -1111,12 +1117,14 @@
           const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                (p.school && p.school.toLowerCase().includes(searchTerm.toLowerCase()));
           const notExcludedPosition = !excludedPositions.includes(p.pos);
-          // The left list is the available pool. Once a player is pulled onto
-          // the board (clicked/dragged over → id pick, or taken via mock/Sleeper
-          // → name pick) they leave the pool entirely. Removing a pick puts them
-          // back. Matches the same id+name predicate used everywhere else.
-          const notDrafted = !draftedPlayerIds.has(p.id) &&
-                             !draftedPlayerNames.has(p.name?.toLowerCase());
+          // When a draft is selected (a mock is running or any Sleeper draft is
+          // chosen) keep drafted players in the list and turn them green, so you
+          // can watch picks land live. With no draft selected (hand-built board)
+          // a player leaves the pool as soon as you add them to your board.
+          const draftSelected = isMockDraftActive || isSleeperDraftContext;
+          const notDrafted = draftSelected
+            ? true
+            : (!draftedPlayerIds.has(p.id) && !draftedPlayerNames.has(p.name?.toLowerCase()));
           return matchesPos && matchesSearch && notExcludedPosition && notDrafted;
         });
         if (customPlayerOrder) {
@@ -1971,7 +1979,7 @@
                             )}
 
                             <div className="flex-1 min-w-0 flex items-center gap-1.5 md:gap-2">
-                              <span className={`pick-name font-bold truncate text-xs md:text-sm ${isStruck ? 'line-through decoration-2 decoration-loss-red opacity-50' : ''}`}>{displayName}</span>
+                              <span className={`pick-name font-bold truncate text-xs md:text-sm ${(isMockDraftActive || isSleeperDraftContext) && pickData ? 'text-green-300' : ''} ${isStruck ? 'line-through decoration-2 decoration-loss-red opacity-50' : ''}`}>{displayName}</span>
                               {displayDetails && (
                                 <span className="pick-details text-[9px] md:text-xs text-silver flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
                                   {displayDetails}
