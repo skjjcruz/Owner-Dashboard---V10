@@ -366,7 +366,12 @@
           sources:           [],
           highlightUrl:      `https://www.youtube.com/results?search_query=${encodeURIComponent(`${p.full_name} ${p.team} highlights`)}`,
           initials:          (p.full_name || '').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
-          photoUrl:          `https://sleepercdn.com/content/nfl/players/${p.id}.jpg`,
+          // Team defenses don't have a player headshot (their id is the team
+          // code), so use the team helmet logo instead of falling back to the
+          // initials block.
+          photoUrl:          pos === 'DEF'
+            ? `https://sleepercdn.com/images/team_logos/nfl/${(p.team || p.id || '').toLowerCase()}.png`
+            : `https://sleepercdn.com/content/nfl/players/${p.id}.jpg`,
           summary:           '',
         };
       });
