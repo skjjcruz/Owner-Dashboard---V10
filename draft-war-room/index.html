@@ -762,11 +762,14 @@
           // Reconcile saved board from local + supabase, newest wins.
           const winner = reconcilePickSources(localCache, savedBoardResult?.data);
           if (winner) {
+            // Always apply the winner — including a deliberately-cleared (empty)
+            // board — so a stale in-memory board can't leave players locked.
+            setDraftPicks(winner.picks);
             if (winner.source === 'remote') {
-              setDraftPicks(winner.picks);
               writePicksToLocal(draftId, winner.picks);
             }
-            setStatus(`Board restored ✅ - ${Object.keys(winner.picks).length} picks`);
+            const n = Object.keys(winner.picks).length;
+            setStatus(n > 0 ? `Board restored ✅ - ${n} picks` : 'Board cleared — no picks.');
             return;
           }
 
@@ -861,19 +864,26 @@
         } catch (e) { return null; }
       };
       // Pick the freshest source between local + supabase. Returns
-      // { picks, updatedAt, source } or null if neither has any picks.
+      // { picks, updatedAt, source } or null when neither side has a record.
+      //
+      // IMPORTANT: a board that exists but is empty ({}) is a *deliberate clear*,
+      // not "no data". We key off whether a record is present (localCache /
+      // supabaseRow truthy) rather than whether it has picks, then let the
+      // newest timestamp win. Treating an empty board as absent caused a
+      // cleared board to be silently overwritten by the older non-empty side on
+      // the next reload — re-locking every player as "drafted".
       const reconcilePickSources = (localCache, supabaseRow) => {
-        const localPicks = localCache?.picks || null;
-        const localAt    = localCache?.updated_at || 0;
-        const remotePicks = supabaseRow?.picks || null;
+        const localExists  = !!localCache;
+        const localPicks   = localCache?.picks || {};
+        const localAt      = localCache?.updated_at || 0;
+        const remoteExists = !!supabaseRow;
+        const remotePicks  = supabaseRow?.picks || {};
         const remoteAt = supabaseRow?.updated_at
           ? new Date(supabaseRow.updated_at).getTime()
           : 0;
-        const localHasAny  = localPicks  && Object.keys(localPicks).length > 0;
-        const remoteHasAny = remotePicks && Object.keys(remotePicks).length > 0;
-        if (!localHasAny && !remoteHasAny) return null;
-        if (!remoteHasAny) return { picks: localPicks, updatedAt: localAt, source: 'local' };
-        if (!localHasAny)  return { picks: remotePicks, updatedAt: remoteAt, source: 'remote' };
+        if (!localExists && !remoteExists) return null;
+        if (!remoteExists) return { picks: localPicks, updatedAt: localAt, source: 'local' };
+        if (!localExists)  return { picks: remotePicks, updatedAt: remoteAt, source: 'remote' };
         return remoteAt > localAt
           ? { picks: remotePicks, updatedAt: remoteAt, source: 'remote' }
           : { picks: localPicks, updatedAt: localAt, source: 'local' };
@@ -940,6 +950,28 @@
         numRounds,
         draftType,
       });
+
+      // ---- Clear the board (durable) ---------------------------------------
+      // Empties the board AND immediately persists the empty state to both
+      // localStorage and Supabase. Relying on the debounced auto-save alone is
+      // unsafe here: if the user navigates away within the 600ms window the
+      // remote save is killed, leaving the old picks in Supabase to re-lock
+      // every player on the next restore.
+      const handleClearBoard = async () => {
+        setDraftPicks({});
+        setStruckPicks({});
+        const key = getBoardKey();
+        writePicksToLocal(key, {});
+        // Only push an empty board to Supabase for keyed (Sleeper / custom-key)
+        // boards, which upsert on conflict. Keyless boards insert a new row each
+        // save, so we let the normal auto-save handle those.
+        if (window.SupabaseDraftClient && key) {
+          try {
+            await window.SupabaseDraftClient.saveDraftBoard({ ...buildSavePayload(), picks: {} });
+          } catch (e) { console.error('[clear] Supabase save failed:', e); }
+        }
+        setStatus('Board cleared ✅');
+      };
 
       // ---- Auto-save on every draftPicks change ----------------------------
       // localStorage write is synchronous and survives page unload, so it's
@@ -1701,7 +1733,7 @@
 
                 <div className="flex gap-2 items-center">
                   <button
-                    onClick={() => { setDraftPicks({}); setStruckPicks({}); }}
+                    onClick={handleClearBoard}
                     className="px-2 py-1 bg-loss-red hover:bg-loss-red rounded text-xs font-bold text-white whitespace-nowrap"
                   >
                     Clear
