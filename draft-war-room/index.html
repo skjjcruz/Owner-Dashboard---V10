@@ -1093,8 +1093,12 @@
           const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                (p.school && p.school.toLowerCase().includes(searchTerm.toLowerCase()));
           const notExcludedPosition = !excludedPositions.includes(p.pos);
-          // During mock/Sleeper drafts keep drafted players visible (highlighted green)
-          const notDrafted = (isMockDraftActive || isSleeperDraftContext) ? true : !draftedPlayerIds.has(p.id);
+          // The left list is the available pool. Once a player is pulled onto
+          // the board (clicked/dragged over → id pick, or taken via mock/Sleeper
+          // → name pick) they leave the pool entirely. Removing a pick puts them
+          // back. Matches the same id+name predicate used everywhere else.
+          const notDrafted = !draftedPlayerIds.has(p.id) &&
+                             !draftedPlayerNames.has(p.name?.toLowerCase());
           return matchesPos && matchesSearch && notExcludedPosition && notDrafted;
         });
         if (customPlayerOrder) {
@@ -1114,8 +1118,10 @@
         return list;
       })();
 
+      // Same predicate the available-pool filter uses, so position counts and
+      // "available" totals stay in sync with what's actually shown on the left.
       const isPlayerDrafted = (p) =>
-        draftedPlayerIds.has(p.id) || (isMockDraftActive && draftedPlayerNames.has(p.name?.toLowerCase()));
+        draftedPlayerIds.has(p.id) || draftedPlayerNames.has(p.name?.toLowerCase());
       const positionCounts = positionsForMode.reduce((acc, pos) => {
         acc[pos] = players.filter(p => p.pos === pos && !isPlayerDrafted(p)).length;
         return acc;
