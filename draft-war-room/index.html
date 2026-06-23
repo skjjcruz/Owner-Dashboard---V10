@@ -594,11 +594,19 @@
           }));
           
           setUserLeagues(mappedLeagues);
-          
+
+          // Auto-select the league whose draft we actually want to work on.
+          // Priority: a draft happening right now (drafting) → a draft that
+          // hasn't happened yet (pre_draft) → most recent league. This keeps
+          // the war room attached to the upcoming/live draft room (and any
+          // league mock draft room, which also flips a league to 'drafting')
+          // instead of a league whose draft is already complete.
           let auto = mappedLeagues[0];
-          const psycho = mappedLeagues.find(l => (l.name || '').toLowerCase().includes('psycho'));
-          if (psycho) auto = psycho;
-          
+          const upcoming = mappedLeagues.find(l => l.status === 'pre_draft');
+          if (upcoming) auto = upcoming;
+          const drafting = mappedLeagues.find(l => l.status === 'drafting');
+          if (drafting) auto = drafting;
+
           setSelectedLeague(auto);
 
           // Load drafts for selected league — pass the league object so the
