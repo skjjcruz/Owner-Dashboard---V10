@@ -669,14 +669,17 @@
 
           setAvailableDrafts(sortedDrafts);
 
-          // Auto-select most recent draft
-          const mostRecent = sortedDrafts[0];
-          setSelectedDraft(mostRecent);
-          setDraftYear(mostRecent.season);
+          // Prefer a draft that's currently live — the real draft in progress,
+          // or a league mock draft room — so the board attaches to it and turns
+          // players green; otherwise fall back to the most recent draft.
+          const liveDraft = sortedDrafts.find(d => d.status === 'drafting' || d.status === 'in_progress');
+          const chosen = liveDraft || sortedDrafts[0];
+          setSelectedDraft(chosen);
+          setDraftYear(chosen.season);
 
           // Load picks for this draft (pass fresh rosters/users/leagueId before
           // React state settles). loadDraftPicks resets isRestoringRef itself.
-          await loadDraftPicks(mostRecent.draft_id, rostersData, usersData, leagueId);
+          await loadDraftPicks(chosen.draft_id, rostersData, usersData, leagueId);
 
           // Auto-sync draft DNA in the background — no spinner, no blocking
           if (window.DraftHistory) {
@@ -1064,6 +1067,44 @@
         sleeperPollRef.current = setInterval(poll, 7000);
         return () => clearInterval(sleeperPollRef.current);
       }, [selectedDraft?.draft_id, selectedDraft?.status]);
+
+      // ---- Auto-attach to a live draft (real draft OR league mock) ----------
+      // Both the league's real draft and any league mock draft room appear in
+      // the league's drafts list. Poll it (every 20s) so that when a draft goes
+      // live the app switches the board to it and starts tracking picks — which
+      // turns players green — and so the selected draft's status stays fresh
+      // without needing a manual reload. The 7s pick-poll above then streams the
+      // picks in as they happen.
+      useEffect(() => {
+        const leagueId = selectedLeague?.id;
+        if (!leagueId) return;
+        let cancelled = false;
+        const isLiveStatus = (d) => d?.status === 'drafting' || d?.status === 'in_progress';
+
+        const refresh = async () => {
+          try {
+            const drafts = await fetchJSON(`https://api.sleeper.app/v1/league/${leagueId}/drafts`);
+            if (cancelled || !Array.isArray(drafts) || drafts.length === 0) return;
+            const sorted = [...drafts].sort((a, b) => Number(b.season || 0) - Number(a.season || 0));
+            setAvailableDrafts(sorted);
+            const live = sorted.find(isLiveStatus);
+            if (live && live.draft_id !== selectedDraft?.draft_id) {
+              // A draft just went live (real or mock) — attach the board to it.
+              setSelectedDraft(live);
+              setDraftYear(live.season);
+              loadDraftPicks(live.draft_id, undefined, undefined, leagueId);
+            } else if (selectedDraft?.draft_id) {
+              // Keep the current selection but refresh its status so the pick
+              // poll + green highlight react when it flips to drafting.
+              const fresh = sorted.find(d => d.draft_id === selectedDraft.draft_id);
+              if (fresh && fresh.status !== selectedDraft.status) setSelectedDraft(fresh);
+            }
+          } catch (e) { /* transient network — retry next tick */ }
+        };
+
+        const id = setInterval(refresh, 20000);
+        return () => { cancelled = true; clearInterval(id); };
+      }, [selectedLeague?.id, selectedDraft?.draft_id, selectedDraft?.status]);
 
       const generateDraftOrder = () => {
         const order = [];
