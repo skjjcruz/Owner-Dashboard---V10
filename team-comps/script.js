@@ -15,12 +15,12 @@ const SPORT = "nfl";
 
 // Defaults
 const DEFAULT_LEAGUE_SEASON = "2026";
-const DEFAULT_STATS_SEASON = "2025";
+const DEFAULT_STATS_SEASON = "2026";
 const DEFAULT_USERNAME = "";
 
 // Dropdown year range
 const LEAGUE_SEASON_YEARS = ["2023", "2024", "2025", "2026"];
-const STATS_SEASON_YEARS = ["2023", "2024", "2025"];
+const STATS_SEASON_YEARS = ["2023", "2024", "2025", "2026"];
 
 const POS_ORDER = ["QB", "RB", "WR", "TE", "K", "DEF", "DL", "LB", "DB", "OTHER"];
 // Tradeable draft-pick horizon (3 years). Recomputed per league in
