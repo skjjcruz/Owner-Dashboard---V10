@@ -1044,6 +1044,11 @@ if ('serviceWorker' in navigator) {
     } catch (e) {
         localStorage.removeItem(AUTH_KEY);
     }
+    // Fall back to the Sleeper username the sub-pages (Team Comps, etc.) remember,
+    // so returning to the dashboard doesn't show "No Sleeper account connected".
+    if (!sleeperUsername) {
+        sleeperUsername = (localStorage.getItem('od_locked_username_v2') || '').trim();
+    }
 
     const { useState, useEffect, useRef } = React;
 
@@ -3120,7 +3125,9 @@ if ('serviceWorker' in navigator) {
                                     <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--silver)', fontSize: '0.85rem' }}>
                                         <div style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>🔗</div>
                                         No Sleeper account connected.<br />
-                                        <span style={{ fontSize: '0.78rem', opacity: 0.7 }}>Sleeper integration coming soon for email accounts.</span>
+                                        <a href="login.html" style={{ display: 'inline-block', marginTop: '0.9rem', padding: '0.45rem 1.1rem', border: '1px solid var(--gold)', borderRadius: '4px', color: 'var(--gold)', fontFamily: 'Oswald, sans-serif', fontWeight: '600', letterSpacing: '0.08em', textDecoration: 'none' }}>
+                                            SIGN IN WITH SLEEPER
+                                        </a>
                                     </div>
                                 ) : loading ? (
                                     <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gold)' }}>
